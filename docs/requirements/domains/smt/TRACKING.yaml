@@ -33,10 +33,11 @@ items:
   - id: SMT-004
     section: "Proof Format"
     summary: "TREE_DEPTH siblings, left-first ordering"
-    status: gap
-    spec_ref: "docs/design/requirements/smt/SMT-004.md"
-    tests: []
-    notes: ""
+    status: implemented
+    spec_ref: "docs/requirements/domains/smt/specs/SMT-004.md"
+    tests:
+      - tests/vv_req_smt_004.rs
+    notes: "MerkleProof with verify(), exactly 32 siblings, left-child-first hash convention"
 
   - id: SMT-005
     section: "Cross-Implementation"
