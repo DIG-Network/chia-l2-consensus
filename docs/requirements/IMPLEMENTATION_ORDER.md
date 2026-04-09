@@ -25,7 +25,7 @@ by phase. Check boxes as requirements are verified.
 - [x] [SMT-003](domains/smt/NORMATIVE.md#SMT-003) — Leaf values (active/empty)
 - [x] [SMT-004](domains/smt/NORMATIVE.md#SMT-004) — Proof format
 - [x] [SMT-005](domains/smt/NORMATIVE.md#SMT-005) — Cross-implementation consistency
-- [ ] [SMT-006](domains/smt/NORMATIVE.md#SMT-006) — Empty tree optimization
+- [x] [SMT-006](domains/smt/NORMATIVE.md#SMT-006) — Empty tree optimization
 
 ### Wire Format
 - [ ] [WIRE-001](domains/wire/NORMATIVE.md#WIRE-001) — Checkpoint message format
@@ -123,7 +123,7 @@ by phase. Check boxes as requirements are verified.
 | Phase | Domain | Requirements | Status |
 |-------|--------|--------------|--------|
 | 0 | Setup | 6 | 6/6 |
-| 1 | SMT | 6 | 5/6 |
+| 1 | SMT | 6 | 6/6 |
 | 1 | Wire | 6 | 0/6 |
 | 2 | Circuit | 6 | 0/6 |
 | 3 | Network Coin | 5 | 0/5 |
@@ -133,4 +133,4 @@ by phase. Check boxes as requirements are verified.
 | 5 | Deployment | 5 | 0/5 |
 | 5 | Validator | 5 | 0/5 |
 | 6 | Security | 6 | 0/6 |
-| **Total** | | **63** | **11/63** |
+| **Total** | | **63** | **12/63** |

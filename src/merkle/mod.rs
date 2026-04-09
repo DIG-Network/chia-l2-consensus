@@ -7,5 +7,6 @@ mod sparse;
 
 pub use proof::MerkleProof;
 pub use sparse::{
-    active_leaf, compute_empty_nodes, compute_slot, SparseMerkleTree, EMPTY_LEAF, TREE_DEPTH,
+    active_leaf, compute_empty_nodes, compute_slot, SparseMerkleTree, EMPTY_LEAF, EMPTY_TREE_ROOT,
+    TREE_DEPTH,
 };

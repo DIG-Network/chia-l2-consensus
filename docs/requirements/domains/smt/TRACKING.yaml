@@ -51,7 +51,8 @@ items:
   - id: SMT-006
     section: "Empty Tree Optimization"
     summary: "Precomputed empty subtree hashes"
-    status: gap
-    spec_ref: "docs/design/requirements/smt/SMT-006.md"
-    tests: []
-    notes: ""
+    status: implemented
+    spec_ref: "docs/requirements/domains/smt/specs/SMT-006.md"
+    tests:
+      - tests/vv_req_smt_006.rs
+    notes: "EMPTY_TREE_ROOT constant, compute_empty_nodes(), O(n*depth) root computation"
