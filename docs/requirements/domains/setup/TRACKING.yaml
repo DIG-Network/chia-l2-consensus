@@ -31,10 +31,11 @@ items:
   - id: SETUP-004
     section: "Core Dependencies"
     summary: "arkworks, chia-wallet-sdk, clvmr, blst, tokio, serde, sha2"
-    status: gap
+    status: implemented
     spec_ref: "docs/requirements/domains/setup/specs/SETUP-004.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_setup_004.rs
+    notes: "All dependencies resolve; cargo build --release succeeds; 6 VV tests pass"
 
   - id: SETUP-005
     section: "Rue Tooling"
