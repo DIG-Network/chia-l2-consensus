@@ -11,9 +11,7 @@ use std::process::Command;
 #[test]
 fn vv_req_setup_005_rue_compiler_available() {
     // Check if rue command is available
-    let output = Command::new("rue")
-        .arg("--help")
-        .output();
+    let output = Command::new("rue").arg("--help").output();
 
     match output {
         Ok(result) => {

@@ -49,7 +49,8 @@ items:
   - id: SETUP-006
     section: "Build Configuration"
     summary: "Release optimization, clippy, fmt checks"
-    status: gap
+    status: implemented
     spec_ref: "docs/requirements/domains/setup/specs/SETUP-006.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_setup_006.rs
+    notes: "Release profile configured (opt-level=3, lto=true, codegen-units=1); cargo fmt and clippy pass"

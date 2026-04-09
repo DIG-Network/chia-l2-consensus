@@ -27,12 +27,12 @@ fn vv_req_setup_004_chia_dependencies() {
 #[test]
 fn vv_req_setup_004_arkworks_dependencies() {
     // Verify arkworks crates are available
-    use ark_groth16::Groth16;
     use ark_bls12_381::{Bls12_381, Fr, G1Projective, G2Projective};
-    use ark_relations::r1cs::ConstraintSystem;
-    use ark_ff::PrimeField;
     use ark_ec::CurveGroup;
-    use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
+    use ark_ff::PrimeField;
+    use ark_groth16::Groth16;
+    use ark_relations::r1cs::ConstraintSystem;
+    use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 
     // Verify basic field operations work
     let cs = ConstraintSystem::<Fr>::new_ref();
@@ -61,7 +61,7 @@ fn vv_req_setup_004_arkworks_dependencies() {
 #[test]
 fn vv_req_setup_004_blst_dependency() {
     // Verify blst is available for BLS signature aggregation
-    use blst::min_pk::{SecretKey, PublicKey, Signature, AggregateSignature};
+    use blst::min_pk::{AggregateSignature, PublicKey, SecretKey, Signature};
 
     // Verify key generation works
     let ikm = [0u8; 32];
@@ -84,12 +84,12 @@ fn vv_req_setup_004_blst_dependency() {
 #[test]
 fn vv_req_setup_004_utility_dependencies() {
     // Verify utility crates are available
-    use sha2::{Sha256, Digest};
-    use hex::{encode, decode};
+    use anyhow::{anyhow, Result};
+    use hex::{decode, encode};
     use num_bigint::BigUint;
-    use serde::{Serialize, Deserialize};
+    use serde::{Deserialize, Serialize};
+    use sha2::{Digest, Sha256};
     use thiserror::Error;
-    use anyhow::{Result, anyhow};
 
     // Verify SHA-256 works
     let mut hasher = Sha256::new();
@@ -111,7 +111,9 @@ fn vv_req_setup_004_utility_dependencies() {
 
     // Verify serde traits exist
     #[derive(Serialize, Deserialize)]
-    struct TestStruct { value: u32 }
+    struct TestStruct {
+        value: u32,
+    }
     let json = serde_json::to_string(&TestStruct { value: 42 }).unwrap();
     assert!(json.contains("42"));
 
@@ -144,7 +146,7 @@ async fn vv_req_setup_004_async_dependencies() {
 #[test]
 fn vv_req_setup_004_ark_crypto_primitives() {
     // Verify ark-crypto-primitives with crh feature
-    use ark_crypto_primitives::crh::{CRHScheme, sha256::Sha256 as ArkSha256};
+    use ark_crypto_primitives::crh::{sha256::Sha256 as ArkSha256, CRHScheme};
 
     // CRH scheme should be available for circuit hash gadgets
     fn _check_crh<H: CRHScheme>() {}

@@ -7,6 +7,6 @@
 | [SETUP-003](NORMATIVE.md#SETUP-003) | ✅ | Project structure | Directory layout matches spec; all modules present |
 | [SETUP-004](NORMATIVE.md#SETUP-004) | ✅ | Core dependencies | `cargo build` succeeds; all deps resolve correctly |
 | [SETUP-005](NORMATIVE.md#SETUP-005) | ✅ | Rue tooling | `rue --help` available; .rue source files exist; `puzzles/compiled/` ready |
-| [SETUP-006](NORMATIVE.md#SETUP-006) | ❌ | Build configuration | `cargo build --release` succeeds; clippy and fmt checks pass |
+| [SETUP-006](NORMATIVE.md#SETUP-006) | ✅ | Build configuration | `cargo build --release` succeeds; clippy and fmt checks pass |
 
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap

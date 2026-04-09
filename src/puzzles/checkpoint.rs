@@ -20,7 +20,9 @@ pub fn spend_checkpoint_singleton(
 }
 
 /// Fetch the current checkpoint singleton state.
-pub fn fetch_checkpoint_singleton_state(_launcher_id: Bytes32) -> ConsensusResult<CheckpointSingletonState> {
+pub fn fetch_checkpoint_singleton_state(
+    _launcher_id: Bytes32,
+) -> ConsensusResult<CheckpointSingletonState> {
     // TODO: Implement
     todo!()
 }
