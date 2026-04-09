@@ -146,3 +146,33 @@ pub fn compute_membership_announcement_message(
     // Total: 67 bytes input, 32 bytes output
     hasher.finalize().into()
 }
+
+// ============================================================================
+// WIRE-005: Registration Message Format
+// ============================================================================
+
+/// Registration message prefix (8 bytes UTF-8, no null terminator).
+pub const REGISTER_PREFIX: &[u8] = b"register";
+
+/// Registration message input size (56 bytes).
+/// "register" (8) + pubkey (48)
+pub const REGISTRATION_INPUT_SIZE: usize = 8 + 48;
+
+/// Compute the registration message that validators sign during registration.
+///
+/// The registration message proves ownership of the BLS key and prevents
+/// unauthorized registrations on behalf of another validator.
+///
+/// Format: `sha256("register" || pubkey)` where "register" is 8-byte UTF-8.
+///
+/// Source: spec-wire-format.md Lines 620-639
+pub fn compute_registration_message(pubkey: &[u8; 48]) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+
+    // Field order is critical - must match Rue implementation exactly
+    hasher.update(REGISTER_PREFIX); // 8 bytes
+    hasher.update(pubkey); // 48 bytes
+
+    // Total: 56 bytes input, 32 bytes output
+    hasher.finalize().into()
+}
