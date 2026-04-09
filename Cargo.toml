@@ -1,0 +1,46 @@
+[package]
+name    = "chia-l2-consensus"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Chia
+chia-wallet-sdk = "0.18"
+chia-protocol   = "0.18"
+chia-puzzles    = "0.18"
+clvm-traits     = "0.18"
+clvmr           = "0.6"
+
+# ZK proving (→ see spec-groth16-circuit — Dependencies)
+ark-groth16           = "0.4"
+ark-bls12-381         = "0.4"
+ark-r1cs-std          = "0.4"
+ark-relations         = "0.4"
+ark-ff                = "0.4"
+ark-ec                = "0.4"
+ark-std               = "0.4"
+ark-serialize         = "0.4"
+ark-crypto-primitives = { version = "0.4", features = ["crh"] }
+
+# BLS aggregation off-chain (→ see spec-wire-format — Aggregate Signature)
+blst = "0.3"
+
+# Async
+tokio   = { version = "1", features = ["full"] }
+futures = "0.3"
+
+# Serialization
+serde        = { version = "1", features = ["derive"] }
+serde_json   = "1"
+hex          = "0.4"
+num-bigint   = "0.4"
+
+# Error handling
+thiserror = "1"
+anyhow    = "1"
+
+sha2 = "0.10"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+rand  = "0.8"

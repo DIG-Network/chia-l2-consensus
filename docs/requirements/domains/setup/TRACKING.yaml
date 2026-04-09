@@ -14,10 +14,10 @@ items:
   - id: SETUP-002
     section: "Cargo.toml Configuration"
     summary: "Crate name, version, edition, pinned dependencies"
-    status: gap
+    status: implemented
     spec_ref: "docs/requirements/domains/setup/specs/SETUP-002.md"
     tests: []
-    notes: ""
+    notes: "Cargo.toml created; cargo check passes; 294 packages resolved"
 
   - id: SETUP-003
     section: "Project Structure"
