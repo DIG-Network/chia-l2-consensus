@@ -42,10 +42,11 @@ items:
   - id: WIRE-005
     section: "Registration Message"
     summary: "register prefix + pubkey for AGG_SIG_ME"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/wire/WIRE-005.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_wire_005.rs
+    notes: "compute_registration_message() in src/prover/serialize.rs"
 
   - id: WIRE-006
     section: "scalar() Function"
