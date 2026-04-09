@@ -10,7 +10,8 @@ mod setup;
 pub use circuit::ConsensusCircuit;
 pub use prove::generate_proof;
 pub use serialize::{
-    compute_checkpoint_message, ClvmProof, ClvmVerificationKey, G1_COMPRESSED_SIZE,
-    G2_COMPRESSED_SIZE, GROTH16_PROOF_SIZE,
+    compute_checkpoint_message, compute_membership_announcement_message, ClvmProof,
+    ClvmVerificationKey, G1_COMPRESSED_SIZE, G2_COMPRESSED_SIZE, GROTH16_PROOF_SIZE,
+    MEMBERSHIP_INPUT_SIZE, MEMBERSHIP_PREFIX,
 };
 pub use setup::{load_proving_key, load_verification_key};

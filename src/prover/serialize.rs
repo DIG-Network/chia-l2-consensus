@@ -108,3 +108,41 @@ pub struct ClvmVerificationKey {
     /// VK bytes in CLVM format.
     pub bytes: Vec<u8>,
 }
+
+// ============================================================================
+// WIRE-004: Membership Announcement Format
+// ============================================================================
+
+/// Membership announcement prefix (10 bytes UTF-8, no null terminator).
+pub const MEMBERSHIP_PREFIX: &[u8] = b"membership";
+
+/// Membership announcement input size (67 bytes).
+/// "membership" (10) + epoch (8) + pubkey (48) + is_member (1)
+pub const MEMBERSHIP_INPUT_SIZE: usize = 10 + 8 + 48 + 1;
+
+/// Compute the membership announcement message.
+///
+/// Membership announcements are emitted by the checkpoint singleton during
+/// membership query spends. They enable validators to prove their membership
+/// status for collateral recovery.
+///
+/// Format: `sha256("membership" || epoch_be8 || pubkey || is_member_byte)`
+/// where is_member_byte is 0x01 for member, 0x00 for non-member.
+///
+/// Source: spec-wire-format.md Lines 548-597
+pub fn compute_membership_announcement_message(
+    epoch: u64,
+    pubkey: &[u8; 48],
+    is_member: bool,
+) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+
+    // Field order is critical - must match Rue implementation exactly
+    hasher.update(MEMBERSHIP_PREFIX); // 10 bytes
+    hasher.update(epoch.to_be_bytes()); // 8 bytes, big-endian
+    hasher.update(pubkey); // 48 bytes
+    hasher.update([if is_member { 0x01 } else { 0x00 }]); // 1 byte
+
+    // Total: 67 bytes input, 32 bytes output
+    hasher.finalize().into()
+}

@@ -33,10 +33,11 @@ items:
   - id: WIRE-004
     section: "Membership Announcement"
     summary: "membership prefix + epoch + pubkey + is_member"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/wire/WIRE-004.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_wire_004.rs
+    notes: "compute_membership_announcement_message() in src/prover/serialize.rs"
 
   - id: WIRE-005
     section: "Registration Message"
