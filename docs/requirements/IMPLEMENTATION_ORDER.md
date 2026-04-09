@@ -29,7 +29,7 @@ by phase. Check boxes as requirements are verified.
 
 ### Wire Format
 - [x] [WIRE-001](domains/wire/NORMATIVE.md#WIRE-001) — Checkpoint message format
-- [ ] [WIRE-002](domains/wire/NORMATIVE.md#WIRE-002) — Point encoding (G1/G2)
+- [x] [WIRE-002](domains/wire/NORMATIVE.md#WIRE-002) — Point encoding (G1/G2)
 - [ ] [WIRE-003](domains/wire/NORMATIVE.md#WIRE-003) — Groth16 proof format
 - [ ] [WIRE-004](domains/wire/NORMATIVE.md#WIRE-004) — Membership announcement
 - [ ] [WIRE-005](domains/wire/NORMATIVE.md#WIRE-005) — Registration message
@@ -124,7 +124,7 @@ by phase. Check boxes as requirements are verified.
 |-------|--------|--------------|--------|
 | 0 | Setup | 6 | 6/6 |
 | 1 | SMT | 6 | 6/6 |
-| 1 | Wire | 6 | 1/6 |
+| 1 | Wire | 6 | 2/6 |
 | 2 | Circuit | 6 | 0/6 |
 | 3 | Network Coin | 5 | 0/5 |
 | 3 | Registration Coin | 6 | 0/6 |
@@ -133,4 +133,4 @@ by phase. Check boxes as requirements are verified.
 | 5 | Deployment | 5 | 0/5 |
 | 5 | Validator | 5 | 0/5 |
 | 6 | Security | 6 | 0/6 |
-| **Total** | | **63** | **13/63** |
+| **Total** | | **63** | **14/63** |

@@ -4,6 +4,31 @@
 
 use sha2::{Digest, Sha256};
 
+// ============================================================================
+// WIRE-002: Point Encoding Constants
+// ============================================================================
+
+/// G1 compressed point size in bytes (ZCash compressed BLS12-381).
+///
+/// G1 points represent public keys and appear in:
+/// - `proof.a` and `proof.c` in Groth16 proofs
+/// - IC points in the verification key
+/// - Aggregate public key (`agg_signers`)
+/// - Individual validator pubkeys
+///
+/// Source: spec-wire-format.md Lines 46-118
+pub const G1_COMPRESSED_SIZE: usize = 48;
+
+/// G2 compressed point size in bytes (ZCash compressed BLS12-381).
+///
+/// G2 points represent signatures and appear in:
+/// - `proof.b` in Groth16 proofs
+/// - `beta_g2`, `gamma_g2`, `delta_g2` in the verification key
+/// - Aggregate signature (`agg_sig`)
+///
+/// Source: spec-wire-format.md Lines 46-118
+pub const G2_COMPRESSED_SIZE: usize = 96;
+
 /// Compute the checkpoint message that validators sign.
 ///
 /// The checkpoint message commits to all new state including the new validator set.
