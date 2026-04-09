@@ -1,0 +1,52 @@
+domain_id: setup
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: SETUP-001
+    section: "Rust Toolchain"
+    summary: "Rust 2021 edition, stable toolchain, rustfmt, clippy"
+    status: implemented
+    spec_ref: "docs/requirements/domains/setup/specs/SETUP-001.md"
+    tests: []
+    notes: "rust-toolchain.toml created; rustc 1.94.1, rustfmt, clippy verified"
+
+  - id: SETUP-002
+    section: "Cargo.toml Configuration"
+    summary: "Crate name, version, edition, pinned dependencies"
+    status: gap
+    spec_ref: "docs/requirements/domains/setup/specs/SETUP-002.md"
+    tests: []
+    notes: ""
+
+  - id: SETUP-003
+    section: "Project Structure"
+    summary: "Directory layout per spec-consensus-crate.md"
+    status: gap
+    spec_ref: "docs/requirements/domains/setup/specs/SETUP-003.md"
+    tests: []
+    notes: ""
+
+  - id: SETUP-004
+    section: "Core Dependencies"
+    summary: "arkworks, chia-wallet-sdk, clvmr, blst, tokio, serde, sha2"
+    status: gap
+    spec_ref: "docs/requirements/domains/setup/specs/SETUP-004.md"
+    tests: []
+    notes: ""
+
+  - id: SETUP-005
+    section: "Chialisp Tooling"
+    summary: "run, brun, include paths for puzzles"
+    status: gap
+    spec_ref: "docs/requirements/domains/setup/specs/SETUP-005.md"
+    tests: []
+    notes: ""
+
+  - id: SETUP-006
+    section: "Build Configuration"
+    summary: "Release optimization, clippy, fmt checks"
+    status: gap
+    spec_ref: "docs/requirements/domains/setup/specs/SETUP-006.md"
+    tests: []
+    notes: ""
