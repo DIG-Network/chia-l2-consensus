@@ -42,10 +42,11 @@ items:
   - id: SMT-005
     section: "Cross-Implementation"
     summary: "Rust and Chialisp produce identical roots"
-    status: gap
-    spec_ref: "docs/design/requirements/smt/SMT-005.md"
-    tests: []
-    notes: ""
+    status: partial
+    spec_ref: "docs/requirements/domains/smt/specs/SMT-005.md"
+    tests:
+      - tests/vv_req_smt_005.rs
+    notes: "Rust side verified with test vectors. Full cross-impl testing with Rue puzzles pending Phase 3."
 
   - id: SMT-006
     section: "Empty Tree Optimization"
