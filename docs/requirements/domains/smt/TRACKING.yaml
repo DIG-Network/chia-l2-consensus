@@ -6,10 +6,11 @@ items:
   - id: SMT-001
     section: "Tree Structure"
     summary: "Fixed depth TREE_DEPTH sparse Merkle tree"
-    status: gap
-    spec_ref: "docs/design/requirements/smt/SMT-001.md"
-    tests: []
-    notes: ""
+    status: implemented
+    spec_ref: "docs/requirements/domains/smt/specs/SMT-001.md"
+    tests:
+      - tests/vv_req_smt_001.rs
+    notes: "TREE_DEPTH=32, EMPTY_LEAF=sha256([0;48]), compute_empty_nodes(), SparseMerkleTree with HashMap storage"
 
   - id: SMT-002
     section: "Slot Assignment"
