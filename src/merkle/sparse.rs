@@ -46,6 +46,18 @@ pub fn compute_slot(pubkey: &[u8; 48]) -> u64 {
     n % (1u64 << TREE_DEPTH)
 }
 
+/// Compute the active leaf value for a validator pubkey.
+///
+/// Active leaf = sha256(pubkey), where pubkey is 48-byte compressed BLS G1 point.
+/// This value is stored in the tree when a validator is registered.
+///
+/// Source: spec-sparse-merkle-tree.md Lines 107-131
+pub fn active_leaf(pubkey: &[u8; 48]) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update(pubkey);
+    hasher.finalize().into()
+}
+
 /// Compute the precomputed empty node hashes for all tree levels.
 ///
 /// - empty_nodes[0] = EMPTY_LEAF (leaf level)
@@ -138,6 +150,25 @@ impl SparseMerkleTree {
         self.leaves.insert(slot, leaf);
         self.recompute_root();
         self.prove(slot)
+    }
+
+    /// Insert a validator by their pubkey.
+    ///
+    /// Computes the slot from pubkey hash and stores active_leaf(pubkey).
+    /// Returns the proof for the new leaf position.
+    pub fn insert_validator(&mut self, pubkey: &[u8; 48]) -> MerkleProof {
+        let slot = compute_slot(pubkey);
+        let leaf = active_leaf(pubkey);
+        self.insert(slot, leaf)
+    }
+
+    /// Remove a validator by their pubkey.
+    ///
+    /// Computes the slot from pubkey hash and removes the leaf.
+    /// Returns the proof for the now-empty slot.
+    pub fn remove_validator(&mut self, pubkey: &[u8; 48]) -> MerkleProof {
+        let slot = compute_slot(pubkey);
+        self.remove(slot)
     }
 
     /// Remove a leaf at the given slot (set to empty).
