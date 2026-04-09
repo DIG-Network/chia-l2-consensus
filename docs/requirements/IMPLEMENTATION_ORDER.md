@@ -12,7 +12,7 @@ by phase. Check boxes as requirements are verified.
 - [x] [SETUP-002](domains/setup/NORMATIVE.md#SETUP-002) — Cargo.toml configuration
 - [x] [SETUP-003](domains/setup/NORMATIVE.md#SETUP-003) — Project structure
 - [x] [SETUP-004](domains/setup/NORMATIVE.md#SETUP-004) — Core dependencies
-- [ ] [SETUP-005](domains/setup/NORMATIVE.md#SETUP-005) — Rue tooling
+- [x] [SETUP-005](domains/setup/NORMATIVE.md#SETUP-005) — Rue tooling
 - [ ] [SETUP-006](domains/setup/NORMATIVE.md#SETUP-006) — Build configuration
 
 ---
