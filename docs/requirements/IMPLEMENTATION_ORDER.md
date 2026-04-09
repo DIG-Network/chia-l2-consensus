@@ -11,8 +11,8 @@ by phase. Check boxes as requirements are verified.
 - [x] [SETUP-001](domains/setup/NORMATIVE.md#SETUP-001) — Rust toolchain
 - [x] [SETUP-002](domains/setup/NORMATIVE.md#SETUP-002) — Cargo.toml configuration
 - [x] [SETUP-003](domains/setup/NORMATIVE.md#SETUP-003) — Project structure
-- [ ] [SETUP-004](domains/setup/NORMATIVE.md#SETUP-004) — Core dependencies
-- [ ] [SETUP-005](domains/setup/NORMATIVE.md#SETUP-005) — Chialisp tooling
+- [x] [SETUP-004](domains/setup/NORMATIVE.md#SETUP-004) — Core dependencies
+- [ ] [SETUP-005](domains/setup/NORMATIVE.md#SETUP-005) — Rue tooling
 - [ ] [SETUP-006](domains/setup/NORMATIVE.md#SETUP-006) — Build configuration
 
 ---
