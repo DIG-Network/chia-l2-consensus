@@ -1,5 +1,20 @@
 # Workflow — commit
 
+**IMPORTANT:** Commit to the repo and push to GitHub after each requirement is validated. Do not batch multiple requirements into a single commit.
+
+## Commit and push procedure
+
+```bash
+# 1. Stage all changes for this requirement
+git add src/merkle/sparse.rs tests/vv_req_smt_001.rs docs/requirements/...
+
+# 2. Commit with proper message format
+git commit -m "feat(smt): implement SMT-001 fixed depth tree structure"
+
+# 3. Push to GitHub
+git push origin <branch-name>
+```
+
 ## Message format
 
 `type(scope): imperative subject`
@@ -39,6 +54,23 @@ chore(deps): update arkworks to 0.4.2
 - Mixing unrelated requirement IDs in one commit
 - Large refactors bundled with feature work
 - Incomplete implementations (prefer `partial` status + separate commit)
+- Batching multiple requirements before pushing
+
+## Push requirements
+
+After committing, **always push to GitHub**:
+
+```bash
+git push origin <branch-name>
+```
+
+This ensures:
+- Progress is backed up remotely
+- CI can validate the changes
+- Work is visible to collaborators
+- Each requirement's completion is tracked in git history
+
+**Do not proceed to the next requirement until the current one is committed and pushed.**
 
 ---
 
