@@ -5,9 +5,11 @@ Compact entrypoint. Use linked **`tree/dt-*.md`** pages for detail.
 ## Session start
 
 1. **`git checkout main`** → **`git pull origin main`** on the repo.
-2. **Pick work** — next `- [ ]` in [`IMPLEMENTATION_ORDER.md`](../requirements/IMPLEMENTATION_ORDER.md), or a scoped task (circuit, puzzle, wire format, indexer).
-3. **Read spec files** — Resource files in [`docs/resources/`](../resources/) contain authoritative specifications with line numbers cited in requirement specs.
-4. **Read requirement spec** — Each requirement has a dedicated spec file in [`docs/requirements/domains/<domain>/specs/`](../requirements/domains/).
+2. **Check GitNexus status** — Run `npx gitnexus status`. If stale, run `npx gitnexus analyze`.
+3. **Pick work** — next `- [ ]` in [`IMPLEMENTATION_ORDER.md`](../requirements/IMPLEMENTATION_ORDER.md), or a scoped task (circuit, puzzle, wire format, indexer).
+4. **Pack context with Repomix** — `npx repomix@latest <scope> -o .repomix/pack-<scope>.xml` for the module you'll edit.
+5. **Read spec files** — Resource files in [`docs/resources/`](../resources/) contain authoritative specifications with line numbers cited in requirement specs.
+6. **Read requirement spec** — Each requirement has a dedicated spec file in [`docs/requirements/domains/<domain>/specs/`](../requirements/domains/).
 
 ## Hard requirements
 
@@ -27,6 +29,7 @@ Compact entrypoint. Use linked **`tree/dt-*.md`** pages for detail.
 | Paths + role | [`tree/dt-paths.md`](tree/dt-paths.md), [`tree/dt-role.md`](tree/dt-role.md) |
 | Rules + sources | [`tree/dt-hard-rules.md`](tree/dt-hard-rules.md), [`tree/dt-authoritative-sources.md`](tree/dt-authoritative-sources.md) |
 | Git | [`tree/dt-git.md`](tree/dt-git.md) |
+| Tools | [`tree/dt-tools.md`](tree/dt-tools.md) (GitNexus + Repomix) |
 | Select | [`tree/dt-wf-select.md`](tree/dt-wf-select.md) |
 | Context | [`tree/dt-wf-gather-context.md`](tree/dt-wf-gather-context.md) |
 | Test first | [`tree/dt-wf-test.md`](tree/dt-wf-test.md) |
