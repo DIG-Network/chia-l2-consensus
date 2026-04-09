@@ -1,5 +1,32 @@
 # Workflow — implement
 
+## Use chia-wallet-sdk first
+
+Before implementing ANY Chia-related functionality, check if `chia-wallet-sdk` or related crates already provide it:
+
+```rust
+// GOOD: Use SDK for singleton handling
+use chia_wallet_sdk::{Singleton, SingletonLauncher};
+use chia_puzzles::singleton::{SingletonStruct, SINGLETON_LAUNCHER_PUZZLE_HASH};
+
+// GOOD: Use SDK for spend bundle creation
+use chia_wallet_sdk::SpendBundle;
+use chia_protocol::{Coin, CoinSpend, Program};
+
+// GOOD: Use SDK for CLVM operations
+use clvmr::{Allocator, run_program};
+use clvm_traits::{ToClvm, FromClvm};
+```
+
+**Check these crates in order:**
+1. `chia-wallet-sdk` — High-level wallet operations
+2. `chia-puzzles` — Standard puzzle implementations
+3. `chia-protocol` — Protocol types and serialization
+4. `clvm-traits` — CLVM type conversions
+5. `clvmr` — Low-level CLVM runtime
+
+Only implement custom logic when SDK functionality is unavailable or insufficient. Document the justification.
+
 ## Implementation by domain
 
 | Domain | Language | Location |

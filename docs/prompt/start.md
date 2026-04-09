@@ -11,10 +11,12 @@ Compact entrypoint. Use linked **`tree/dt-*.md`** pages for detail.
 
 ## Hard requirements
 
+- **Use chia-wallet-sdk first** — Check `chia-wallet-sdk`, `chia-protocol`, `chia-puzzles`, `clvmr` before implementing custom logic.
 - **Resource files are authoritative** — [`docs/resources/`](../resources/) contains the CHIP and spec files. Requirement specs cite these with line numbers.
 - **Cross-implementation consistency** — Rust and Chialisp MUST produce identical results for shared logic (SMT, wire format, hashes).
 - **No trusted setup changes** — Circuit parameters (MAX_SIGNERS, TREE_DEPTH) require new trusted setup ceremony to change.
 - **Test vectors** — All wire formats and hash computations must have test vectors verified in both Rust and Chialisp.
+- **VV tests per requirement** — Each requirement gets a dedicated test file `tests/vv_req_{id}.rs`.
 
 ## Decision tree (short)
 
