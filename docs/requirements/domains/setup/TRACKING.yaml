@@ -40,10 +40,11 @@ items:
   - id: SETUP-005
     section: "Rue Tooling"
     summary: "rue compiler installed, PATH configured, puzzles/compiled/ directory"
-    status: gap
+    status: implemented
     spec_ref: "docs/requirements/domains/setup/specs/SETUP-005.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_setup_005.rs
+    notes: "Rue compiler available; .rue source files in puzzles/; compiled/ dir ready; puzzle implementations come in Phase 3 (NET/REG/CHK)"
 
   - id: SETUP-006
     section: "Build Configuration"
