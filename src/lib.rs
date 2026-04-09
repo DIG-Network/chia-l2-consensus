@@ -41,5 +41,8 @@ pub use prover::{
     GROTH16_PROOF_SIZE,
 };
 
+// Groth16 circuit (spec-groth16-circuit.md)
+pub use prover::{ConsensusCircuit, MAX_SIGNERS};
+
 // Re-export PublicKey type (48-byte BLS public key)
 // TODO: Use proper BLS pubkey type from chia-bls when needed

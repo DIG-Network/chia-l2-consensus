@@ -6,10 +6,11 @@ items:
   - id: CIR-001
     section: "Circuit Statement"
     summary: "Prove membership, aggregation, and majority"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/circuit/CIR-001.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_cir_001.rs
+    notes: "ConsensusCircuit struct in src/prover/circuit.rs with public inputs and private witnesses"
 
   - id: CIR-002
     section: "Constraints"

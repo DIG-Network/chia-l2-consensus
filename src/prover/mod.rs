@@ -7,7 +7,7 @@ mod prove;
 mod serialize;
 mod setup;
 
-pub use circuit::ConsensusCircuit;
+pub use circuit::{ConsensusCircuit, MAX_SIGNERS};
 pub use prove::generate_proof;
 pub use serialize::{
     bytes_to_scalar, compute_checkpoint_message, compute_membership_announcement_message,
