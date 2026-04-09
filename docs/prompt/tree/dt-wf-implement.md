@@ -31,17 +31,51 @@ Only implement custom logic when SDK functionality is unavailable or insufficien
 
 | Domain | Language | Location |
 |--------|----------|----------|
-| SMT | Rust | `src/sparse_merkle_tree.rs` |
-| Wire | Rust | `src/wire/` |
-| Circuit | Rust (arkworks) | `src/circuit/` |
-| Network Coin | Chialisp | `puzzles/network_coin_inner.clsp` |
-| Registration Coin | Chialisp | `puzzles/registration_coin.clsp` |
-| Checkpoint | Chialisp | `puzzles/checkpoint_inner.clsp` |
+| SMT | Rust | `src/merkle/sparse.rs` |
+| Wire | Rust | `src/prover/serialize.rs` |
+| Circuit | Rust (arkworks) | `src/prover/circuit.rs` |
+| Network Coin | Rue | `puzzles/network_coin_inner.rue` |
+| Registration Coin | Rue | `puzzles/registration_coin.rue` |
+| Checkpoint | Rue | `puzzles/checkpoint_inner.rue` |
 | Indexer | Rust | `src/indexer/` |
+
+## Rue compilation requirements
+
+**All `.rue` files MUST compile without errors or warnings before moving on.**
+
+```bash
+# Verify all Rue puzzles compile
+rue build puzzles/network_coin_inner.rue
+rue build puzzles/registration_coin.rue
+rue build puzzles/checkpoint_inner.rue
+
+# Or build all at once
+for f in puzzles/*.rue; do rue build "$f" || exit 1; done
+```
+
+### Fixing Rue errors
+
+1. **Undeclared symbol** — Import the symbol or define it
+2. **Type mismatch** — Use explicit casts or fix the type
+3. **Expected symbol, but found type** — Use lowercase function calls, not type names
+
+### Rue-specific patterns
+
+```rust
+// Use condition functions, not constructors
+assert_coin_announcement(sha256(coin_id + message))  // GOOD
+AssertCoinAnnouncement(...)  // BAD - this is a type
+
+// Use proper types
+let hash: Bytes32 = sha256(data);
+let pk: PublicKey = validator_pubkey;
+```
+
+**Do not proceed to the next requirement if any Rue file fails to compile.**
 
 ## Critical consistency points
 
-### SMT (Rust ↔ Chialisp)
+### SMT (Rust ↔ Rue)
 
 - Slot: `first_8_bytes_be(sha256(pubkey)) mod 2^32`
 - Active leaf: `sha256(pubkey)`

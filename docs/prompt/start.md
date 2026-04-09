@@ -12,10 +12,12 @@ Compact entrypoint. Use linked **`tree/dt-*.md`** pages for detail.
 ## Hard requirements
 
 - **Use chia-wallet-sdk first** — Check `chia-wallet-sdk`, `chia-protocol`, `chia-puzzles`, `clvmr` before implementing custom logic.
+- **On-chain puzzles MUST use Rue** — All puzzles in `puzzles/*.rue` use [Rue](https://rue-lang.dev/), not Chialisp.
+- **Rue files MUST compile** — Run `rue build puzzles/<file>.rue` and fix all errors/warnings before proceeding.
 - **Resource files are authoritative** — [`docs/resources/`](../resources/) contains the CHIP and spec files. Requirement specs cite these with line numbers.
-- **Cross-implementation consistency** — Rust and Chialisp MUST produce identical results for shared logic (SMT, wire format, hashes).
+- **Cross-implementation consistency** — Rust and Rue MUST produce identical results for shared logic (SMT, wire format, hashes).
 - **No trusted setup changes** — Circuit parameters (MAX_SIGNERS, TREE_DEPTH) require new trusted setup ceremony to change.
-- **Test vectors** — All wire formats and hash computations must have test vectors verified in both Rust and Chialisp.
+- **Test vectors** — All wire formats and hash computations must have test vectors verified in both Rust and Rue.
 - **VV tests per requirement** — Each requirement gets a dedicated test file `tests/vv_req_{id}.rs`.
 
 ## Decision tree (short)
@@ -39,8 +41,8 @@ Compact entrypoint. Use linked **`tree/dt-*.md`** pages for detail.
 
 | Component | Technology |
 |-----------|------------|
-| Off-chain logic | Rust (arkworks for ZK, clvm_rs for CLVM) |
-| On-chain puzzles | Chialisp / Rue |
+| Off-chain logic | Rust (arkworks for ZK, clvmr for CLVM) |
+| On-chain puzzles | Rue (compiles to CLVM) |
 | ZK proofs | Groth16 on BLS12-381 |
 | Signatures | BLS aggregate signatures |
 | Data structure | Sparse Merkle Tree (depth 32) |
