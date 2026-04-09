@@ -35,7 +35,10 @@ pub use error::{ConsensusError, ConsensusResult};
 pub use state::{CheckpointSingletonState, ValidatorSet};
 
 // Wire format functions and constants (spec-wire-format.md)
-pub use prover::{compute_checkpoint_message, G1_COMPRESSED_SIZE, G2_COMPRESSED_SIZE};
+pub use prover::{
+    compute_checkpoint_message, ClvmProof, G1_COMPRESSED_SIZE, G2_COMPRESSED_SIZE,
+    GROTH16_PROOF_SIZE,
+};
 
 // Re-export PublicKey type (48-byte BLS public key)
 // TODO: Use proper BLS pubkey type from chia-bls when needed
