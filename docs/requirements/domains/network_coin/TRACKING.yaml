@@ -1,0 +1,44 @@
+domain_id: network_coin
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: NET-001
+    section: "Singleton Identity"
+    summary: "Network coin is singleton, one per L2 network"
+    status: gap
+    spec_ref: "docs/design/requirements/network_coin/NET-001.md"
+    tests: []
+    notes: ""
+
+  - id: NET-002
+    section: "Registration Flow"
+    summary: "AggSigMe verification for registration"
+    status: gap
+    spec_ref: "docs/design/requirements/network_coin/NET-002.md"
+    tests: []
+    notes: ""
+
+  - id: NET-003
+    section: "Registration Flow"
+    summary: "Create registration coin with correct puzzle hash"
+    status: gap
+    spec_ref: "docs/design/requirements/network_coin/NET-003.md"
+    tests: []
+    notes: ""
+
+  - id: NET-004
+    section: "Self-Recreation"
+    summary: "Recreate network coin after registration"
+    status: gap
+    spec_ref: "docs/design/requirements/network_coin/NET-004.md"
+    tests: []
+    notes: ""
+
+  - id: NET-005
+    section: "Driver Convention"
+    summary: "Include pubkey memo for indexer"
+    status: gap
+    spec_ref: "docs/design/requirements/network_coin/NET-005.md"
+    tests: []
+    notes: ""

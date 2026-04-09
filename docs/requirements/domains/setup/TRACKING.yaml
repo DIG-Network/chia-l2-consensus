@@ -22,10 +22,11 @@ items:
   - id: SETUP-003
     section: "Project Structure"
     summary: "Directory layout per spec-consensus-crate.md"
-    status: gap
+    status: implemented
     spec_ref: "docs/requirements/domains/setup/specs/SETUP-003.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_setup_003.rs
+    notes: "All modules created; cargo check and cargo test pass"
 
   - id: SETUP-004
     section: "Core Dependencies"
@@ -36,8 +37,8 @@ items:
     notes: ""
 
   - id: SETUP-005
-    section: "Chialisp Tooling"
-    summary: "run, brun, include paths for puzzles"
+    section: "Rue Tooling"
+    summary: "rue compiler installed, PATH configured, puzzles/compiled/ directory"
     status: gap
     spec_ref: "docs/requirements/domains/setup/specs/SETUP-005.md"
     tests: []

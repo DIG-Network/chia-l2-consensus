@@ -1,0 +1,52 @@
+domain_id: circuit
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: CIR-001
+    section: "Circuit Statement"
+    summary: "Prove membership, aggregation, and majority"
+    status: gap
+    spec_ref: "docs/design/requirements/circuit/CIR-001.md"
+    tests: []
+    notes: ""
+
+  - id: CIR-002
+    section: "Constraints"
+    summary: "Merkle membership verification per signer"
+    status: gap
+    spec_ref: "docs/design/requirements/circuit/CIR-002.md"
+    tests: []
+    notes: ""
+
+  - id: CIR-003
+    section: "Constraints"
+    summary: "G1 sum equals agg_signers"
+    status: gap
+    spec_ref: "docs/design/requirements/circuit/CIR-003.md"
+    tests: []
+    notes: ""
+
+  - id: CIR-004
+    section: "Constraints"
+    summary: "Majority threshold 2k > count"
+    status: gap
+    spec_ref: "docs/design/requirements/circuit/CIR-004.md"
+    tests: []
+    notes: ""
+
+  - id: CIR-005
+    section: "Public Inputs"
+    summary: "6 public inputs in fixed order"
+    status: gap
+    spec_ref: "docs/design/requirements/circuit/CIR-005.md"
+    tests: []
+    notes: ""
+
+  - id: CIR-006
+    section: "Parameters"
+    summary: "MAX_SIGNERS and TREE_DEPTH fixed at setup"
+    status: gap
+    spec_ref: "docs/design/requirements/circuit/CIR-006.md"
+    tests: []
+    notes: ""

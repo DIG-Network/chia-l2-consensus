@@ -10,7 +10,7 @@ by phase. Check boxes as requirements are verified.
 ### Setup
 - [x] [SETUP-001](domains/setup/NORMATIVE.md#SETUP-001) — Rust toolchain
 - [x] [SETUP-002](domains/setup/NORMATIVE.md#SETUP-002) — Cargo.toml configuration
-- [ ] [SETUP-003](domains/setup/NORMATIVE.md#SETUP-003) — Project structure
+- [x] [SETUP-003](domains/setup/NORMATIVE.md#SETUP-003) — Project structure
 - [ ] [SETUP-004](domains/setup/NORMATIVE.md#SETUP-004) — Core dependencies
 - [ ] [SETUP-005](domains/setup/NORMATIVE.md#SETUP-005) — Chialisp tooling
 - [ ] [SETUP-006](domains/setup/NORMATIVE.md#SETUP-006) — Build configuration
@@ -122,7 +122,7 @@ by phase. Check boxes as requirements are verified.
 
 | Phase | Domain | Requirements | Status |
 |-------|--------|--------------|--------|
-| 0 | Setup | 6 | 2/6 |
+| 0 | Setup | 6 | 3/6 |
 | 1 | SMT | 6 | 0/6 |
 | 1 | Wire | 6 | 0/6 |
 | 2 | Circuit | 6 | 0/6 |
@@ -133,4 +133,4 @@ by phase. Check boxes as requirements are verified.
 | 5 | Deployment | 5 | 0/5 |
 | 5 | Validator | 5 | 0/5 |
 | 6 | Security | 6 | 0/6 |
-| **Total** | | **63** | **2/63** |
+| **Total** | | **63** | **3/63** |

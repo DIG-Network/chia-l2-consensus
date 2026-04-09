@@ -1,0 +1,52 @@
+domain_id: smt
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: SMT-001
+    section: "Tree Structure"
+    summary: "Fixed depth TREE_DEPTH sparse Merkle tree"
+    status: gap
+    spec_ref: "docs/design/requirements/smt/SMT-001.md"
+    tests: []
+    notes: ""
+
+  - id: SMT-002
+    section: "Slot Assignment"
+    summary: "Deterministic slot from sha256(pubkey)"
+    status: gap
+    spec_ref: "docs/design/requirements/smt/SMT-002.md"
+    tests: []
+    notes: ""
+
+  - id: SMT-003
+    section: "Leaf Values"
+    summary: "sha256(pubkey) or EMPTY_LEAF_HASH"
+    status: gap
+    spec_ref: "docs/design/requirements/smt/SMT-003.md"
+    tests: []
+    notes: ""
+
+  - id: SMT-004
+    section: "Proof Format"
+    summary: "TREE_DEPTH siblings, left-first ordering"
+    status: gap
+    spec_ref: "docs/design/requirements/smt/SMT-004.md"
+    tests: []
+    notes: ""
+
+  - id: SMT-005
+    section: "Cross-Implementation"
+    summary: "Rust and Chialisp produce identical roots"
+    status: gap
+    spec_ref: "docs/design/requirements/smt/SMT-005.md"
+    tests: []
+    notes: ""
+
+  - id: SMT-006
+    section: "Empty Tree Optimization"
+    summary: "Precomputed empty subtree hashes"
+    status: gap
+    spec_ref: "docs/design/requirements/smt/SMT-006.md"
+    tests: []
+    notes: ""

@@ -1,0 +1,106 @@
+schema_version: 1
+
+status_values:
+  active: "Requirements in use for chia-l2-consensus implementation"
+  planned: "Scoped; not yet verified in production"
+
+domains:
+  - id: network_coin
+    title: "Network Coin"
+    summary: "Singleton gatekeeper for validator registration. Creates registration coins with approved puzzle hash."
+    status: active
+    paths:
+      normative: domains/network_coin/NORMATIVE.md
+      verification: domains/network_coin/VERIFICATION.md
+      tracking: domains/network_coin/TRACKING.yaml
+      requirement_specs: ../design/requirements/network_coin
+
+  - id: registration_coin
+    title: "Registration Coin"
+    summary: "Validator collateral and identity. Lineage-verified. Spendable only with non-membership proof."
+    status: active
+    paths:
+      normative: domains/registration_coin/NORMATIVE.md
+      verification: domains/registration_coin/VERIFICATION.md
+      tracking: domains/registration_coin/TRACKING.yaml
+      requirement_specs: ../design/requirements/registration_coin
+
+  - id: checkpoint
+    title: "Checkpoint Singleton"
+    summary: "On-chain state authority. Tracks epoch, state root, validator set. Two spend paths."
+    status: active
+    paths:
+      normative: domains/checkpoint/NORMATIVE.md
+      verification: domains/checkpoint/VERIFICATION.md
+      tracking: domains/checkpoint/TRACKING.yaml
+      requirement_specs: ../design/requirements/checkpoint
+
+  - id: circuit
+    title: "Groth16 Circuit"
+    summary: "ZK circuit proving membership and majority. BLS12-381. Arkworks implementation."
+    status: active
+    paths:
+      normative: domains/circuit/NORMATIVE.md
+      verification: domains/circuit/VERIFICATION.md
+      tracking: domains/circuit/TRACKING.yaml
+      requirement_specs: ../design/requirements/circuit
+
+  - id: smt
+    title: "Sparse Merkle Tree"
+    summary: "Fixed-depth tree for validator set. Deterministic slot assignment. Membership and non-membership proofs."
+    status: active
+    paths:
+      normative: domains/smt/NORMATIVE.md
+      verification: domains/smt/VERIFICATION.md
+      tracking: domains/smt/TRACKING.yaml
+      requirement_specs: ../design/requirements/smt
+
+  - id: wire
+    title: "Wire Format"
+    summary: "Byte-level serialization. Message hashes. Point encoding. Cross-implementation compatibility."
+    status: active
+    paths:
+      normative: domains/wire/NORMATIVE.md
+      verification: domains/wire/VERIFICATION.md
+      tracking: domains/wire/TRACKING.yaml
+      requirement_specs: ../design/requirements/wire
+
+  - id: indexer
+    title: "Indexer"
+    summary: "Off-chain state tracker. Lineage verification. Merkle root consistency. Registration coin detection."
+    status: active
+    paths:
+      normative: domains/indexer/NORMATIVE.md
+      verification: domains/indexer/VERIFICATION.md
+      tracking: domains/indexer/TRACKING.yaml
+      requirement_specs: ../design/requirements/indexer
+
+  - id: security
+    title: "Security"
+    summary: "Security assumptions. Failure modes. Recovery procedures. Threat model."
+    status: active
+    paths:
+      normative: domains/security/NORMATIVE.md
+      verification: domains/security/VERIFICATION.md
+      tracking: domains/security/TRACKING.yaml
+      requirement_specs: ../design/requirements/security
+
+  - id: deployment
+    title: "Deployment"
+    summary: "Trusted setup. Genesis coin. Network configuration. On-chain verification."
+    status: active
+    paths:
+      normative: domains/deployment/NORMATIVE.md
+      verification: domains/deployment/VERIFICATION.md
+      tracking: domains/deployment/TRACKING.yaml
+      requirement_specs: ../design/requirements/deployment
+
+  - id: validator
+    title: "Validator Operations"
+    summary: "Onboarding flow. Key management. Signing protocol. Exit procedures."
+    status: active
+    paths:
+      normative: domains/validator/NORMATIVE.md
+      verification: domains/validator/VERIFICATION.md
+      tracking: domains/validator/TRACKING.yaml
+      requirement_specs: ../design/requirements/validator

@@ -1,0 +1,52 @@
+domain_id: security
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: SEC-001
+    section: "Majority Assumption"
+    summary: "Honest majority required for safety"
+    status: gap
+    spec_ref: "docs/design/requirements/security/SEC-001.md"
+    tests: []
+    notes: ""
+
+  - id: SEC-002
+    section: "Two-Check Completeness"
+    summary: "ZK proof + BLS signature both required"
+    status: gap
+    spec_ref: "docs/design/requirements/security/SEC-002.md"
+    tests: []
+    notes: ""
+
+  - id: SEC-003
+    section: "Collateral Security"
+    summary: "Collateral locked until non-membership proven"
+    status: gap
+    spec_ref: "docs/design/requirements/security/SEC-003.md"
+    tests: []
+    notes: ""
+
+  - id: SEC-004
+    section: "Trusted Setup"
+    summary: "MPC ceremony required, no single-party"
+    status: gap
+    spec_ref: "docs/design/requirements/security/SEC-004.md"
+    tests: []
+    notes: ""
+
+  - id: SEC-005
+    section: "Lineage Enforcement"
+    summary: "Indexer verifies network coin parentage"
+    status: gap
+    spec_ref: "docs/design/requirements/security/SEC-005.md"
+    tests: []
+    notes: ""
+
+  - id: SEC-006
+    section: "Epoch Replay"
+    summary: "Epoch prevents announcement replay"
+    status: gap
+    spec_ref: "docs/design/requirements/security/SEC-006.md"
+    tests: []
+    notes: ""

@@ -1,0 +1,44 @@
+domain_id: indexer
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: IDX-001
+    section: "State Tracking"
+    summary: "Track network coin, checkpoint, registrations, history"
+    status: gap
+    spec_ref: "docs/design/requirements/indexer/IDX-001.md"
+    tests: []
+    notes: ""
+
+  - id: IDX-002
+    section: "Lineage Verification"
+    summary: "Verify parent is network coin spend"
+    status: gap
+    spec_ref: "docs/design/requirements/indexer/IDX-002.md"
+    tests: []
+    notes: ""
+
+  - id: IDX-003
+    section: "Merkle Consistency"
+    summary: "Verify computed root matches on-chain"
+    status: gap
+    spec_ref: "docs/design/requirements/indexer/IDX-003.md"
+    tests: []
+    notes: ""
+
+  - id: IDX-004
+    section: "Reorg Handling"
+    summary: "Rollback and re-index on chain reorg"
+    status: gap
+    spec_ref: "docs/design/requirements/indexer/IDX-004.md"
+    tests: []
+    notes: ""
+
+  - id: IDX-005
+    section: "Persistent Cache"
+    summary: "JSON cache for fast restarts"
+    status: gap
+    spec_ref: "docs/design/requirements/indexer/IDX-005.md"
+    tests: []
+    notes: ""

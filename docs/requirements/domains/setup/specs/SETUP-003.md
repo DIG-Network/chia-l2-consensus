@@ -7,7 +7,7 @@
 
 ## Summary
 
-The project must follow the directory structure defined in spec-consensus-crate.md: `src/` for Rust code organized into modules, `puzzles/` for Chialisp files, and `tests/` for integration tests.
+The project must follow the directory structure defined in spec-consensus-crate.md: `src/` for Rust code organized into modules, `puzzles/` for Rue source files (`.rue`), and `tests/` for integration tests.
 
 ## Specification
 
@@ -45,11 +45,10 @@ chia-l2-consensus/
 │       ├── reorg.rs              # Reorg handling
 │       └── cache.rs              # IndexerCache
 ├── puzzles/
-│   ├── include/                  # Chialisp include files
-│   │   └── *.clib
-│   ├── network_coin_inner.clsp
-│   ├── registration_coin.clsp
-│   └── checkpoint_inner.clsp
+│   ├── compiled/                 # Compiled CLVM output
+│   ├── network_coin_inner.rue    # Network coin inner puzzle (Rue)
+│   ├── registration_coin.rue     # Registration coin puzzle (Rue)
+│   └── checkpoint_inner.rue      # Checkpoint singleton inner puzzle (Rue)
 ├── tests/
 │   └── integration.rs            # End-to-end tests
 └── docs/
