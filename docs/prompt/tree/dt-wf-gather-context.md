@@ -1,5 +1,18 @@
 # Workflow — gather context
 
+## 0. Pack with Repomix (first!)
+
+Before reading files manually, pack the relevant scope:
+
+```bash
+# From repo root - pack the module you'll work on
+npx repomix@latest src/merkle -o .repomix/pack-merkle.xml
+npx repomix@latest src/prover -o .repomix/pack-prover.xml
+npx repomix@latest puzzles -o .repomix/pack-puzzles.xml
+```
+
+Read the packed context before proceeding. See [`dt-tools.md`](dt-tools.md) for full Repomix workflow.
+
 ## 1. Requirements trace (when a REQ-ID applies)
 
 1. **`NORMATIVE.md`** — Read the rule; note the link to the spec file.

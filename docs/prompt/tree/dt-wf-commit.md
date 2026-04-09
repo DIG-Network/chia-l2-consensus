@@ -5,15 +5,23 @@
 ## Commit and push procedure
 
 ```bash
-# 1. Stage all changes for this requirement
+# 1. Update GitNexus index after code changes
+npx gitnexus analyze
+
+# 2. Optionally check scope vs intent
+npx gitnexus detect_changes
+
+# 3. Stage all changes for this requirement
 git add src/merkle/sparse.rs tests/vv_req_smt_001.rs docs/requirements/...
 
-# 2. Commit with proper message format
+# 4. Commit with proper message format
 git commit -m "feat(smt): implement SMT-001 fixed depth tree structure"
 
-# 3. Push to GitHub
+# 5. Push to GitHub
 git push origin <branch-name>
 ```
+
+See [`dt-tools.md`](dt-tools.md) for full GitNexus workflow.
 
 ## Message format
 

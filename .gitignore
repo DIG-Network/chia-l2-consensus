@@ -9,3 +9,6 @@
 # OS
 .DS_Store
 Thumbs.db
+
+# Repomix context packs (local only)
+.repomix/

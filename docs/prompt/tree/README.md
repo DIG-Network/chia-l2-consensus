@@ -9,6 +9,7 @@ One file ≈ one decision. Master flow: [`../prompt.md`](../prompt.md) and [`../
 | [`dt-hard-rules.md`](dt-hard-rules.md) | Non-negotiables |
 | [`dt-authoritative-sources.md`](dt-authoritative-sources.md) | Spec + requirements layout |
 | [`dt-git.md`](dt-git.md) | Sync, commit, push |
+| [`dt-tools.md`](dt-tools.md) | GitNexus + Repomix tools |
 | **Workflow** | |
 | [`dt-wf-select.md`](dt-wf-select.md) | Choose requirement or task |
 | [`dt-wf-gather-context.md`](dt-wf-gather-context.md) | Specs, resource files, cross-references |
@@ -25,4 +26,4 @@ One file ≈ one decision. Master flow: [`../prompt.md`](../prompt.md) and [`../
 1. Open [`../start.md`](../start.md).
 2. Walk **`dt-*.md`** in workflow order; each page ends with **Continue the tree**.
 
-**Convention chain:** `dt-paths` → `dt-role` → `dt-hard-rules` → `dt-authoritative-sources` → `dt-git` → `dt-wf-select` → `dt-wf-gather-context` → `dt-wf-test` → `dt-wf-implement` → `dt-wf-validate` → `dt-wf-update-tracking` → `dt-wf-commit`.
+**Convention chain:** `dt-paths` → `dt-role` → `dt-hard-rules` → `dt-authoritative-sources` → `dt-git` → `dt-tools` → `dt-wf-select` → `dt-wf-gather-context` → `dt-wf-test` → `dt-wf-implement` → `dt-wf-validate` → `dt-wf-update-tracking` → `dt-wf-commit`.

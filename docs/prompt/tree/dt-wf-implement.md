@@ -1,5 +1,24 @@
 # Workflow — implement
 
+## Check GitNexus impact first
+
+Before editing any **named symbol** (function, struct, method, export):
+
+```bash
+# Check if index is fresh
+npx gitnexus status
+
+# If stale, rebuild
+npx gitnexus analyze
+```
+
+Then check impact:
+- **`gitnexus_impact`** on the symbol (direction: upstream)
+- If impact is **high/critical**, gather more context with `gitnexus_context`
+- For **renames**, use `gitnexus_rename` with `dry_run: true` first
+
+See [`dt-tools.md`](dt-tools.md) for full GitNexus workflow.
+
 ## Use chia-wallet-sdk first
 
 Before implementing ANY Chia-related functionality, check if `chia-wallet-sdk` or related crates already provide it:
