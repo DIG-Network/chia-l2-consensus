@@ -1,0 +1,44 @@
+domain_id: deployment
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: DEP-001
+    section: "Trusted Setup"
+    summary: "MPC ceremony for PK and VK generation"
+    status: gap
+    spec_ref: "docs/design/requirements/deployment/DEP-001.md"
+    tests: []
+    notes: ""
+
+  - id: DEP-002
+    section: "Genesis Coin"
+    summary: "Derive launcher IDs from shared genesis"
+    status: gap
+    spec_ref: "docs/design/requirements/deployment/DEP-002.md"
+    tests: []
+    notes: ""
+
+  - id: DEP-003
+    section: "Initial State"
+    summary: "epoch=0, count=0, empty merkle root"
+    status: gap
+    spec_ref: "docs/design/requirements/deployment/DEP-003.md"
+    tests: []
+    notes: ""
+
+  - id: DEP-004
+    section: "VK Verification"
+    summary: "Decurry and compare VK after deployment"
+    status: gap
+    spec_ref: "docs/design/requirements/deployment/DEP-004.md"
+    tests: []
+    notes: ""
+
+  - id: DEP-005
+    section: "Artifact Publication"
+    summary: "Publish config, VK, transcript, source"
+    status: gap
+    spec_ref: "docs/design/requirements/deployment/DEP-005.md"
+    tests: []
+    notes: ""

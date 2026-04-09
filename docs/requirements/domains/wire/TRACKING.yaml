@@ -1,0 +1,52 @@
+domain_id: wire
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: WIRE-001
+    section: "Checkpoint Message"
+    summary: "sha256 of new state fields, integers big-endian"
+    status: gap
+    spec_ref: "docs/design/requirements/wire/WIRE-001.md"
+    tests: []
+    notes: ""
+
+  - id: WIRE-002
+    section: "Point Encoding"
+    summary: "G1 48 bytes, G2 96 bytes, ZCash compressed"
+    status: gap
+    spec_ref: "docs/design/requirements/wire/WIRE-002.md"
+    tests: []
+    notes: ""
+
+  - id: WIRE-003
+    section: "Groth16 Proof"
+    summary: "192 bytes: A(48) + B(96) + C(48)"
+    status: gap
+    spec_ref: "docs/design/requirements/wire/WIRE-003.md"
+    tests: []
+    notes: ""
+
+  - id: WIRE-004
+    section: "Membership Announcement"
+    summary: "membership prefix + epoch + pubkey + is_member"
+    status: gap
+    spec_ref: "docs/design/requirements/wire/WIRE-004.md"
+    tests: []
+    notes: ""
+
+  - id: WIRE-005
+    section: "Registration Message"
+    summary: "register prefix + pubkey for AGG_SIG_ME"
+    status: gap
+    spec_ref: "docs/design/requirements/wire/WIRE-005.md"
+    tests: []
+    notes: ""
+
+  - id: WIRE-006
+    section: "scalar() Function"
+    summary: "sha256 as u256 mod r for circuit inputs"
+    status: gap
+    spec_ref: "docs/design/requirements/wire/WIRE-006.md"
+    tests: []
+    notes: ""

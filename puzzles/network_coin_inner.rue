@@ -1,0 +1,30 @@
+// network_coin_inner.rue
+// See spec-network-coin.md for specification
+// Full driver code: spec-network-coin.md — Driver Code (Rust)
+
+fn main(
+    REGISTRATION_COIN_MOD_HASH: Bytes32,
+    COLLATERAL_AMOUNT: Int,
+    CHECKPOINT_SINGLETON_ID: Bytes32,
+
+    new_validator_pubkey: PublicKey,
+    conditions: List<Condition>,
+) -> List<Condition> {
+
+    // Registration coin puzzle hash - must match spec-registration-coin
+    // and the lineage check in spec-indexer
+    let registration_coin_puzzle_hash = curry_hash(
+        REGISTRATION_COIN_MOD_HASH,
+        new_validator_pubkey,
+        CHECKPOINT_SINGLETON_ID,
+    );
+
+    // Registration message format per spec-wire-format — Registration Message Format
+    let registration_message = sha256("register" + new_validator_pubkey);
+
+    conditions + [
+        AggSigMe(new_validator_pubkey, registration_message),
+        CreateCoin(registration_coin_puzzle_hash, COLLATERAL_AMOUNT),
+        CreateCoin(MY_PUZZLE_HASH, MY_AMOUNT),
+    ]
+}

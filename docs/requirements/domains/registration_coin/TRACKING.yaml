@@ -1,0 +1,52 @@
+domain_id: registration_coin
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: REG-001
+    section: "Puzzle Structure"
+    summary: "Curried with VALIDATOR_PUBKEY and CHECKPOINT_SINGLETON_ID"
+    status: gap
+    spec_ref: "docs/design/requirements/registration_coin/REG-001.md"
+    tests: []
+    notes: ""
+
+  - id: REG-002
+    section: "Lineage Verification"
+    summary: "Parent must be network coin spend"
+    status: gap
+    spec_ref: "docs/design/requirements/registration_coin/REG-002.md"
+    tests: []
+    notes: ""
+
+  - id: REG-003
+    section: "Collateral Lock"
+    summary: "Locked until non-membership announcement"
+    status: gap
+    spec_ref: "docs/design/requirements/registration_coin/REG-003.md"
+    tests: []
+    notes: ""
+
+  - id: REG-004
+    section: "Spend Conditions"
+    summary: "Assert checkpoint announcement for non-membership"
+    status: gap
+    spec_ref: "docs/design/requirements/registration_coin/REG-004.md"
+    tests: []
+    notes: ""
+
+  - id: REG-005
+    section: "Spend Conditions"
+    summary: "Return collateral to specified destination"
+    status: gap
+    spec_ref: "docs/design/requirements/registration_coin/REG-005.md"
+    tests: []
+    notes: ""
+
+  - id: REG-006
+    section: "Epoch Replay Protection"
+    summary: "Verify epoch matches current checkpoint"
+    status: gap
+    spec_ref: "docs/design/requirements/registration_coin/REG-006.md"
+    tests: []
+    notes: ""

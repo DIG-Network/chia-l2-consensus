@@ -20,7 +20,7 @@
 
 ## §3 Project Structure
 
-<a id="SETUP-003"></a>**SETUP-003** The project MUST follow the directory structure defined in spec-consensus-crate.md: `src/` for Rust code organized into modules (client, puzzles, merkle, prover, indexer), `puzzles/` for Chialisp files, and `tests/` for integration tests.
+<a id="SETUP-003"></a>**SETUP-003** The project MUST follow the directory structure defined in spec-consensus-crate.md: `src/` for Rust code organized into modules (client, puzzles, merkle, prover, indexer), `puzzles/` for Rue source files (`.rue`), and `tests/` for integration tests.
 > **Spec:** [`SETUP-003.md`](specs/SETUP-003.md)
 
 ---
@@ -32,9 +32,9 @@
 
 ---
 
-## §5 Chialisp Tooling
+## §5 Rue Tooling
 
-<a id="SETUP-005"></a>**SETUP-005** Developers MUST have Chialisp tooling installed (`run`, `brun`) for compiling and testing puzzles. Include paths MUST be configured for `puzzles/include/`.
+<a id="SETUP-005"></a>**SETUP-005** Developers MUST have Rue tooling installed (`rue` compiler from [rue-lang.dev](https://rue-lang.dev/)) for compiling puzzles. The `rue` command MUST be available in PATH. Compiled CLVM output goes to `puzzles/compiled/`.
 > **Spec:** [`SETUP-005.md`](specs/SETUP-005.md)
 
 ---

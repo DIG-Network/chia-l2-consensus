@@ -1,0 +1,44 @@
+domain_id: validator
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: VAL-001
+    section: "Key Generation"
+    summary: "Generate and backup BLS keypair"
+    status: gap
+    spec_ref: "docs/design/requirements/validator/VAL-001.md"
+    tests: []
+    notes: ""
+
+  - id: VAL-002
+    section: "Registration"
+    summary: "Spend network coin with collateral"
+    status: gap
+    spec_ref: "docs/design/requirements/validator/VAL-002.md"
+    tests: []
+    notes: ""
+
+  - id: VAL-003
+    section: "Signing Protocol"
+    summary: "Sign checkpoint messages correctly"
+    status: gap
+    spec_ref: "docs/design/requirements/validator/VAL-003.md"
+    tests: []
+    notes: ""
+
+  - id: VAL-004
+    section: "Voluntary Exit"
+    summary: "Signal, wait for exclusion, recover collateral"
+    status: gap
+    spec_ref: "docs/design/requirements/validator/VAL-004.md"
+    tests: []
+    notes: ""
+
+  - id: VAL-005
+    section: "Forced Exit"
+    summary: "Majority vote exclusion and slashing"
+    status: gap
+    spec_ref: "docs/design/requirements/validator/VAL-005.md"
+    tests: []
+    notes: ""

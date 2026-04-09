@@ -1,0 +1,30 @@
+// registration_coin.rue
+// See spec-registration-coin.md for specification
+// Full driver code: spec-registration-coin.md — Driver Code (Rust)
+
+fn main(
+    VALIDATOR_PUBKEY: PublicKey,
+    CHECKPOINT_SINGLETON_ID: Bytes32,
+
+    epoch: Int,
+    collateral_destination: Bytes32,
+    collateral_amount: Int,
+    conditions: List<Condition>,
+) -> List<Condition> {
+
+    // Announcement format per spec-wire-format — Membership Announcement Format
+    // epoch encoded as 8-byte big-endian u64
+    // is_member = 0 (0x00) means not a member
+    let expected_announcement = sha256(
+        "membership" + int_to_8_bytes_be(epoch) + VALIDATOR_PUBKEY + 0
+    );
+
+    // CHECKPOINT_SINGLETON_ID is the current coin ID, not the launcher ID
+    // per spec-wire-format — Common Mistakes: Coin ID vs launcher ID
+    conditions + [
+        AssertCoinAnnouncement(
+            sha256(CHECKPOINT_SINGLETON_ID + expected_announcement)
+        ),
+        CreateCoin(collateral_destination, collateral_amount),
+    ]
+}
