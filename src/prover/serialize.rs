@@ -2,6 +2,9 @@
 //!
 //! See [spec-wire-format.md](../../docs/resources/spec-wire-format.md).
 
+use ark_bls12_381::Fr;
+use ark_ff::PrimeField;
+use num_bigint::BigUint;
 use sha2::{Digest, Sha256};
 
 // ============================================================================
@@ -175,4 +178,34 @@ pub fn compute_registration_message(pubkey: &[u8; 48]) -> [u8; 32] {
 
     // Total: 56 bytes input, 32 bytes output
     hasher.finalize().into()
+}
+
+// ============================================================================
+// WIRE-006: scalar() Function
+// ============================================================================
+
+/// Convert bytes to a BLS12-381 scalar field element.
+///
+/// The `scalar()` function converts public input values to BLS12-381 scalar
+/// field elements. It is used in both off-chain proof generation and on-chain
+/// Rue puzzle to compute the linear combination of IC points for Groth16
+/// verification.
+///
+/// Formula: `scalar(bytes) = SHA-256(bytes) interpreted as 256-bit big-endian integer, mod r`
+///
+/// Where `r` is the BLS12-381 scalar field order:
+/// `r = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`
+///
+/// Source: spec-wire-format.md Lines 285-401
+pub fn bytes_to_scalar(bytes: &[u8]) -> Fr {
+    // Compute SHA-256 hash
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    let hash: [u8; 32] = hasher.finalize().into();
+
+    // Interpret hash as big-endian 256-bit integer
+    let big_int = BigUint::from_bytes_be(&hash);
+
+    // Convert to field element (automatically reduces mod r)
+    Fr::from(big_int)
 }

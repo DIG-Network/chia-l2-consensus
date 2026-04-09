@@ -36,7 +36,7 @@ pub use state::{CheckpointSingletonState, ValidatorSet};
 
 // Wire format functions and constants (spec-wire-format.md)
 pub use prover::{
-    compute_checkpoint_message, compute_membership_announcement_message,
+    bytes_to_scalar, compute_checkpoint_message, compute_membership_announcement_message,
     compute_registration_message, ClvmProof, G1_COMPRESSED_SIZE, G2_COMPRESSED_SIZE,
     GROTH16_PROOF_SIZE,
 };
