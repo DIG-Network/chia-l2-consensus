@@ -4,99 +4,138 @@ Write a **failing** test before implementation.
 
 Before choosing the exact test shape, read the active requirement's dedicated spec file. The spec's verification guidance is the primary authority for what must be proven complete.
 
+## One file per requirement
+
+Each requirement gets its own dedicated test file:
+
+```
+tests/
+├── vv_req_smt_001.rs
+├── vv_req_smt_002.rs
+├── vv_req_wire_001.rs
+├── vv_req_chk_001.rs
+└── ...
+```
+
 ## Naming
 
-`vv_req_{id}` where `{id}` is the requirement id in lowercase with hyphens to underscores:
+File: `tests/vv_req_{id}.rs` where `{id}` is lowercase with underscores:
 
-- `SMT-001` -> `vv_req_smt_001`
-- `WIRE-003` -> `vv_req_wire_003`
-- `CHK-005` -> `vv_req_chk_005`
+- `SMT-001` → `tests/vv_req_smt_001.rs`
+- `WIRE-003` → `tests/vv_req_wire_003.rs`
+- `CHK-005` → `tests/vv_req_chk_005.rs`
 
-## Location
+## File structure
 
-| Component | Location |
-|-----------|----------|
-| Rust unit tests | Next to code under `#[cfg(test)]` |
-| Rust integration tests | `tests/` directory |
-| Chialisp tests | `puzzles/tests/` or inline CLVM assertions |
-| Cross-implementation | `tests/cross_impl/` with both Rust and CLVM verification |
-
-## Structure
-
-### Rust test
+Each VV test file follows this structure:
 
 ```rust
+//! REQUIREMENT: SMT-001 — Fixed depth tree structure
+//! (`docs/requirements/domains/smt/NORMATIVE.md#SMT-001`).
+//!
+//! Spec: `docs/requirements/domains/smt/specs/SMT-001.md`.
+//!
+//! Implementation: `src/merkle/sparse.rs`.
+
+use crate::merkle::SparseMerkleTree;
+
 #[test]
-fn vv_req_smt_001() {
-    // REQUIREMENT: SMT-001
-    // Verify tree depth is exactly 32.
+fn vv_req_smt_001_tree_depth_is_32() {
+    let tree = SparseMerkleTree::new();
+    assert_eq!(tree.depth(), 32, "SMT-001: depth must be exactly 32");
+}
+
+#[test]
+fn vv_req_smt_001_depth_matches_slot_bits() {
+    // Additional test for same requirement
     let tree = SparseMerkleTree::new();
     assert_eq!(tree.depth(), 32);
+    assert_eq!(tree.max_slot(), u32::MAX);
 }
 ```
 
-### Cross-implementation test
+Key elements:
+1. **Module doc comment** — Cite requirement ID, NORMATIVE link, spec file, implementation file
+2. **Test function naming** — `vv_req_{id}_{description}`
+3. **Assertion messages** — Include requirement ID
+
+## Cross-implementation tests
+
+For requirements spanning Rust and Chialisp, create cross-impl verification:
 
 ```rust
+//! REQUIREMENT: WIRE-001 — Checkpoint message format
+//! (`docs/requirements/domains/wire/NORMATIVE.md#WIRE-001`).
+//!
+//! Cross-implementation test: verifies Rust and CLVM produce identical bytes.
+
+use crate::wire::compute_checkpoint_message;
+use crate::test_utils::run_clvm;
+
 #[test]
-fn vv_req_wire_001_cross_impl() {
-    // REQUIREMENT: WIRE-001
-    // Verify Rust and CLVM produce identical checkpoint message bytes.
+fn vv_req_wire_001_cross_impl_checkpoint_message() {
+    let state = CheckpointState { epoch: 1, validator_count: 10, ... };
 
     let rust_output = compute_checkpoint_message(&state);
-    let clvm_output = run_clvm_checkpoint_message(&state);
+    let clvm_output = run_clvm("checkpoint-message", &state);
 
-    assert_eq!(rust_output, clvm_output, "Cross-impl mismatch");
+    assert_eq!(rust_output, clvm_output, "WIRE-001: cross-impl mismatch");
 }
 ```
 
-Cite the requirement id in a comment.
+## Cross-implementation matrix
 
-## Cross-implementation consistency
-
-For requirements that span Rust and Chialisp, the test MUST verify both implementations produce identical results:
-
-| Domain | Cross-impl required |
-|--------|---------------------|
-| SMT | Yes — slot assignment, leaf values, proof verification |
-| Wire | Yes — all serialization formats |
-| Circuit | No — Rust only (arkworks) |
-| Checkpoint | Partial — CLVM verification, Rust proof generation |
-| Registration | Partial — CLVM puzzle, Rust driver |
-| Indexer | No — Rust only |
+| Domain | Cross-impl required | Notes |
+|--------|---------------------|-------|
+| SMT | Yes | Slot assignment, leaf values, proof verification |
+| Wire | Yes | All serialization formats |
+| Circuit | No | Rust only (arkworks) |
+| Checkpoint | Partial | CLVM verification, Rust proof generation |
+| Registration | Partial | CLVM puzzle, Rust driver |
+| Indexer | No | Rust only |
 
 ## Test vectors
 
-For wire format and hash computations, define test vectors:
+For wire format and hash computations, define vectors in a shared module:
 
 ```rust
-// tests/vectors/wire_001.rs
+// tests/vectors/mod.rs
+pub mod wire_vectors;
+pub mod smt_vectors;
+
+// tests/vectors/wire_vectors.rs
 pub const CHECKPOINT_MESSAGE_VECTORS: &[TestVector] = &[
     TestVector {
+        name: "empty_state",
         input: CheckpointState { epoch: 0, validator_count: 0, ... },
-        expected_bytes: hex!("0000000000000000..."),
+        expected: hex!("0000000000000000..."),
     },
-    // ...
 ];
 ```
 
-Verify the same vectors in Chialisp:
+Use vectors in requirement tests:
 
-```clojure
-; puzzles/tests/wire_001_vectors.clsp
-(defun test-checkpoint-message ()
-  (assert (= (checkpoint-message 0 0 ...) 0x0000000000000000...))
-)
+```rust
+//! REQUIREMENT: WIRE-001
+use crate::vectors::wire_vectors::CHECKPOINT_MESSAGE_VECTORS;
+
+#[test]
+fn vv_req_wire_001_test_vectors() {
+    for v in CHECKPOINT_MESSAGE_VECTORS {
+        let result = compute_checkpoint_message(&v.input);
+        assert_eq!(result, v.expected, "WIRE-001: vector '{}' failed", v.name);
+    }
+}
 ```
 
-## When to skip
+## When to skip test-first
 
-Skip test-first only for:
+Skip only for:
 - Documentation-only changes
 - Tracking file updates
 - Pure refactoring with existing test coverage
 
-Then -> [`dt-wf-implement.md`](dt-wf-implement.md).
+Then → [`dt-wf-implement.md`](dt-wf-implement.md).
 
 ---
 
