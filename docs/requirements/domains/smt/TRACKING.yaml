@@ -24,10 +24,11 @@ items:
   - id: SMT-003
     section: "Leaf Values"
     summary: "sha256(pubkey) or EMPTY_LEAF_HASH"
-    status: gap
-    spec_ref: "docs/design/requirements/smt/SMT-003.md"
-    tests: []
-    notes: ""
+    status: implemented
+    spec_ref: "docs/requirements/domains/smt/specs/SMT-003.md"
+    tests:
+      - tests/vv_req_smt_003.rs
+    notes: "active_leaf() = sha256(pubkey), EMPTY_LEAF = sha256([0;48]), insert_validator/remove_validator convenience methods"
 
   - id: SMT-004
     section: "Proof Format"
