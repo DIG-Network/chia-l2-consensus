@@ -6,10 +6,11 @@ items:
   - id: WIRE-001
     section: "Checkpoint Message"
     summary: "sha256 of new state fields, integers big-endian"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/wire/WIRE-001.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_wire_001.rs
+    notes: "Implemented in src/prover/serialize.rs"
 
   - id: WIRE-002
     section: "Point Encoding"
