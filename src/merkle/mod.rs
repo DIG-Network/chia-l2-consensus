@@ -6,4 +6,4 @@ mod proof;
 mod sparse;
 
 pub use proof::MerkleProof;
-pub use sparse::{compute_empty_nodes, SparseMerkleTree, EMPTY_LEAF, TREE_DEPTH};
+pub use sparse::{compute_empty_nodes, compute_slot, SparseMerkleTree, EMPTY_LEAF, TREE_DEPTH};

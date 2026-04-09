@@ -30,6 +30,22 @@ pub const EMPTY_LEAF: [u8; 32] = [
     0xe3, 0x55, 0xc7, 0x0e, 0x2e, 0x29, 0xdf, 0x28, 0x8b, 0x65, 0xb3, 0x07, 0x10, 0xdc, 0xbc, 0xd1,
 ];
 
+/// Compute the slot for a validator pubkey.
+///
+/// The slot is computed as:
+/// 1. Hash the pubkey: `h = sha256(pubkey)`
+/// 2. Take first 8 bytes as big-endian u64
+/// 3. Reduce mod 2^TREE_DEPTH
+///
+/// Source: spec-sparse-merkle-tree.md Lines 63-104
+pub fn compute_slot(pubkey: &[u8; 48]) -> u64 {
+    let mut hasher = Sha256::new();
+    hasher.update(pubkey);
+    let hash: [u8; 32] = hasher.finalize().into();
+    let n = u64::from_be_bytes(hash[0..8].try_into().unwrap());
+    n % (1u64 << TREE_DEPTH)
+}
+
 /// Compute the precomputed empty node hashes for all tree levels.
 ///
 /// - empty_nodes[0] = EMPTY_LEAF (leaf level)

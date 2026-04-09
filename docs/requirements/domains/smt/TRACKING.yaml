@@ -15,10 +15,11 @@ items:
   - id: SMT-002
     section: "Slot Assignment"
     summary: "Deterministic slot from sha256(pubkey)"
-    status: gap
-    spec_ref: "docs/design/requirements/smt/SMT-002.md"
-    tests: []
-    notes: ""
+    status: implemented
+    spec_ref: "docs/requirements/domains/smt/specs/SMT-002.md"
+    tests:
+      - tests/vv_req_smt_002.rs
+    notes: "compute_slot() function: sha256(pubkey) -> first 8 bytes BE u64 -> mod 2^32"
 
   - id: SMT-003
     section: "Leaf Values"
