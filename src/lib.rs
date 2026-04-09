@@ -34,5 +34,8 @@ pub use config::NetworkConfig;
 pub use error::{ConsensusError, ConsensusResult};
 pub use state::{CheckpointSingletonState, ValidatorSet};
 
+// Wire format functions (spec-wire-format.md)
+pub use prover::compute_checkpoint_message;
+
 // Re-export PublicKey type (48-byte BLS public key)
 // TODO: Use proper BLS pubkey type from chia-bls when needed

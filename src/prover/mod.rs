@@ -9,5 +9,5 @@ mod setup;
 
 pub use circuit::ConsensusCircuit;
 pub use prove::generate_proof;
-pub use serialize::{ClvmProof, ClvmVerificationKey};
+pub use serialize::{compute_checkpoint_message, ClvmProof, ClvmVerificationKey};
 pub use setup::{load_proving_key, load_verification_key};
