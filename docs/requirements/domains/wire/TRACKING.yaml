@@ -15,10 +15,11 @@ items:
   - id: WIRE-002
     section: "Point Encoding"
     summary: "G1 48 bytes, G2 96 bytes, ZCash compressed"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/wire/WIRE-002.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_wire_002.rs
+    notes: "Constants in src/prover/serialize.rs; verified via arkworks"
 
   - id: WIRE-003
     section: "Groth16 Proof"
