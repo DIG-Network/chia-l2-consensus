@@ -2,27 +2,29 @@
 
 1. **Use chia-wallet-sdk first** — Before implementing ANY custom logic, check if `chia-wallet-sdk`, `chia-protocol`, `chia-puzzles`, or `clvmr` already provides the functionality. Custom implementations are only allowed when the SDK does not support the required operation.
 
-2. **On-chain puzzles MUST use Rue** — All on-chain puzzles (network_coin_inner, registration_coin, checkpoint_inner) MUST be written in [Rue](https://rue-lang.dev/), not Chialisp. Rue compiles to CLVM and is the language specified in all resource specs.
+2. **Follow crate architecture** — All implementations MUST fit within the framework defined in [`spec-consensus-crate.md`](../../resources/spec-consensus-crate.md). Public API is `ConsensusClient` and types it returns only. Internal modules (`merkle/`, `prover/`, `puzzles/`, `indexer/`) are `pub(crate)` or private. The `merkle` module is `pub` for testing purposes.
 
-3. **Rue files MUST compile** — All `.rue` files MUST compile without errors or warnings before moving to the next requirement. Run `rue build puzzles/<file>.rue` and fix all issues. Do NOT proceed if compilation fails.
+3. **On-chain puzzles MUST use Rue** — All on-chain puzzles (network_coin_inner, registration_coin, checkpoint_inner) MUST be written in [Rue](https://rue-lang.dev/), not Chialisp. Rue compiles to CLVM and is the language specified in all resource specs.
 
-4. **Resource files are authoritative** — Specs in [`docs/resources/`](../../resources/) define the protocol. Requirement specs cite these with line numbers.
+4. **Rue files MUST compile** — All `.rue` files MUST compile without errors or warnings before moving to the next requirement. Run `rue build puzzles/<file>.rue` and fix all issues. Do NOT proceed if compilation fails.
 
-5. **Cross-implementation consistency** — Rust and Rue MUST produce identical outputs:
+5. **Resource files are authoritative** — Specs in [`docs/resources/`](../../resources/) define the protocol. Requirement specs cite these with line numbers.
+
+6. **Cross-implementation consistency** — Rust and Rue MUST produce identical outputs:
    - SMT slot assignment: `first_8_bytes_be(sha256(pubkey)) mod 2^32`
    - Leaf hashes: `sha256(pubkey)` for active, `sha256(zeros)` for empty
    - Merkle path: left child first in hash concatenation
    - Wire formats: exact byte layouts per spec
 
-6. **Integer encoding** — All integers in wire formats MUST be fixed-width big-endian. Variable-length encoding is forbidden.
+7. **Integer encoding** — All integers in wire formats MUST be fixed-width big-endian. Variable-length encoding is forbidden.
 
-7. **Trusted setup immutability** — Circuit parameters (MAX_SIGNERS, TREE_DEPTH) are fixed at trusted setup. Changing them requires a new ceremony.
+8. **Trusted setup immutability** — Circuit parameters (MAX_SIGNERS, TREE_DEPTH) are fixed at trusted setup. Changing them requires a new ceremony.
 
-8. **Test vectors required** — Every hash computation and wire format must have test vectors verified in both Rust and Rue.
+9. **Test vectors required** — Every hash computation and wire format must have test vectors verified in both Rust and Rue.
 
-9. **BLS12-381 point format** — Use ZCash compressed format (48 bytes G1, 96 bytes G2) with proper infinity and sign encoding.
+10. **BLS12-381 point format** — Use ZCash compressed format (48 bytes G1, 96 bytes G2) with proper infinity and sign encoding.
 
-10. **After `git pull`** — Treat `- [x]` in [`IMPLEMENTATION_ORDER.md`](../../requirements/IMPLEMENTATION_ORDER.md) as **done**; only `- [ ]` is selectable.
+11. **After `git pull`** — Treat `- [x]` in [`IMPLEMENTATION_ORDER.md`](../../requirements/IMPLEMENTATION_ORDER.md) as **done**; only `- [ ]` is selectable.
 
 ## chia-wallet-sdk priority
 
