@@ -24,10 +24,11 @@ items:
   - id: WIRE-003
     section: "Groth16 Proof"
     summary: "192 bytes: A(48) + B(96) + C(48)"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/wire/WIRE-003.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_wire_003.rs
+    notes: "ClvmProof struct and GROTH16_PROOF_SIZE constant in src/prover/serialize.rs"
 
   - id: WIRE-004
     section: "Membership Announcement"
