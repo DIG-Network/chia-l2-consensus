@@ -51,7 +51,8 @@ items:
   - id: WIRE-006
     section: "scalar() Function"
     summary: "sha256 as u256 mod r for circuit inputs"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/wire/WIRE-006.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_wire_006.rs
+    notes: "bytes_to_scalar() in src/prover/serialize.rs"
