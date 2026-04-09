@@ -21,7 +21,7 @@ mod state;
 
 // Internal modules
 pub(crate) mod indexer;
-pub(crate) mod merkle;
+pub mod merkle;
 pub(crate) mod prover;
 pub(crate) mod puzzles;
 

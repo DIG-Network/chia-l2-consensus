@@ -20,7 +20,7 @@ by phase. Check boxes as requirements are verified.
 ## Phase 1 — Foundation (Core Infrastructure)
 
 ### Sparse Merkle Tree
-- [ ] [SMT-001](domains/smt/NORMATIVE.md#SMT-001) — Fixed depth tree structure
+- [x] [SMT-001](domains/smt/NORMATIVE.md#SMT-001) — Fixed depth tree structure
 - [ ] [SMT-002](domains/smt/NORMATIVE.md#SMT-002) — Deterministic slot assignment
 - [ ] [SMT-003](domains/smt/NORMATIVE.md#SMT-003) — Leaf values (active/empty)
 - [ ] [SMT-004](domains/smt/NORMATIVE.md#SMT-004) — Proof format
@@ -123,7 +123,7 @@ by phase. Check boxes as requirements are verified.
 | Phase | Domain | Requirements | Status |
 |-------|--------|--------------|--------|
 | 0 | Setup | 6 | 6/6 |
-| 1 | SMT | 6 | 0/6 |
+| 1 | SMT | 6 | 1/6 |
 | 1 | Wire | 6 | 0/6 |
 | 2 | Circuit | 6 | 0/6 |
 | 3 | Network Coin | 5 | 0/5 |
@@ -133,4 +133,4 @@ by phase. Check boxes as requirements are verified.
 | 5 | Deployment | 5 | 0/5 |
 | 5 | Validator | 5 | 0/5 |
 | 6 | Security | 6 | 0/6 |
-| **Total** | | **63** | **6/63** |
+| **Total** | | **63** | **7/63** |
