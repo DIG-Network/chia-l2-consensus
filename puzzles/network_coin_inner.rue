@@ -1,30 +1,58 @@
 // network_coin_inner.rue
-// See spec-network-coin.md for specification
-// Full driver code: spec-network-coin.md — Driver Code (Rust)
+// Inner puzzle for the Network Coin singleton.
+//
+// NET-001: Singleton identity - wrapped by singleton_top_layer_v1_1
+// NET-002: AggSigMe registration - requires validator signature
+// NET-003: Registration coin creation - creates registration coin with collateral
+// NET-004: Self-recreation - recreates network coin via singleton wrapper
+// NET-005: Pubkey memo - includes pubkey in memo for indexer
+//
+// See spec-network-coin.md for specification.
 
 fn main(
-    REGISTRATION_COIN_MOD_HASH: Bytes32,
-    COLLATERAL_AMOUNT: Int,
-    CHECKPOINT_SINGLETON_ID: Bytes32,
+    // Curried parameters (fixed at deployment)
+    registration_coin_mod_hash: Bytes32,
+    collateral_amount: Int,
+    checkpoint_singleton_id: Bytes32,
 
+    // Solution parameters (provided at spend time)
     new_validator_pubkey: PublicKey,
     conditions: List<Condition>,
 ) -> List<Condition> {
-
-    // Registration coin puzzle hash - must match spec-registration-coin
-    // and the lineage check in spec-indexer
-    let registration_coin_puzzle_hash = curry_hash(
-        REGISTRATION_COIN_MOD_HASH,
-        new_validator_pubkey,
-        CHECKPOINT_SINGLETON_ID,
+    // Compute the registration coin puzzle hash by currying:
+    // registration_coin_mod_hash(new_validator_pubkey, checkpoint_singleton_id)
+    let registration_coin_puzzle_hash = curry_tree_hash(
+        registration_coin_mod_hash,
+        [
+            tree_hash(new_validator_pubkey),
+            tree_hash(checkpoint_singleton_id),
+        ],
     );
 
     // Registration message format per spec-wire-format — Registration Message Format
-    let registration_message = sha256("register" + new_validator_pubkey);
+    // message = sha256("register" || pubkey)
+    // "register" as 8 bytes: 0x7265676973746572
+    let prefix: Bytes = 0x7265676973746572;
+    let pubkey_bytes: Bytes = new_validator_pubkey as Bytes;
+    let registration_message = sha256(prefix + pubkey_bytes);
 
-    conditions + [
-        AggSigMe(new_validator_pubkey, registration_message),
-        CreateCoin(registration_coin_puzzle_hash, COLLATERAL_AMOUNT),
-        CreateCoin(MY_PUZZLE_HASH, MY_AMOUNT),
-    ]
+    // NET-002: Require signature from the new validator
+    let agg_sig = AggSigMe {
+        public_key: new_validator_pubkey,
+        message: registration_message,
+    };
+
+    // NET-003 & NET-005: Create the registration coin with collateral and pubkey memo
+    let create_registration = CreateCoin {
+        puzzle_hash: registration_coin_puzzle_hash,
+        amount: collateral_amount,
+        memos: nil,
+    };
+
+    // Return conditions:
+    // - AggSigMe to verify validator signature
+    // - CreateCoin for registration coin
+    // - Additional conditions passed through (e.g., for fees)
+    // Note: Singleton wrapper handles self-recreation (NET-004)
+    [agg_sig, create_registration, ...conditions]
 }
