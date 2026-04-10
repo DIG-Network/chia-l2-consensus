@@ -17,7 +17,9 @@ use crate::merkle::{MerkleProof, TREE_DEPTH};
 /// Maximum number of signing validators the circuit supports.
 /// The actual k can be anything from majority threshold up to MAX_SIGNERS.
 /// Changing this requires a new trusted setup ceremony.
-pub const MAX_SIGNERS: usize = 64;
+///
+/// Set to 20,000 to support large validator sets.
+pub const MAX_SIGNERS: usize = 20_000;
 
 // ============================================================================
 // CIR-001: Circuit Statement
@@ -119,6 +121,7 @@ impl ConsensusCircuit {
     }
 
     /// Create a circuit with both public inputs and private witnesses.
+    #[allow(clippy::too_many_arguments)]
     pub fn with_witnesses(
         validator_merkle_root: [u8; 32],
         validator_count: u64,

@@ -185,21 +185,22 @@ fn vv_req_cir_003_order_independent() {
 
 #[test]
 fn vv_req_cir_003_many_signers() {
-    // CIR-003: k=64 signers (original max) works correctly
-    let pubkeys = random_pubkeys(64);
+    // CIR-003: Test with a reasonable number of signers (100)
+    // Note: MAX_SIGNERS is 20,000 but we test with smaller set for performance
+    let pubkeys = random_pubkeys(100);
 
     let aggregate = aggregate_pubkeys(&pubkeys).unwrap();
 
     // Should produce a valid G1 point
     assert!(
         chia_l2_consensus::deserialize_g1(&aggregate).is_some(),
-        "CIR-003: Aggregate of 64 pubkeys must be valid G1 point"
+        "CIR-003: Aggregate of many pubkeys must be valid G1 point"
     );
 
     // Verify round-trip
     assert!(
         verify_aggregate(&pubkeys, &aggregate),
-        "CIR-003: 64 pubkeys must verify against their aggregate"
+        "CIR-003: Many pubkeys must verify against their aggregate"
     );
 }
 
@@ -260,15 +261,15 @@ fn vv_req_cir_003_invalid_pubkey_fails() {
 fn vv_req_cir_003_padding_with_identity_preserves_sum() {
     // CIR-003: For k < MAX_SIGNERS, padding with identity preserves sum
     let k = 5;
-    let max_signers = 64; // Original max
+    let padded_size = 100; // Test with reasonable padding size
 
     let pubkeys = random_pubkeys(k);
     let actual_aggregate = aggregate_pubkeys(&pubkeys).unwrap();
 
-    // Pad with identity to reach max_signers
+    // Pad with identity to reach padded_size
     let mut padded = pubkeys.clone();
     let identity = g1_identity();
-    for _ in k..max_signers {
+    for _ in k..padded_size {
         padded.push(identity);
     }
 
