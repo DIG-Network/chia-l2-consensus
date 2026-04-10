@@ -15,10 +15,11 @@ items:
   - id: CIR-002
     section: "Constraints"
     summary: "Merkle membership verification per signer"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/circuit/CIR-002.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_cir_002.rs
+    notes: "prove_validator() and verify_for_pubkey() methods for Merkle proof verification"
 
   - id: CIR-003
     section: "Constraints"
