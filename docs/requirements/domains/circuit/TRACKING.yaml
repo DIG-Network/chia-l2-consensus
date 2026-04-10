@@ -51,7 +51,8 @@ items:
   - id: CIR-006
     section: "Parameters"
     summary: "MAX_SIGNERS and TREE_DEPTH fixed at setup"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/circuit/CIR-006.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_cir_006.rs
+    notes: "MAX_SIGNERS=20,000 and TREE_DEPTH=32 as compile-time constants"
