@@ -2,11 +2,16 @@
 //!
 //! See [spec-consensus-crate.md Lines 929-1026](../docs/resources/spec-consensus-crate.md).
 
+mod aggregate;
 mod circuit;
 mod prove;
 mod serialize;
 mod setup;
 
+pub use aggregate::{
+    add_g1, aggregate_pubkeys, deserialize_g1, g1_identity, negate_g1, serialize_g1,
+    verify_aggregate, AggregateError,
+};
 pub use circuit::{ConsensusCircuit, MAX_SIGNERS};
 pub use prove::generate_proof;
 pub use serialize::{
