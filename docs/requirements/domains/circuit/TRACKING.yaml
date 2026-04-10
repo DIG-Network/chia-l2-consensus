@@ -42,10 +42,11 @@ items:
   - id: CIR-005
     section: "Public Inputs"
     summary: "6 public inputs in fixed order"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/circuit/CIR-005.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_cir_005.rs
+    notes: "PUBLIC_INPUT_COUNT constant and public_input_index module in src/prover/circuit.rs"
 
   - id: CIR-006
     section: "Parameters"
