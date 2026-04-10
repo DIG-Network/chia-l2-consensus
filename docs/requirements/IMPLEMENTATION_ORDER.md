@@ -53,7 +53,7 @@ by phase. Check boxes as requirements are verified.
 
 ### Network Coin
 - [x] [NET-001](domains/network_coin/NORMATIVE.md#NET-001) — Singleton identity
-- [ ] [NET-002](domains/network_coin/NORMATIVE.md#NET-002) — AggSigMe registration
+- [x] [NET-002](domains/network_coin/NORMATIVE.md#NET-002) — AggSigMe registration
 - [ ] [NET-003](domains/network_coin/NORMATIVE.md#NET-003) — Registration coin creation
 - [ ] [NET-004](domains/network_coin/NORMATIVE.md#NET-004) — Self-recreation
 - [ ] [NET-005](domains/network_coin/NORMATIVE.md#NET-005) — Pubkey memo
@@ -126,11 +126,11 @@ by phase. Check boxes as requirements are verified.
 | 1 | SMT | 6 | 6/6 |
 | 1 | Wire | 6 | 6/6 |
 | 2 | Circuit | 6 | 6/6 |
-| 3 | Network Coin | 5 | 1/5 |
+| 3 | Network Coin | 5 | 2/5 |
 | 3 | Registration Coin | 6 | 0/6 |
 | 3 | Checkpoint | 7 | 0/7 |
 | 4 | Indexer | 5 | 0/5 |
 | 5 | Deployment | 5 | 0/5 |
 | 5 | Validator | 5 | 0/5 |
 | 6 | Security | 6 | 0/6 |
-| **Total** | | **63** | **25/63** |
+| **Total** | | **63** | **26/63** |

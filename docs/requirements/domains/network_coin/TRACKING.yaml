@@ -22,10 +22,22 @@ items:
   - id: NET-002
     section: "Registration Flow"
     summary: "AggSigMe verification for registration"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/network_coin/NET-002.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_net_002.rs::vv_req_net_002_register_prefix_is_8_bytes
+      - tests/vv_req_net_002.rs::vv_req_net_002_message_format_sha256_register_plus_pubkey
+      - tests/vv_req_net_002.rs::vv_req_net_002_message_is_deterministic
+      - tests/vv_req_net_002.rs::vv_req_net_002_different_pubkeys_produce_different_messages
+      - tests/vv_req_net_002.rs::vv_req_net_002_puzzle_has_aggsigme_condition
+      - tests/vv_req_net_002.rs::vv_req_net_002_puzzle_uses_sha256_for_message
+      - tests/vv_req_net_002.rs::vv_req_net_002_puzzle_uses_register_prefix
+      - tests/vv_req_net_002.rs::vv_req_net_002_puzzle_combines_prefix_and_pubkey
+      - tests/vv_req_net_002.rs::vv_req_net_002_aggsigme_uses_pubkey_and_message
+      - tests/vv_req_net_002.rs::vv_req_net_002_puzzle_documents_net_002
+      - tests/vv_req_net_002.rs::vv_req_net_002_hex_prefix_equals_register_string
+      - tests/vv_req_net_002.rs::vv_req_net_002_message_does_not_depend_on_conditions
+    notes: "AggSigMe verifies sha256('register' + pubkey) with validator's key"
 
   - id: NET-003
     section: "Registration Flow"
