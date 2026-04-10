@@ -58,6 +58,26 @@ impl MerkleProof {
         current == root
     }
 
+    /// Verify this proof for a specific pubkey against a root.
+    ///
+    /// This verifies:
+    /// 1. The leaf equals sha256(pubkey) (active validator)
+    /// 2. The Merkle path from leaf to root is valid
+    ///
+    /// Source: spec-sparse-merkle-tree.md Lines 327-380 (CIR-002)
+    pub fn verify_for_pubkey(&self, pubkey: &[u8; 48], root: [u8; 32]) -> bool {
+        // Compute expected leaf for this pubkey
+        let expected_leaf = super::sparse::active_leaf(pubkey);
+
+        // Verify the leaf matches
+        if self.leaf != expected_leaf {
+            return false;
+        }
+
+        // Verify the Merkle path
+        self.verify(root)
+    }
+
     /// Get the number of siblings (should be TREE_DEPTH).
     pub fn len(&self) -> usize {
         self.siblings.len()

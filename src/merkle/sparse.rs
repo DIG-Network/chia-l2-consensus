@@ -174,6 +174,14 @@ impl SparseMerkleTree {
         self.insert(slot, leaf)
     }
 
+    /// Generate a proof for a validator by their pubkey.
+    ///
+    /// Computes the slot from pubkey hash and returns the proof.
+    pub fn prove_validator(&self, pubkey: &[u8; 48]) -> MerkleProof {
+        let slot = compute_slot(pubkey);
+        self.prove(slot)
+    }
+
     /// Remove a validator by their pubkey.
     ///
     /// Computes the slot from pubkey hash and removes the leaf.
