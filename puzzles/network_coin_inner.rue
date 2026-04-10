@@ -42,11 +42,12 @@ fn main(
         message: registration_message,
     };
 
-    // NET-003 & NET-005: Create the registration coin with collateral and pubkey memo
+    // NET-003: Create the registration coin with collateral
+    // NET-005: Driver adds pubkey memo for indexer (not enforced by puzzle)
     let create_registration = CreateCoin {
         puzzle_hash: registration_coin_puzzle_hash,
         amount: collateral_amount,
-        memos: nil,
+        memos: nil, // Driver adds pubkey memo per NET-005
     };
 
     // Return conditions:

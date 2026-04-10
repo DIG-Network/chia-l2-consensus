@@ -81,7 +81,16 @@ items:
   - id: NET-005
     section: "Driver Convention"
     summary: "Include pubkey memo for indexer"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/network_coin/NET-005.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_net_005.rs::vv_req_net_005_puzzle_documents_net_005
+      - tests/vv_req_net_005.rs::vv_req_net_005_puzzle_documents_driver_responsibility
+      - tests/vv_req_net_005.rs::vv_req_net_005_puzzle_does_not_enforce_memo
+      - tests/vv_req_net_005.rs::vv_req_net_005_memo_format_documented
+      - tests/vv_req_net_005.rs::vv_req_net_005_memo_is_first_element
+      - tests/vv_req_net_005.rs::vv_req_net_005_indexer_can_extract_pubkey
+      - tests/vv_req_net_005.rs::vv_req_net_005_spec_file_exists
+      - tests/vv_req_net_005.rs::vv_req_net_005_is_driver_convention
+      - tests/vv_req_net_005.rs::vv_req_net_005_puzzle_header_mentions_memo
+    notes: "Driver convention - puzzle delegates memo to driver code"
