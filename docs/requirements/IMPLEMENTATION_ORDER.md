@@ -43,7 +43,7 @@ by phase. Check boxes as requirements are verified.
 - [x] [CIR-001](domains/circuit/NORMATIVE.md#CIR-001) — Circuit statement
 - [x] [CIR-002](domains/circuit/NORMATIVE.md#CIR-002) — Merkle membership constraint
 - [x] [CIR-003](domains/circuit/NORMATIVE.md#CIR-003) — Aggregate key constraint
-- [ ] [CIR-004](domains/circuit/NORMATIVE.md#CIR-004) — Majority threshold constraint
+- [x] [CIR-004](domains/circuit/NORMATIVE.md#CIR-004) — Majority threshold constraint
 - [ ] [CIR-005](domains/circuit/NORMATIVE.md#CIR-005) — Public inputs
 - [ ] [CIR-006](domains/circuit/NORMATIVE.md#CIR-006) — Circuit parameters
 
@@ -125,7 +125,7 @@ by phase. Check boxes as requirements are verified.
 | 0 | Setup | 6 | 6/6 |
 | 1 | SMT | 6 | 6/6 |
 | 1 | Wire | 6 | 6/6 |
-| 2 | Circuit | 6 | 3/6 |
+| 2 | Circuit | 6 | 4/6 |
 | 3 | Network Coin | 5 | 0/5 |
 | 3 | Registration Coin | 6 | 0/6 |
 | 3 | Checkpoint | 7 | 0/7 |
@@ -133,4 +133,4 @@ by phase. Check boxes as requirements are verified.
 | 5 | Deployment | 5 | 0/5 |
 | 5 | Validator | 5 | 0/5 |
 | 6 | Security | 6 | 0/6 |
-| **Total** | | **63** | **21/63** |
+| **Total** | | **63** | **22/63** |
