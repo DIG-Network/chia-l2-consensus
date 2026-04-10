@@ -4,6 +4,7 @@
 
 mod aggregate;
 mod circuit;
+mod majority;
 mod prove;
 mod serialize;
 mod setup;
@@ -13,6 +14,7 @@ pub use aggregate::{
     verify_aggregate, AggregateError,
 };
 pub use circuit::{ConsensusCircuit, MAX_SIGNERS};
+pub use majority::{is_at_least_half, is_majority, minimum_signers};
 pub use prove::generate_proof;
 pub use serialize::{
     bytes_to_scalar, compute_checkpoint_message, compute_membership_announcement_message,

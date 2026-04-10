@@ -33,10 +33,11 @@ items:
   - id: CIR-004
     section: "Constraints"
     summary: "Majority threshold 2k > count"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/circuit/CIR-004.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_cir_004.rs
+    notes: "is_majority() and minimum_signers() functions in src/prover/majority.rs"
 
   - id: CIR-005
     section: "Public Inputs"

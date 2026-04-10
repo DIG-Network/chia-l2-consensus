@@ -50,5 +50,8 @@ pub use prover::{
     verify_aggregate, AggregateError,
 };
 
+// Majority threshold (CIR-004)
+pub use prover::{is_at_least_half, is_majority, minimum_signers};
+
 // Re-export PublicKey type (48-byte BLS public key)
 // TODO: Use proper BLS pubkey type from chia-bls when needed
