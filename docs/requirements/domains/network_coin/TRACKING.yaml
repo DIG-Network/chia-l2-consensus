@@ -42,10 +42,23 @@ items:
   - id: NET-003
     section: "Registration Flow"
     summary: "Create registration coin with correct puzzle hash"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/network_coin/NET-003.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_net_003.rs::vv_req_net_003_puzzle_has_create_coin_condition
+      - tests/vv_req_net_003.rs::vv_req_net_003_puzzle_computes_puzzle_hash
+      - tests/vv_req_net_003.rs::vv_req_net_003_puzzle_uses_curry_hash
+      - tests/vv_req_net_003.rs::vv_req_net_003_puzzle_hash_includes_mod_hash
+      - tests/vv_req_net_003.rs::vv_req_net_003_puzzle_hash_includes_pubkey
+      - tests/vv_req_net_003.rs::vv_req_net_003_puzzle_hash_includes_checkpoint_id
+      - tests/vv_req_net_003.rs::vv_req_net_003_create_coin_uses_computed_hash
+      - tests/vv_req_net_003.rs::vv_req_net_003_create_coin_uses_collateral_amount
+      - tests/vv_req_net_003.rs::vv_req_net_003_collateral_amount_is_curried
+      - tests/vv_req_net_003.rs::vv_req_net_003_mod_hash_is_curried
+      - tests/vv_req_net_003.rs::vv_req_net_003_checkpoint_id_is_curried
+      - tests/vv_req_net_003.rs::vv_req_net_003_puzzle_documents_net_003
+      - tests/vv_req_net_003.rs::vv_req_net_003_curry_hash_concept
+    notes: "CreateCoin with curry_tree_hash(mod_hash, pubkey, checkpoint_id)"
 
   - id: NET-004
     section: "Self-Recreation"
