@@ -6,10 +6,18 @@ items:
   - id: NET-001
     section: "Singleton Identity"
     summary: "Network coin is singleton, one per L2 network"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/network_coin/NET-001.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_net_001.rs::vv_req_net_001_puzzle_compiles
+      - tests/vv_req_net_001.rs::vv_req_net_001_puzzle_produces_clvm
+      - tests/vv_req_net_001.rs::vv_req_net_001_puzzle_is_deterministic
+      - tests/vv_req_net_001.rs::vv_req_net_001_puzzle_has_curried_params
+      - tests/vv_req_net_001.rs::vv_req_net_001_puzzle_has_solution_params
+      - tests/vv_req_net_001.rs::vv_req_net_001_puzzle_returns_conditions
+      - tests/vv_req_net_001.rs::vv_req_net_001_singleton_wrapper_documented
+      - tests/vv_req_net_001.rs::vv_req_net_001_inner_puzzle_pattern
+    notes: "Inner puzzle for singleton; wrapper handles lineage/recreation"
 
   - id: NET-002
     section: "Registration Flow"
