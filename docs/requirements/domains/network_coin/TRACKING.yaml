@@ -63,10 +63,20 @@ items:
   - id: NET-004
     section: "Self-Recreation"
     summary: "Recreate network coin after registration"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/network_coin/NET-004.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_net_004.rs::vv_req_net_004_puzzle_documents_self_recreation
+      - tests/vv_req_net_004.rs::vv_req_net_004_puzzle_mentions_singleton_wrapper
+      - tests/vv_req_net_004.rs::vv_req_net_004_puzzle_is_inner_puzzle
+      - tests/vv_req_net_004.rs::vv_req_net_004_inner_puzzle_returns_conditions
+      - tests/vv_req_net_004.rs::vv_req_net_004_puzzle_does_not_create_self
+      - tests/vv_req_net_004.rs::vv_req_net_004_create_coin_is_for_registration
+      - tests/vv_req_net_004.rs::vv_req_net_004_puzzle_mentions_singleton_top_layer
+      - tests/vv_req_net_004.rs::vv_req_net_004_no_my_puzzle_hash_in_inner
+      - tests/vv_req_net_004.rs::vv_req_net_004_curried_params_are_constant
+      - tests/vv_req_net_004.rs::vv_req_net_004_curried_params_are_deployment_fixed
+    notes: "Self-recreation handled by singleton_top_layer_v1_1 wrapper"
 
   - id: NET-005
     section: "Driver Convention"
