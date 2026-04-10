@@ -7,6 +7,6 @@
 | [CIR-003](NORMATIVE.md#CIR-003) | ✅ | Aggregate key check | aggregate_pubkeys() and verify_aggregate(); 14 VV tests in tests/vv_req_cir_003.rs |
 | [CIR-004](NORMATIVE.md#CIR-004) | ✅ | Majority threshold | is_majority() and minimum_signers(); 16 VV tests in tests/vv_req_cir_004.rs |
 | [CIR-005](NORMATIVE.md#CIR-005) | ✅ | Public inputs | PUBLIC_INPUT_COUNT=6, public_input_index module; 12 VV tests in tests/vv_req_cir_005.rs |
-| [CIR-006](NORMATIVE.md#CIR-006) | ❌ | Circuit parameters | MAX_SIGNERS and TREE_DEPTH match between circuit, VK, and checkpoint singleton |
+| [CIR-006](NORMATIVE.md#CIR-006) | ✅ | Circuit parameters | MAX_SIGNERS=20,000, TREE_DEPTH=32 as constants; 13 VV tests in tests/vv_req_cir_006.rs |
 
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap
