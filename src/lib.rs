@@ -44,5 +44,11 @@ pub use prover::{
 // Groth16 circuit (spec-groth16-circuit.md)
 pub use prover::{ConsensusCircuit, MAX_SIGNERS};
 
+// G1 pubkey aggregation (CIR-003)
+pub use prover::{
+    add_g1, aggregate_pubkeys, deserialize_g1, g1_identity, negate_g1, serialize_g1,
+    verify_aggregate, AggregateError,
+};
+
 // Re-export PublicKey type (48-byte BLS public key)
 // TODO: Use proper BLS pubkey type from chia-bls when needed

@@ -24,10 +24,11 @@ items:
   - id: CIR-003
     section: "Constraints"
     summary: "G1 sum equals agg_signers"
-    status: gap
+    status: complete
     spec_ref: "docs/design/requirements/circuit/CIR-003.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_cir_003.rs
+    notes: "aggregate_pubkeys() and verify_aggregate() functions in src/prover/aggregate.rs"
 
   - id: CIR-004
     section: "Constraints"
