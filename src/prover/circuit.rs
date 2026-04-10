@@ -22,6 +22,31 @@ use crate::merkle::{MerkleProof, TREE_DEPTH};
 pub const MAX_SIGNERS: usize = 20_000;
 
 // ============================================================================
+// CIR-005: Public Input Constants
+// ============================================================================
+
+/// Number of public inputs in the circuit.
+/// This must match the number of IC points in the verification key minus 1.
+/// VK has 7 IC points: IC[0] is constant, IC[1..7] are for the 6 public inputs.
+pub const PUBLIC_INPUT_COUNT: usize = 6;
+
+/// Public input indices (1-based, matching IC point indices).
+pub mod public_input_index {
+    /// Index 1: Current validator Merkle root.
+    pub const VALIDATOR_MERKLE_ROOT: usize = 1;
+    /// Index 2: Current validator count.
+    pub const VALIDATOR_COUNT: usize = 2;
+    /// Index 3: New validator Merkle root.
+    pub const NEW_VALIDATOR_MERKLE_ROOT: usize = 3;
+    /// Index 4: New validator count.
+    pub const NEW_VALIDATOR_COUNT: usize = 4;
+    /// Index 5: Aggregate signers pubkey.
+    pub const AGG_SIGNERS: usize = 5;
+    /// Index 6: Checkpoint message hash.
+    pub const CHECKPOINT_MESSAGE: usize = 6;
+}
+
+// ============================================================================
 // CIR-001: Circuit Statement
 // ============================================================================
 
@@ -192,6 +217,33 @@ impl ConsensusCircuit {
     /// Get the checkpoint message.
     pub fn checkpoint_message(&self) -> [u8; 32] {
         self.checkpoint_message
+    }
+
+    /// Get all public inputs in order as raw bytes.
+    ///
+    /// Returns a vector of 6 byte slices in the canonical order:
+    /// 1. validator_merkle_root (32 bytes)
+    /// 2. validator_count (8 bytes, big-endian)
+    /// 3. new_validator_merkle_root (32 bytes)
+    /// 4. new_validator_count (8 bytes, big-endian)
+    /// 5. agg_signers (48 bytes)
+    /// 6. checkpoint_message (32 bytes)
+    ///
+    /// This order must match the IC point assignment in the verification key.
+    pub fn public_inputs_bytes(&self) -> Vec<Vec<u8>> {
+        vec![
+            self.validator_merkle_root.to_vec(),
+            self.validator_count.to_be_bytes().to_vec(),
+            self.new_validator_merkle_root.to_vec(),
+            self.new_validator_count.to_be_bytes().to_vec(),
+            self.agg_signers.to_vec(),
+            self.checkpoint_message.to_vec(),
+        ]
+    }
+
+    /// Get the number of public inputs (always 6).
+    pub fn public_input_count(&self) -> usize {
+        PUBLIC_INPUT_COUNT
     }
 
     // ========================================================================

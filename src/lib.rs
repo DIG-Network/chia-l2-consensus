@@ -42,7 +42,7 @@ pub use prover::{
 };
 
 // Groth16 circuit (spec-groth16-circuit.md)
-pub use prover::{ConsensusCircuit, MAX_SIGNERS};
+pub use prover::{public_input_index, ConsensusCircuit, MAX_SIGNERS, PUBLIC_INPUT_COUNT};
 
 // G1 pubkey aggregation (CIR-003)
 pub use prover::{

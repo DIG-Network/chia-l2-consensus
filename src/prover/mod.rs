@@ -13,7 +13,7 @@ pub use aggregate::{
     add_g1, aggregate_pubkeys, deserialize_g1, g1_identity, negate_g1, serialize_g1,
     verify_aggregate, AggregateError,
 };
-pub use circuit::{ConsensusCircuit, MAX_SIGNERS};
+pub use circuit::{public_input_index, ConsensusCircuit, MAX_SIGNERS, PUBLIC_INPUT_COUNT};
 pub use majority::{is_at_least_half, is_majority, minimum_signers};
 pub use prove::generate_proof;
 pub use serialize::{
