@@ -111,10 +111,11 @@ items:
   - id: SEC-007
     section: "CLVM Vulnerability Audit"
     summary: "All known Chialisp/CLVM vulnerabilities assessed against Rue puzzles"
-    status: gap
+    status: verified
     spec_ref: "docs/requirements/domains/security/specs/SEC-007.md"
-    tests: []
-    notes: "9 vulnerabilities assessed: 4 mitigated, 1 N/A, 1 by-design, 3 gaps (V4/V5/V6/V9)"
+    tests:
+      - tests/vv_req_sec_007.rs
+    notes: "13 VV tests verify all 9 vulnerabilities: V1-V3 mitigated, V4-V6 tracked by SEC-008/009, V7 N/A, V8 by-design, V9 implemented (CHK-012)."
 
   - id: SEC-008
     section: "Condition Injection Protection"
