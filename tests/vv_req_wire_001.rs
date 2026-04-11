@@ -4,41 +4,34 @@
 //! Spec: `docs/requirements/domains/wire/specs/WIRE-001.md`.
 //!
 //! Verifies that the checkpoint message is computed correctly as:
-//! sha256(new_state_root || new_validator_merkle_root || new_validator_count_be8 || new_epoch_be8)
+//! sha256(new_state_root || new_validator_merkle_root || new_validator_count_be8 || new_epoch_be8 || network_coin_launcher_id)
+//! Total preimage: 112 bytes (32+32+8+8+32). Output: 32 bytes.
 
 use chia_l2_consensus::testing::compute_checkpoint_message;
 use sha2::{Digest, Sha256};
 
+/// Dummy network ID for tests (CHK-012)
+const NET_ID: [u8; 32] = [0x00; 32];
+
 #[test]
-fn vv_req_wire_001_message_is_sha256_of_80_bytes() {
-    // WIRE-001: Message is computed as sha256 of exactly 80 bytes
+fn vv_req_wire_001_message_is_sha256_of_112_bytes() {
     let state_root = [0x11u8; 32];
     let merkle_root = [0x22u8; 32];
     let count = 100u64;
     let epoch = 42u64;
 
-    // Compute message
-    let message = compute_checkpoint_message(state_root, merkle_root, count, epoch);
+    let message = compute_checkpoint_message(state_root, merkle_root, count, epoch, NET_ID);
+    assert_eq!(message.len(), 32, "WIRE-001: Output must be 32 bytes");
 
-    // Verify it's 32 bytes (sha256 output)
-    assert_eq!(
-        message.len(),
-        32,
-        "WIRE-001: Checkpoint message must be 32 bytes"
-    );
-
-    // Manually compute expected
-    let mut input = Vec::with_capacity(80);
+    let mut input = Vec::with_capacity(112);
     input.extend_from_slice(&state_root);
     input.extend_from_slice(&merkle_root);
     input.extend_from_slice(&count.to_be_bytes());
     input.extend_from_slice(&epoch.to_be_bytes());
-    assert_eq!(input.len(), 80, "Input should be exactly 80 bytes");
+    input.extend_from_slice(&NET_ID); // CHK-012
+    assert_eq!(input.len(), 112, "Input should be exactly 112 bytes");
 
-    let mut hasher = Sha256::new();
-    hasher.update(&input);
-    let expected: [u8; 32] = hasher.finalize().into();
-
+    let expected: [u8; 32] = Sha256::digest(&input).into();
     assert_eq!(
         message, expected,
         "WIRE-001: Message must match manual computation"
@@ -47,145 +40,104 @@ fn vv_req_wire_001_message_is_sha256_of_80_bytes() {
 
 #[test]
 fn vv_req_wire_001_field_order_correct() {
-    // WIRE-001: Field order matches specification exactly
-    // state_root || merkle_root || count_be8 || epoch_be8
-
     let state_root = [0xAAu8; 32];
     let merkle_root = [0xBBu8; 32];
     let count = 0x0102030405060708u64;
     let epoch = 0x0908070605040302u64;
 
-    let message = compute_checkpoint_message(state_root, merkle_root, count, epoch);
+    let message = compute_checkpoint_message(state_root, merkle_root, count, epoch, NET_ID);
 
-    // Build expected with explicit field order
     let mut hasher = Sha256::new();
-    hasher.update(&state_root); // First: state_root
-    hasher.update(&merkle_root); // Second: merkle_root
-    hasher.update(&count.to_be_bytes()); // Third: count (BE)
-    hasher.update(&epoch.to_be_bytes()); // Fourth: epoch (BE)
+    hasher.update(&state_root);
+    hasher.update(&merkle_root);
+    hasher.update(&count.to_be_bytes());
+    hasher.update(&epoch.to_be_bytes());
+    hasher.update(&NET_ID); // CHK-012
     let expected: [u8; 32] = hasher.finalize().into();
 
     assert_eq!(
         message, expected,
-        "WIRE-001: Field order must be state_root || merkle_root || count || epoch"
+        "WIRE-001: Field order must be sr || mr || count || epoch || network_id"
     );
 }
 
 #[test]
 fn vv_req_wire_001_integers_are_8_byte_big_endian() {
-    // WIRE-001: Integers are 8-byte big-endian, zero-padded
     let state_root = [0x00u8; 32];
     let merkle_root = [0x00u8; 32];
-    let count = 1u64; // Small number to verify padding
-    let epoch = 256u64; // 0x100 to check byte order
+    let count = 1u64;
+    let epoch = 256u64;
 
-    let message = compute_checkpoint_message(state_root, merkle_root, count, epoch);
+    let message = compute_checkpoint_message(state_root, merkle_root, count, epoch, NET_ID);
 
-    // count = 1 as 8-byte BE: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
-    // epoch = 256 as 8-byte BE: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00]
-    let mut input = Vec::with_capacity(80);
+    let mut input = Vec::with_capacity(112);
     input.extend_from_slice(&state_root);
     input.extend_from_slice(&merkle_root);
     input.extend_from_slice(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]); // count=1
     input.extend_from_slice(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00]); // epoch=256
+    input.extend_from_slice(&NET_ID); // CHK-012
 
-    let mut hasher = Sha256::new();
-    hasher.update(&input);
-    let expected: [u8; 32] = hasher.finalize().into();
-
+    let expected: [u8; 32] = Sha256::digest(&input).into();
     assert_eq!(
         message, expected,
-        "WIRE-001: Integers must be 8-byte big-endian, zero-padded"
+        "WIRE-001: Integers must be 8-byte big-endian"
     );
 }
 
 #[test]
 fn vv_req_wire_001_edge_case_zeros() {
-    // WIRE-001: Test with all zeros
-    let state_root = [0x00u8; 32];
-    let merkle_root = [0x00u8; 32];
-    let count = 0u64;
-    let epoch = 0u64;
+    let message = compute_checkpoint_message([0; 32], [0; 32], 0, 0, [0; 32]);
 
-    let message = compute_checkpoint_message(state_root, merkle_root, count, epoch);
-
-    // Should be sha256 of 80 zero bytes
-    let input = [0x00u8; 80];
-    let mut hasher = Sha256::new();
-    hasher.update(&input);
-    let expected: [u8; 32] = hasher.finalize().into();
+    // sha256 of 112 zero bytes
+    let input = [0x00u8; 112];
+    let expected: [u8; 32] = Sha256::digest(&input).into();
 
     assert_eq!(
         message, expected,
-        "WIRE-001: All zeros should produce sha256([0; 80])"
+        "WIRE-001: All zeros should produce sha256([0; 112])"
     );
 }
 
 #[test]
 fn vv_req_wire_001_edge_case_max_values() {
-    // WIRE-001: Test with maximum u64 values
-    let state_root = [0xFFu8; 32];
-    let merkle_root = [0xFFu8; 32];
-    let count = u64::MAX;
-    let epoch = u64::MAX;
+    let message = compute_checkpoint_message([0xFF; 32], [0xFF; 32], u64::MAX, u64::MAX, NET_ID);
 
-    let message = compute_checkpoint_message(state_root, merkle_root, count, epoch);
+    // First 80 bytes = 0xFF, last 32 bytes = 0x00 (NET_ID)
+    let mut input = Vec::with_capacity(112);
+    input.extend_from_slice(&[0xFFu8; 80]);
+    input.extend_from_slice(&NET_ID);
 
-    // Should be sha256 of 80 bytes of 0xFF
-    let input = [0xFFu8; 80];
-    let mut hasher = Sha256::new();
-    hasher.update(&input);
-    let expected: [u8; 32] = hasher.finalize().into();
-
+    let expected: [u8; 32] = Sha256::digest(&input).into();
     assert_eq!(
         message, expected,
-        "WIRE-001: Max values should produce sha256([0xFF; 80])"
+        "WIRE-001: Max values with zero network_id"
     );
 }
 
 #[test]
 fn vv_req_wire_001_known_test_vector() {
-    // WIRE-001: Known test vector for cross-implementation verification
-    // This value must match the Rue implementation
-
-    // Test values from spec
     let state_root = [0x01u8; 32];
     let merkle_root = [0x02u8; 32];
     let count = 10u64;
     let epoch = 5u64;
 
-    let message = compute_checkpoint_message(state_root, merkle_root, count, epoch);
+    let message = compute_checkpoint_message(state_root, merkle_root, count, epoch, NET_ID);
 
-    // Compute expected manually
-    let mut input = Vec::with_capacity(80);
-    input.extend_from_slice(&[0x01u8; 32]); // state_root
-    input.extend_from_slice(&[0x02u8; 32]); // merkle_root
-    input.extend_from_slice(&10u64.to_be_bytes()); // count=10
-    input.extend_from_slice(&5u64.to_be_bytes()); // epoch=5
+    let mut input = Vec::with_capacity(112);
+    input.extend_from_slice(&[0x01u8; 32]);
+    input.extend_from_slice(&[0x02u8; 32]);
+    input.extend_from_slice(&10u64.to_be_bytes());
+    input.extend_from_slice(&5u64.to_be_bytes());
+    input.extend_from_slice(&NET_ID); // CHK-012
 
-    let mut hasher = Sha256::new();
-    hasher.update(&input);
-    let expected: [u8; 32] = hasher.finalize().into();
-
+    let expected: [u8; 32] = Sha256::digest(&input).into();
     assert_eq!(message, expected, "WIRE-001: Known test vector must match");
-
-    // Store expected value for cross-impl verification
-    // This exact value must be produced by Rue implementation
-    eprintln!("WIRE-001 test vector: {:02x?}", message);
 }
 
 #[test]
 fn vv_req_wire_001_deterministic() {
-    // WIRE-001: Same inputs produce same output
-    let state_root = [0x42u8; 32];
-    let merkle_root = [0x43u8; 32];
-    let count = 1000u64;
-    let epoch = 999u64;
-
-    let message1 = compute_checkpoint_message(state_root, merkle_root, count, epoch);
-    let message2 = compute_checkpoint_message(state_root, merkle_root, count, epoch);
-    let message3 = compute_checkpoint_message(state_root, merkle_root, count, epoch);
+    let message1 = compute_checkpoint_message([0x42; 32], [0x43; 32], 1000, 999, NET_ID);
+    let message2 = compute_checkpoint_message([0x42; 32], [0x43; 32], 1000, 999, NET_ID);
 
     assert_eq!(message1, message2, "WIRE-001: Must be deterministic");
-    assert_eq!(message2, message3, "WIRE-001: Must be deterministic");
 }

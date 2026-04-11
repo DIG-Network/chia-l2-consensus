@@ -21,8 +21,8 @@ fn vv_req_chk_009_checkpoint_message_includes_epoch() {
     let mr = [0xBB; 32];
     let vc: u64 = 5;
 
-    let msg_epoch_1 = compute_checkpoint_message(sr, mr, vc, 1);
-    let msg_epoch_2 = compute_checkpoint_message(sr, mr, vc, 2);
+    let msg_epoch_1 = compute_checkpoint_message(sr, mr, vc, 1, [0x00; 32]);
+    let msg_epoch_2 = compute_checkpoint_message(sr, mr, vc, 2, [0x00; 32]);
 
     assert_ne!(
         msg_epoch_1, msg_epoch_2,
@@ -39,19 +39,20 @@ fn vv_req_chk_009_checkpoint_message_format() {
     let vc: u64 = 10;
     let epoch: u64 = 42;
 
-    let msg = compute_checkpoint_message(sr, mr, vc, epoch);
+    let msg = compute_checkpoint_message(sr, mr, vc, epoch, [0x00; 32]);
 
-    // Manual computation
+    // Manual computation — 112 bytes total (CHK-012 added network_coin_launcher_id)
     let mut hasher = Sha256::new();
     hasher.update(sr);
     hasher.update(mr);
     hasher.update(vc.to_be_bytes());
     hasher.update(epoch.to_be_bytes()); // epoch MUST be here
+    hasher.update([0x00u8; 32]); // CHK-012: network_coin_launcher_id
     let expected: [u8; 32] = hasher.finalize().into();
 
     assert_eq!(
         msg, expected,
-        "CHK-009: Checkpoint message must be sha256(sr ‖ mr ‖ vc_be8 ‖ epoch_be8)"
+        "CHK-009: Checkpoint message must be sha256(sr ‖ mr ‖ vc_be8 ‖ epoch_be8 ‖ network_id)"
     );
 }
 
@@ -64,7 +65,7 @@ fn vv_req_chk_009_adjacent_epochs_differ() {
     let vc: u64 = 1;
 
     let messages: Vec<[u8; 32]> = (0..10u64)
-        .map(|e| compute_checkpoint_message(sr, mr, vc, e))
+        .map(|e| compute_checkpoint_message(sr, mr, vc, e, [0x00; 32]))
         .collect();
 
     for i in 0..messages.len() {
@@ -90,13 +91,13 @@ fn vv_req_chk_009_proof_encodes_epoch() {
     let vc: u64 = 1;
 
     // Generate proof for epoch 5 (new_epoch = 5, so old_epoch was 4)
-    let msg_epoch_5 = compute_checkpoint_message(sr, mr, vc, 5);
+    let msg_epoch_5 = compute_checkpoint_message(sr, mr, vc, 5, [0x00; 32]);
     let circuit_5 =
         ConsensusCircuit::with_public_inputs(mr, vc, mr, vc, [0xCC; 48], msg_epoch_5, 1);
     let proof_5 = generate_proof(circuit_5, &pk).expect("Proof for epoch 5");
 
     // Generate proof for epoch 10 (new_epoch = 10, so old_epoch was 9)
-    let msg_epoch_10 = compute_checkpoint_message(sr, mr, vc, 10);
+    let msg_epoch_10 = compute_checkpoint_message(sr, mr, vc, 10, [0x00; 32]);
     let circuit_10 =
         ConsensusCircuit::with_public_inputs(mr, vc, mr, vc, [0xCC; 48], msg_epoch_10, 1);
     let proof_10 = generate_proof(circuit_10, &pk).expect("Proof for epoch 10");
@@ -116,8 +117,8 @@ fn vv_req_chk_009_scalar_s6_changes_with_epoch() {
     let mr = [0xBB; 32];
     let vc: u64 = 1;
 
-    let msg_5 = compute_checkpoint_message(sr, mr, vc, 5);
-    let msg_6 = compute_checkpoint_message(sr, mr, vc, 6);
+    let msg_5 = compute_checkpoint_message(sr, mr, vc, 5, [0x00; 32]);
+    let msg_6 = compute_checkpoint_message(sr, mr, vc, 6, [0x00; 32]);
 
     let s6_epoch5 = bytes_to_scalar(&msg_5);
     let s6_epoch6 = bytes_to_scalar(&msg_6);
@@ -177,7 +178,7 @@ fn vv_req_chk_009_epoch_0_to_1_valid() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
     let pk = deserialize_proving_key(&pk_bytes).expect("PK");
 
-    let msg = compute_checkpoint_message([0; 32], [0; 32], 0, 1); // new_epoch = 1
+    let msg = compute_checkpoint_message([0; 32], [0; 32], 0, 1, [0x00; 32]); // new_epoch = 1
     let circuit = ConsensusCircuit::with_public_inputs([0; 32], 1, [0; 32], 0, [0; 48], msg, 1);
     let proof = generate_proof(circuit, &pk);
 
@@ -191,8 +192,8 @@ fn vv_req_chk_009_epoch_0_to_1_valid() {
 
 #[test]
 fn vv_req_chk_009_large_epoch() {
-    let msg_large = compute_checkpoint_message([0; 32], [0; 32], 0, u64::MAX);
-    let msg_prev = compute_checkpoint_message([0; 32], [0; 32], 0, u64::MAX - 1);
+    let msg_large = compute_checkpoint_message([0; 32], [0; 32], 0, u64::MAX, [0x00; 32]);
+    let msg_prev = compute_checkpoint_message([0; 32], [0; 32], 0, u64::MAX - 1, [0x00; 32]);
 
     assert_ne!(
         msg_large, msg_prev,

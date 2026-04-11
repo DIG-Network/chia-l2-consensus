@@ -102,10 +102,18 @@ items:
   - id: CHK-011
     section: "State Hash Binding"
     summary: "state_root in checkpoint_message binds proof to specific state"
-    status: gap
+    status: verified
     spec_ref: "docs/requirements/domains/checkpoint/specs/CHK-011.md"
-    tests: []
-    notes: "state_root IS included in checkpoint_message already. Need VV tests verifying the binding."
+    tests:
+      - tests/vv_req_chk_011.rs::vv_req_chk_011_state_root_is_first_field
+      - tests/vv_req_chk_011.rs::vv_req_chk_011_different_state_roots_different_messages
+      - tests/vv_req_chk_011.rs::vv_req_chk_011_single_byte_change
+      - tests/vv_req_chk_011.rs::vv_req_chk_011_rue_includes_state_root
+      - tests/vv_req_chk_011.rs::vv_req_chk_011_same_state_root_for_message_and_recreation
+      - tests/vv_req_chk_011.rs::vv_req_chk_011_state_root_changes_scalar
+      - tests/vv_req_chk_011.rs::vv_req_chk_011_proof_bound_to_state_root
+      - tests/vv_req_chk_011.rs::vv_req_chk_011_zero_state_root_valid
+    notes: "state_root is first field of 80-byte preimage. Different roots → different messages → different scalars → different proofs. Rue uses same state_root for message AND recreation."
 
   - id: CHK-012
     section: "Network ID Binding"

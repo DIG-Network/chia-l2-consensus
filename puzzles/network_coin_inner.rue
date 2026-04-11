@@ -4,18 +4,26 @@
 // NET-001: Singleton identity - wrapped by singleton_top_layer_v1_1
 // NET-002: AggSigMe registration - requires validator signature
 // NET-003: Registration coin creation - creates registration coin with collateral
-// NET-004: Self-recreation - recreates network coin via singleton wrapper
-// NET-005: Pubkey memo - includes pubkey in memo for indexer
+// NET-004: Self-recreation - emits CreateCoin with INNER_MOD_HASH for singleton morphing
+// NET-005: Pubkey memo - includes pubkey in memo for indexer (driver convention)
+// NET-006: End-to-end simulator test validates full singleton lifecycle
 //
 // See spec-network-coin.md for specification.
+//
+// Singleton integration: This puzzle is stored UNCURRIED in the singleton.
+// All parameters (curried + solution) are passed as a flat list in inner_solution.
+// The singleton wrapper calls `(a MODULE inner_solution)`.
+// Self-recreation outputs INNER_MOD_HASH (uncurried module hash) which the
+// singleton morphs to the full singleton puzzle hash.
 
 fn main(
-    // Curried parameters (fixed at deployment)
+    // Curried parameters (fixed at deployment, passed in inner_solution)
+    INNER_MOD_HASH: Bytes32,
     registration_coin_mod_hash: Bytes32,
     collateral_amount: Int,
     checkpoint_singleton_id: Bytes32,
 
-    // Solution parameters (provided at spend time)
+    // Solution parameters (provided at spend time via inner_solution)
     new_validator_pubkey: PublicKey,
     conditions: List<Condition>,
 ) -> List<Condition> {
@@ -50,10 +58,20 @@ fn main(
         memos: nil, // Driver adds pubkey memo per NET-005
     };
 
+    // NET-004: Self-recreation for singleton morphing.
+    // Output INNER_MOD_HASH (uncurried module hash) with odd amount.
+    // The singleton_top_layer_v1_1 wrapper morphs this to the full
+    // singleton puzzle hash: curry_hash(SINGLETON_MOD, STRUCT, INNER_MOD_HASH).
+    let recreate_self = CreateCoin {
+        puzzle_hash: INNER_MOD_HASH,
+        amount: 1,
+        memos: nil,
+    };
+
     // Return conditions:
-    // - AggSigMe to verify validator signature
-    // - CreateCoin for registration coin
+    // - AggSigMe to verify validator signature (NET-002)
+    // - CreateCoin for registration coin (NET-003)
+    // - CreateCoin for singleton recreation (NET-004, amount=1=odd)
     // - Additional conditions passed through (e.g., for fees)
-    // Note: Singleton wrapper handles self-recreation (NET-004)
-    [agg_sig, create_registration, ...conditions]
+    [agg_sig, create_registration, recreate_self, ...conditions]
 }

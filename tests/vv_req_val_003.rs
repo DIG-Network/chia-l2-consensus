@@ -62,14 +62,15 @@ fn vv_req_val_003_checkpoint_message_from_wire() {
     let new_vc: u64 = 5;
     let new_epoch: u64 = 3;
 
-    let msg = compute_checkpoint_message(new_state_root, new_vmr, new_vc, new_epoch);
+    let msg = compute_checkpoint_message(new_state_root, new_vmr, new_vc, new_epoch, [0x00; 32]);
 
-    // Manual computation per WIRE-001
+    // Manual computation per WIRE-001 + CHK-012
     let mut hasher = Sha256::new();
     hasher.update(new_state_root);
     hasher.update(new_vmr);
     hasher.update(new_vc.to_be_bytes());
     hasher.update(new_epoch.to_be_bytes());
+    hasher.update([0x00u8; 32]); // CHK-012: network_coin_launcher_id
     let expected: [u8; 32] = hasher.finalize().into();
 
     assert_eq!(

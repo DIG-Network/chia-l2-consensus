@@ -1,30 +1,66 @@
 // registration_coin.rue
-// See spec-registration-coin.md for specification
+//
+// REG-001: Puzzle structure — curried with VALIDATOR_PUBKEY + CHECKPOINT_SINGLETON_ID
+// REG-003: Collateral lock — spendable only with non-membership announcement
+// REG-004: Announcement assertion — asserts checkpoint singleton announcement
+// REG-005: Collateral return — creates coin at collateral_destination
+// REG-006: Epoch replay protection — epoch in announcement prevents replay
+//
+// See spec-registration-coin.md for specification.
 // Full driver code: spec-registration-coin.md — Driver Code (Rust)
 
-fn main(
-    VALIDATOR_PUBKEY: PublicKey,
-    CHECKPOINT_SINGLETON_ID: Bytes32,
+/// Encode an integer as exactly 8 big-endian bytes.
+/// Uses a sentinel byte (0x01) at position 0 to force 9-byte length,
+/// then strips it with substr to yield exactly 8 bytes.
+/// Required by spec-wire-format — Integer Encoding.
+inline fn int_to_8_bytes_be(n: Int) -> Bytes {
+    let sentinel: Int = 0x010000000000000000 as Int;
+    let padded_bytes: Bytes = (n + sentinel) as Bytes;
+    substr(padded_bytes, 1, 9)
+}
 
-    epoch: Int,
-    collateral_destination: Bytes32,
-    collateral_amount: Int,
-    conditions: List<Condition>,
+fn main(
+    // REG-001: Curried parameters (set by network coin at creation time)
+    VALIDATOR_PUBKEY: PublicKey,          // 48-byte BLS G1 point
+    CHECKPOINT_SINGLETON_ID: Bytes32,    // Coin ID (not launcher ID)
+
+    // Solution parameters (provided at spend time)
+    epoch: Int,                          // Current checkpoint epoch
+    // TODO: Add a requirement where the destination is the puzzle hash of the registration coin owner
+    collateral_destination: Bytes32,     // Where to send collateral
+    collateral_amount: Int,              // Amount to return
+    conditions: List<Condition>,         // Additional conditions
 ) -> List<Condition> {
 
-    // Announcement format per spec-wire-format — Membership Announcement Format
-    // epoch encoded as 8-byte big-endian u64
-    // is_member = 0 (0x00) means not a member
-    let expected_announcement = sha256(
-        "membership" + int_to_8_bytes_be(epoch) + VALIDATOR_PUBKEY + 0
+    // REG-004: Compute expected membership announcement
+    // Format per spec-wire-format — Membership Announcement Format:
+    // sha256("membership" + epoch_be8 + pubkey + is_member)
+    // is_member = 0x00 means not a member
+    let pk_bytes: Bytes = VALIDATOR_PUBKEY as Bytes;
+    let expected_announcement: Bytes32 = sha256(
+        "membership" + int_to_8_bytes_be(epoch) + pk_bytes + 0x00
     );
 
-    // CHECKPOINT_SINGLETON_ID is the current coin ID, not the launcher ID
+    // REG-004: Full announcement hash includes checkpoint singleton coin ID
+    // CHECKPOINT_SINGLETON_ID is the coin ID, not the launcher ID
     // per spec-wire-format — Common Mistakes: Coin ID vs launcher ID
-    conditions + [
-        AssertCoinAnnouncement(
-            sha256(CHECKPOINT_SINGLETON_ID + expected_announcement)
-        ),
-        CreateCoin(collateral_destination, collateral_amount),
-    ]
+    let checkpoint_bytes: Bytes = CHECKPOINT_SINGLETON_ID as Bytes;
+    let full_announcement: Bytes32 = sha256(
+        checkpoint_bytes + expected_announcement
+    );
+
+    // REG-003: Assert non-membership announcement from checkpoint singleton
+    let assert_announcement = AssertCoinAnnouncement {
+        id: full_announcement,
+    };
+
+    // REG-005: Return collateral to specified destination
+    let create_collateral = CreateCoin {
+        puzzle_hash: collateral_destination,
+        amount: collateral_amount,
+        memos: nil,
+    };
+
+    // Return conditions: assert announcement + create collateral + passthrough
+    [assert_announcement, create_collateral, ...conditions]
 }
