@@ -134,3 +134,12 @@ items:
     tests:
       - tests/vv_req_sec_009.rs
     notes: "8 VV tests. Risk mitigated: announcement requires matching checkpoint coin ID (changes every epoch). SEC-008 removed condition injection. RBF impractical."
+
+  - id: SEC-010
+    section: "Comprehensive Attack Surface"
+    summary: "20 attack vectors verified across all 3 puzzles"
+    status: verified
+    spec_ref: "docs/requirements/domains/security/specs/SEC-010.md"
+    tests:
+      - tests/vv_req_sec_010.rs
+    notes: "20 VV tests: one per attack vector (A-T). 16 fully addressed, 3 acknowledged trade-offs, 1 by-design."

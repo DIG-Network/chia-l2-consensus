@@ -12,5 +12,6 @@
 | [SEC-007](NORMATIVE.md#SEC-007) | ✅ | CLVM vulnerability audit | 9 vulns verified: V1-V3 mitigated, V4-V6 tracked, V7 N/A, V8 by-design, V9 CHK-012; 13 VV tests |
 | [SEC-008](NORMATIVE.md#SEC-008) | ✅ | Condition injection | Removed from registration + checkpoint; network coin keeps (AggSigMe protected); 9 VV tests |
 | [SEC-009](NORMATIVE.md#SEC-009) | ✅ | Destination binding | Risk mitigated by announcement requirement; RBF impractical; 8 VV tests |
+| [SEC-010](NORMATIVE.md#SEC-010) | ✅ | Attack surface | 20 attack vectors verified across all puzzles; 16 addressed, 3 trade-offs, 1 by-design; 20 VV tests |
 
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap

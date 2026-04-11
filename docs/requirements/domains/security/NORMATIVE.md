@@ -64,3 +64,10 @@
 
 <a id="SEC-009"></a>**SEC-009** The registration coin's `collateral_destination` MUST be protected against RBF/mempool substitution attacks, either by requiring a validator signature over the destination hash or by documenting the risk as mitigated by the announcement requirement.
 > **Spec:** [`SEC-009.md`](specs/SEC-009.md)
+
+---
+
+## §10 Comprehensive Attack Surface
+
+<a id="SEC-010"></a>**SEC-010** All 20 identified attack vectors (A-T) MUST be verified as addressed, mitigated, or acknowledged. This includes: proof replay, cross-network replay, state forgery, minority checkpoint, fake registration, collateral theft, epoch manipulation, double checkpoint, signature subtraction, rogue key, Merkle forgery, front-running, singleton destruction, VK substitution, spam, censorship, stale proofs, announcement spoofing, and bundle splitting.
+> **Spec:** [`SEC-010.md`](specs/SEC-010.md)
