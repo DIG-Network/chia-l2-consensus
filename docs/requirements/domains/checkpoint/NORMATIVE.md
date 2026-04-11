@@ -45,7 +45,31 @@
 
 ---
 
-## §6 End-to-End Integration Test
+## §6 Epoch Binding
+
+<a id="CHK-009"></a>**CHK-009** The checkpoint message MUST include `new_epoch` (8-byte big-endian u64) in its SHA-256 preimage, and the CLVM puzzle MUST compute `new_epoch = old_epoch + 1` internally rather than accepting it from the solution, binding each Groth16 proof to exactly one epoch value.
+> **Spec:** [`CHK-009.md`](specs/CHK-009.md)
+
+<a id="CHK-010"></a>**CHK-010** Only one checkpoint spend per epoch MUST be accepted. This is enforced by: (a) the singleton pattern — spending consumes the coin and creates a successor with epoch+1, (b) the checkpoint_message hash including the epoch — a proof for epoch N cannot verify at epoch M because the message differs, (c) the BLS signature binding — validators sign a message containing the epoch.
+> **Spec:** [`CHK-010.md`](specs/CHK-010.md)
+
+---
+
+## §7 State Hash Binding
+
+<a id="CHK-011"></a>**CHK-011** The checkpoint_message hash MUST include `new_state_root` as the first field of its SHA-256 preimage, binding the Groth16 proof and BLS signature to a specific L2 state transition. The CLVM puzzle MUST use the same state_root from the solution in both the checkpoint_message computation and the singleton recreation.
+> **Spec:** [`CHK-011.md`](specs/CHK-011.md)
+
+---
+
+## §8 Network ID Binding
+
+<a id="CHK-012"></a>**CHK-012** The checkpoint_message hash MUST include the `network_coin_launcher_id` (32 bytes) in its SHA-256 preimage, preventing proofs generated for one L2 network from being replayed on another. The network_coin_launcher_id MUST be curried into the checkpoint singleton puzzle at deployment and MUST NOT be accepted from the solution.
+> **Spec:** [`CHK-012.md`](specs/CHK-012.md)
+
+---
+
+## §9 End-to-End Integration Test
 
 <a id="CHK-008"></a>**CHK-008** A full end-to-end integration test MUST exercise the complete lifecycle: deploy network coin + checkpoint singleton, register validators, collect signatures, generate a real Groth16 proof, submit a checkpoint spend via chia-wallet-sdk simulator, verify state update, then execute collateral recovery via membership query + registration coin spend in the same bundle.
 > **Spec:** [`CHK-008.md`](../../../design/requirements/checkpoint/CHK-008.md)

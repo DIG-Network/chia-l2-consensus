@@ -66,3 +66,51 @@ items:
     spec_ref: "docs/design/requirements/checkpoint/CHK-008.md"
     tests: []
     notes: "Requires: Groth16 prover, trusted setup, chia-wallet-sdk simulator, singleton wrapping"
+
+  - id: CHK-009
+    section: "Epoch Binding"
+    summary: "Checkpoint message includes epoch; puzzle computes new_epoch internally"
+    status: verified
+    spec_ref: "docs/requirements/domains/checkpoint/specs/CHK-009.md"
+    tests:
+      - tests/vv_req_chk_009.rs::vv_req_chk_009_checkpoint_message_includes_epoch
+      - tests/vv_req_chk_009.rs::vv_req_chk_009_checkpoint_message_format
+      - tests/vv_req_chk_009.rs::vv_req_chk_009_adjacent_epochs_differ
+      - tests/vv_req_chk_009.rs::vv_req_chk_009_proof_encodes_epoch
+      - tests/vv_req_chk_009.rs::vv_req_chk_009_scalar_s6_changes_with_epoch
+      - tests/vv_req_chk_009.rs::vv_req_chk_009_puzzle_computes_epoch_internally
+      - tests/vv_req_chk_009.rs::vv_req_chk_009_rue_includes_epoch_in_message
+      - tests/vv_req_chk_009.rs::vv_req_chk_009_epoch_0_to_1_valid
+      - tests/vv_req_chk_009.rs::vv_req_chk_009_large_epoch
+    notes: "Epoch bound via checkpoint_message hash. Puzzle computes new_epoch=old+1 internally. Scalar s6=sha256(msg) changes with epoch. Proofs for different epochs differ."
+
+  - id: CHK-010
+    section: "Single Checkpoint Per Epoch"
+    summary: "Only one checkpoint per epoch via singleton + epoch binding + BLS"
+    status: verified
+    spec_ref: "docs/requirements/domains/checkpoint/specs/CHK-010.md"
+    tests:
+      - tests/vv_req_chk_010.rs::vv_req_chk_010_same_state_different_epochs
+      - tests/vv_req_chk_010.rs::vv_req_chk_010_signature_epoch_mismatch
+      - tests/vv_req_chk_010.rs::vv_req_chk_010_aggregate_signature_epoch_bound
+      - tests/vv_req_chk_010.rs::vv_req_chk_010_signing_message_epoch_chain
+      - tests/vv_req_chk_010.rs::vv_req_chk_010_puzzle_creates_new_coin_with_epoch_plus_1
+      - tests/vv_req_chk_010.rs::vv_req_chk_010_epoch_increment_exactly_1
+      - tests/vv_req_chk_010.rs::vv_req_chk_010_proof_replay_prevention
+    notes: "Three-layer enforcement: singleton UTXO (old coin consumed), epoch in checkpoint_message (scalar mismatch), BLS signature binding (different epoch = different message)."
+
+  - id: CHK-011
+    section: "State Hash Binding"
+    summary: "state_root in checkpoint_message binds proof to specific state"
+    status: gap
+    spec_ref: "docs/requirements/domains/checkpoint/specs/CHK-011.md"
+    tests: []
+    notes: "state_root IS included in checkpoint_message already. Need VV tests verifying the binding."
+
+  - id: CHK-012
+    section: "Network ID Binding"
+    summary: "network_coin_launcher_id in checkpoint_message prevents cross-network replay"
+    status: gap
+    spec_ref: "docs/requirements/domains/checkpoint/specs/CHK-012.md"
+    tests: []
+    notes: "REQUIRES IMPLEMENTATION: network_coin_launcher_id NOT in checkpoint_message yet. Rue puzzle + wire format change needed."

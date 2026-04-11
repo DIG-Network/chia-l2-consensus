@@ -84,6 +84,10 @@ by phase. Check boxes as requirements are verified.
 - [x] [CHK-008e](domains/checkpoint/specs/CHK-008.md) — Checkpoint spend accepted by simulator
 - [x] [CHK-008f](domains/checkpoint/specs/CHK-008.md) — Invalid proof rejected
 - [x] [CHK-008g](domains/checkpoint/specs/CHK-008.md) — Ark→ZCash format compatibility verified
+- [x] [CHK-009](domains/checkpoint/NORMATIVE.md#CHK-009) — Epoch binding (proof bound to specific epoch via checkpoint_message)
+- [x] [CHK-010](domains/checkpoint/NORMATIVE.md#CHK-010) — Single checkpoint per epoch (singleton + epoch hash + BLS)
+- [ ] [CHK-011](domains/checkpoint/NORMATIVE.md#CHK-011) — State hash binding (state_root in checkpoint_message)
+- [ ] [CHK-012](domains/checkpoint/NORMATIVE.md#CHK-012) — Network ID binding (network_coin_launcher_id in checkpoint_message)
 
 ---
 
@@ -150,10 +154,10 @@ by phase. Check boxes as requirements are verified.
 | 2 | Circuit | 6 | 6/6 |
 | 3 | Network Coin | 6 | 6/6 |
 | 3 | Registration Coin | 7 | 7/7 |
-| 3 | Checkpoint | 8 (7+7sub) | 8/8 (7/7 sub) |
+| 3 | Checkpoint | 12 (7+7sub+4) | 10/12 |
 | 4 | Indexer | 5 | 5/5 |
 | 5 | Deployment | 5 | 5/5 |
 | 5 | Validator | 5 | 5/5 |
 | 6 | Security | 6 | 6/6 |
 | 7 | Crate API | 6 | 2/6 |
-| **Total** | | **72** | **68/72** |
+| **Total** | | **76** | **70/76** |
