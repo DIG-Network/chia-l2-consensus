@@ -18,5 +18,6 @@
 | [CHK-011](NORMATIVE.md#CHK-011) | ✅ | State hash binding | state_root is first field; different roots → different messages/scalars/proofs; Rue uses same root for msg+recreation; 8 VV tests |
 | [CHK-012](NORMATIVE.md#CHK-012) | ✅ | Network ID binding | network_coin_launcher_id curried in puzzle; 112-byte preimage; different networks → different messages; 7 VV tests |
 | [CHK-013](NORMATIVE.md#CHK-013) | ✅ | Validator attestation | Validators sign epoch+network+state; bls_verify + Groth16 prove majority attestation; 11 VV tests |
+| [CHK-014](NORMATIVE.md#CHK-014) | ✅ | Permissionless/forgery | No AGG_SIG (anyone submits); both checks reject forgery; minority rejected; internal computation; 11 VV tests |
 
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap
