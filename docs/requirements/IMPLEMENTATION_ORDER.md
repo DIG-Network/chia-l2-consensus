@@ -134,6 +134,7 @@ by phase. Check boxes as requirements are verified.
 - [x] [SEC-007](domains/security/NORMATIVE.md#SEC-007) — CLVM vulnerability audit (9 vulns assessed, verify mitigations)
 - [x] [SEC-008](domains/security/NORMATIVE.md#SEC-008) — Condition injection protection (removed from registration + checkpoint)
 - [x] [SEC-009](domains/security/NORMATIVE.md#SEC-009) — Registration coin destination binding (risk mitigated by announcement)
+- [x] [SEC-010](domains/security/NORMATIVE.md#SEC-010) — Comprehensive attack surface (20 vectors A-T verified)
 
 ---
 
@@ -173,7 +174,7 @@ by phase. Check boxes as requirements are verified.
 | 4 | Indexer | 5 | 5/5 |
 | 5 | Deployment | 5 | 5/5 |
 | 5 | Validator | 5 | 5/5 |
-| 6 | Security | 9 | 9/9 |
+| 6 | Security | 10 | 10/10 |
 | 7 | Crate API | 6 | 6/6 |
 | 8 | RPC | 4 | 0/4 |
-| **Total** | | **85** | **81/85** |
+| **Total** | | **86** | **82/86** |
