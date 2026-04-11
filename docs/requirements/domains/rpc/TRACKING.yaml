@@ -1,0 +1,36 @@
+domain_id: rpc
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: RPC-001
+    section: "RPC Client"
+    summary: "Chia full node RPC client infrastructure"
+    status: gap
+    spec_ref: "docs/requirements/domains/rpc/specs/RPC-001.md"
+    tests: []
+    notes: "Prerequisite for all other RPC items. Needs async HTTP client, connection management."
+
+  - id: RPC-002
+    section: "Puzzle Drivers"
+    summary: "Spend bundle construction for 3 puzzles (8 todo!() stubs)"
+    status: gap
+    spec_ref: "docs/requirements/domains/rpc/specs/RPC-002.md"
+    tests: []
+    notes: "src/puzzles/network_coin.rs (3), registration_coin.rs (2), checkpoint.rs (3)"
+
+  - id: RPC-003
+    section: "Indexer Sync"
+    summary: "Full indexer algorithm implementation (3 todo!() stubs)"
+    status: gap
+    spec_ref: "docs/requirements/domains/rpc/specs/RPC-003.md"
+    tests: []
+    notes: "src/indexer/mod.rs::sync(), chain.rs (2), validator_set.rs::build_validator_set()"
+
+  - id: RPC-004
+    section: "Client Operations"
+    summary: "ConsensusClient coordination methods (5 todo!() stubs)"
+    status: gap
+    spec_ref: "docs/requirements/domains/rpc/specs/RPC-004.md"
+    tests: []
+    notes: "src/client.rs: deploy(), register_validator(), submit_checkpoint(), get_checkpoint_state(), recover_collateral()"
