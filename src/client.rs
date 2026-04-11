@@ -46,6 +46,10 @@ use crate::state::{CheckpointSingletonState, ValidatorSet};
 pub struct ConsensusClient {
     config: NetworkConfig,
     indexer: IndexerState,
+    /// Cached checkpoint state from last sync(). None before first sync.
+    state: Option<CheckpointSingletonState>,
+    /// Path for indexer persistent cache.
+    cache_path: Option<String>,
 }
 
 impl ConsensusClient {
@@ -59,6 +63,8 @@ impl ConsensusClient {
         Self {
             config,
             indexer: IndexerState::new(cache),
+            state: None,
+            cache_path: None,
         }
     }
 
@@ -171,5 +177,136 @@ impl ConsensusClient {
         // TODO: Implement — see prepare_collateral_recovery() in validator/exit.rs
         // for the off-chain parameter computation
         todo!()
+    }
+
+    // ================================================================
+    // API-004: State Accessors
+    // ================================================================
+
+    /// Get the internal state, or NotDeployed if sync() hasn't been called.
+    fn require_state(&self) -> ConsensusResult<&CheckpointSingletonState> {
+        self.state
+            .as_ref()
+            .ok_or(crate::error::ConsensusError::NotDeployed)
+    }
+
+    /// Current epoch from the checkpoint singleton.
+    /// Primary health signal — stalled epoch means checkpoints are stuck.
+    ///
+    /// See [spec-consensus-crate.md Lines 2129-2131](../docs/resources/spec-consensus-crate.md).
+    pub fn epoch(&self) -> ConsensusResult<u64> {
+        Ok(self.require_state()?.epoch)
+    }
+
+    /// Current L2 state root from the checkpoint singleton.
+    ///
+    /// See [spec-consensus-crate.md Lines 2132-2134](../docs/resources/spec-consensus-crate.md).
+    pub fn state_root(&self) -> ConsensusResult<Bytes32> {
+        Ok(self.require_state()?.state_root)
+    }
+
+    /// Current on-chain Merkle root of the active validator set.
+    ///
+    /// See [spec-consensus-crate.md Lines 2136-2140](../docs/resources/spec-consensus-crate.md).
+    pub fn validator_merkle_root(&self) -> ConsensusResult<Bytes32> {
+        Ok(self.require_state()?.validator_merkle_root)
+    }
+
+    /// On-chain validator count from the checkpoint singleton.
+    ///
+    /// See [spec-consensus-crate.md Lines 2145-2147](../docs/resources/spec-consensus-crate.md).
+    pub fn validator_count(&self) -> ConsensusResult<u64> {
+        Ok(self.require_state()?.validator_count)
+    }
+
+    /// Set the indexer cache file path for persistent storage.
+    ///
+    /// See [spec-consensus-crate.md Lines 1604-1608](../docs/resources/spec-consensus-crate.md).
+    pub fn set_cache_path(&mut self, path: &str) {
+        self.cache_path = Some(path.to_string());
+    }
+
+    // ================================================================
+    // API-005: Message Computation Facades
+    // ================================================================
+
+    /// Compute the checkpoint message for a proposed state transition.
+    ///
+    /// Uses current epoch+1 as new_epoch. Delegates to `compute_checkpoint_message()`.
+    ///
+    /// See [spec-consensus-crate.md Lines 1903-1918](../docs/resources/spec-consensus-crate.md).
+    pub fn checkpoint_message(
+        &self,
+        new_state_root: Bytes32,
+        new_validator_merkle_root: Bytes32,
+        new_validator_count: u64,
+    ) -> ConsensusResult<[u8; 32]> {
+        let state = self.require_state()?;
+        let new_epoch = state.epoch + 1;
+        Ok(crate::prover::compute_checkpoint_message(
+            new_state_root.into(),
+            new_validator_merkle_root.into(),
+            new_validator_count,
+            new_epoch,
+            self.config.network_coin_launcher_id.into(),
+        ))
+    }
+
+    /// Compute the full 96-byte message each validator signs.
+    ///
+    /// = checkpoint_message + genesis_challenge + checkpoint_singleton_coin_id
+    ///
+    /// See [spec-consensus-crate.md Lines 1920-1945](../docs/resources/spec-consensus-crate.md).
+    pub fn validator_signing_message(
+        &self,
+        new_state_root: Bytes32,
+        new_validator_merkle_root: Bytes32,
+        new_validator_count: u64,
+    ) -> ConsensusResult<[u8; 96]> {
+        let msg = self.checkpoint_message(
+            new_state_root,
+            new_validator_merkle_root,
+            new_validator_count,
+        )?;
+        let state = self.require_state()?;
+        let gc: [u8; 32] = self.config.genesis_challenge.into();
+        let cid: [u8; 32] = state.coin.coin_id().into();
+        let mut result = [0u8; 96];
+        result[0..32].copy_from_slice(&msg);
+        result[32..64].copy_from_slice(&gc);
+        result[64..96].copy_from_slice(&cid);
+        Ok(result)
+    }
+
+    /// Fast local membership check. No RPC call. Call sync() first.
+    ///
+    /// See [spec-consensus-crate.md Lines 2060-2070](../docs/resources/spec-consensus-crate.md).
+    pub fn is_active(&self, pubkey: &[u8; 48]) -> ConsensusResult<bool> {
+        // Requires validator set from sync — for now, check state exists
+        let _ = self.require_state()?;
+        // TODO: Check against the local validator set when sync() populates it
+        Ok(false)
+    }
+
+    /// Compute the membership announcement hash for AssertCoinAnnouncement.
+    ///
+    /// Uses current epoch and checkpoint coin ID.
+    ///
+    /// See [spec-consensus-crate.md Lines 2108-2120](../docs/resources/spec-consensus-crate.md).
+    pub fn membership_announcement(
+        &self,
+        pubkey: &[u8; 48],
+        is_member: bool,
+    ) -> ConsensusResult<[u8; 32]> {
+        let state = self.require_state()?;
+        let inner =
+            crate::prover::compute_membership_announcement_message(state.epoch, pubkey, is_member);
+        // Full announcement = sha256(checkpoint_coin_id + inner)
+        use sha2::{Digest, Sha256};
+        let cid: [u8; 32] = state.coin.coin_id().into();
+        let mut hasher = Sha256::new();
+        hasher.update(cid);
+        hasher.update(inner);
+        Ok(hasher.finalize().into())
     }
 }

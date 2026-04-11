@@ -104,4 +104,4 @@ pub use crate::indexer::{
 // ============================================================================
 // State helpers (src/state.rs)
 // ============================================================================
-pub use crate::state::initial_checkpoint_state;
+pub use crate::state::{initial_checkpoint_state, Validator};
