@@ -10,7 +10,7 @@
 | [SEC-006](NORMATIVE.md#SEC-006) | ✅ | Epoch replay | Epoch in inner hash + coin ID in outer hash; full replay scenario; adjacent/boundary epochs; 11 VV tests |
 
 | [SEC-007](NORMATIVE.md#SEC-007) | ✅ | CLVM vulnerability audit | 9 vulns verified: V1-V3 mitigated, V4-V6 tracked, V7 N/A, V8 by-design, V9 CHK-012; 13 VV tests |
-| [SEC-008](NORMATIVE.md#SEC-008) | ❌ | Condition injection | Verify passthrough conditions are safe or removed in all 3 puzzles |
-| [SEC-009](NORMATIVE.md#SEC-009) | ❌ | Destination binding | Verify registration coin destination is signed or risk documented |
+| [SEC-008](NORMATIVE.md#SEC-008) | ✅ | Condition injection | Removed from registration + checkpoint; network coin keeps (AggSigMe protected); 9 VV tests |
+| [SEC-009](NORMATIVE.md#SEC-009) | ✅ | Destination binding | Risk mitigated by announcement requirement; RBF impractical; 8 VV tests |
 
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap

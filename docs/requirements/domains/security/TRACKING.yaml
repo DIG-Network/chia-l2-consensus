@@ -119,16 +119,18 @@ items:
 
   - id: SEC-008
     section: "Condition Injection Protection"
-    summary: "Passthrough conditions must be removed, filtered, or signed"
-    status: gap
+    summary: "Passthrough conditions removed from registration + checkpoint"
+    status: verified
     spec_ref: "docs/requirements/domains/security/specs/SEC-008.md"
-    tests: []
-    notes: "All 3 puzzles spread ...conditions from solution. Farmer can inject CREATE_COIN, RESERVE_FEE."
+    tests:
+      - tests/vv_req_sec_008.rs
+    notes: "9 VV tests. Removed ...conditions from registration_coin.rue and checkpoint_inner.rue. Network coin keeps conditions (protected by AggSigMe)."
 
   - id: SEC-009
     section: "Registration Coin Destination Binding"
-    summary: "collateral_destination must be signed or risk documented"
-    status: gap
+    summary: "Risk mitigated by announcement requirement; documented"
+    status: verified
     spec_ref: "docs/requirements/domains/security/specs/SEC-009.md"
-    tests: []
-    notes: "Registration coin TODO on line 29 acknowledges this. RBF attack possible."
+    tests:
+      - tests/vv_req_sec_009.rs
+    notes: "8 VV tests. Risk mitigated: announcement requires matching checkpoint coin ID (changes every epoch). SEC-008 removed condition injection. RBF impractical."
