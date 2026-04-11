@@ -42,7 +42,7 @@ items:
   - id: SMT-005
     section: "Cross-Implementation"
     summary: "Rust and Chialisp produce identical roots"
-    status: partial
+    status: verified
     spec_ref: "docs/requirements/domains/smt/specs/SMT-005.md"
     tests:
       - tests/vv_req_smt_005.rs
