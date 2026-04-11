@@ -120,5 +120,6 @@ items:
     summary: "Full lifecycle: create via network coin, lock collateral, recover via cross-coin bundle"
     status: verified
     spec_ref: "docs/requirements/domains/registration_coin/specs/REG-007.md"
-    tests: []
-    notes: "Requires: chia-wallet-sdk singleton wrapping, checkpoint membership query, cross-coin announcement matching"
+    tests:
+      - tests/vv_req_reg_007.rs
+    notes: "2 tests: cross-coin bundle (checkpoint query + registration spend), collateral recovery."
