@@ -24,6 +24,12 @@
 
 10. **BLS12-381 point format** — Use ZCash compressed format (48 bytes G1, 96 bytes G2) with proper infinity and sign encoding.
 
+12. **Puzzle tests MUST execute CLVM** — Source-inspection-only tests (e.g., `src.contains("AggSigMe")`) are NOT acceptable for verifying puzzle behavior. Every puzzle VV test MUST deserialize the compiled `.hex`, curry with parameters, run the CLVM with a solution, and assert exact output conditions.
+
+13. **Puzzle tests MUST use the simulator** — All puzzle spend paths MUST be tested with `chia-sdk-test::Simulator`. The simulator runs full consensus validation including CLVM execution, signature aggregation, and announcement matching. Tests must verify coin creation, spend rejection for invalid inputs, and cross-spend announcement assertions.
+
+14. **Test all permutations** — Puzzle tests must cover valid spends, invalid curried params, invalid solution fields, edge values, cross-implementation hash checks, and each spend path of multi-path puzzles.
+
 11. **After `git pull`** — Treat `- [x]` in [`IMPLEMENTATION_ORDER.md`](../../requirements/IMPLEMENTATION_ORDER.md) as **done**; only `- [ ]` is selectable.
 
 ## chia-wallet-sdk priority

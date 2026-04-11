@@ -5,7 +5,7 @@
 //!
 //! Verifies that validator slots are computed deterministically from pubkey hashes.
 
-use chia_l2_consensus::merkle::{compute_slot, TREE_DEPTH};
+use chia_l2_consensus::testing::{compute_slot, TREE_DEPTH};
 use sha2::{Digest, Sha256};
 
 #[test]

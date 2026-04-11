@@ -5,7 +5,7 @@
 //!
 //! Verifies that leaf values are correctly computed for active and empty slots.
 
-use chia_l2_consensus::merkle::{active_leaf, compute_slot, SparseMerkleTree, EMPTY_LEAF};
+use chia_l2_consensus::testing::{active_leaf, compute_slot, SparseMerkleTree, EMPTY_LEAF};
 use sha2::{Digest, Sha256};
 
 #[test]

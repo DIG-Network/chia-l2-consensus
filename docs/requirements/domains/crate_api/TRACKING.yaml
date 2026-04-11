@@ -1,0 +1,52 @@
+domain_id: crate_api
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: API-001
+    section: "Public API Surface"
+    summary: "lib.rs exports match spec; testing module for VV tests"
+    status: verified
+    spec_ref: "docs/requirements/domains/crate_api/specs/API-001.md"
+    tests: []
+    notes: "lib.rs exports only public API types (ConsensusClient, NetworkConfig, etc.). Internal modules are pub(crate). src/testing.rs re-exports all internal types for VV tests. ~55 test files migrated to testing:: imports."
+
+  - id: API-002
+    section: "NetworkConfig Completeness"
+    summary: "Serde derives, verification_key(), checkpoint_singleton_id()"
+    status: gap
+    spec_ref: "docs/requirements/domains/crate_api/specs/API-002.md"
+    tests: []
+    notes: "NetworkConfig missing serde derives and two helper methods per spec Lines 238, 298-314."
+
+  - id: API-003
+    section: "State Types"
+    summary: "NetworkState, ValidatorInfo, lineage_proof fields, ValidatorSet helpers"
+    status: gap
+    spec_ref: "docs/requirements/domains/crate_api/specs/API-003.md"
+    tests: []
+    notes: "NetworkState struct completely missing. ValidatorInfo missing. ValidatorSet uses wrong inner type and lacks helper methods."
+
+  - id: API-004
+    section: "Client State Accessors"
+    summary: "epoch(), state_root(), validator_merkle_root(), etc."
+    status: gap
+    spec_ref: "docs/requirements/domains/crate_api/specs/API-004.md"
+    tests: []
+    notes: "7 accessor methods missing from ConsensusClient. set_cache_path() and load_proving_key() also missing."
+
+  - id: API-005
+    section: "Client Message Computation"
+    summary: "checkpoint_message(), validator_signing_message(), etc."
+    status: gap
+    spec_ref: "docs/requirements/domains/crate_api/specs/API-005.md"
+    tests: []
+    notes: "5 message computation methods missing from ConsensusClient facade."
+
+  - id: API-006
+    section: "Module Visibility"
+    summary: "pub(crate) for internal modules; testing re-exports"
+    status: verified
+    spec_ref: "docs/requirements/domains/crate_api/specs/API-006.md"
+    tests: []
+    notes: "All 5 internal modules (indexer, merkle, prover, puzzles, validator) are pub(crate). src/testing.rs provides pub mod testing with all VV test re-exports."

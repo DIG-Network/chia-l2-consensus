@@ -21,6 +21,9 @@ Compact entrypoint. Use linked **`tree/dt-*.md`** pages for detail.
 - **No trusted setup changes** — Circuit parameters (MAX_SIGNERS, TREE_DEPTH) require new trusted setup ceremony to change.
 - **Test vectors** — All wire formats and hash computations must have test vectors verified in both Rust and Rue.
 - **VV tests per requirement** — Each requirement gets a dedicated test file `tests/vv_req_{id}.rs`.
+- **Puzzle tests MUST execute CLVM** — Source-inspection tests are not sufficient. Deserialize `.hex`, curry, run CLVM, assert exact conditions.
+- **Puzzle tests MUST use simulator** — All spend paths tested with `chia-sdk-test::Simulator` for full consensus validation.
+- **Test all permutations** — Valid spends, invalid params, invalid solutions, edge cases, failure modes, cross-impl hashes.
 
 ## Decision tree (short)
 

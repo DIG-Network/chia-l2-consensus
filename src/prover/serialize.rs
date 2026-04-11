@@ -184,6 +184,89 @@ pub fn compute_registration_message(pubkey: &[u8; 48]) -> [u8; 32] {
 // WIRE-006: scalar() Function
 // ============================================================================
 
+// ============================================================================
+// Ark → ZCash/Chia BLS12-381 Point Format Conversion
+// ============================================================================
+
+/// Convert an arkworks-compressed G1 point (48 bytes) to ZCash/Chia format.
+///
+/// Arkworks: little-endian x-coordinate, flags in MSB of last byte.
+/// ZCash/Chia: big-endian x-coordinate, flags in MSB of first byte.
+///
+/// Flag mapping:
+/// - ark byte[47] bit 7 → zcash byte[0] bit 5 (y-sign / "largest")
+/// - ark byte[47] bit 6 → zcash byte[0] bit 6 (point at infinity)
+/// - zcash byte[0] bit 7 = 1 (compressed flag, always set)
+pub fn ark_g1_to_zcash(ark_bytes: &[u8]) -> [u8; 48] {
+    assert_eq!(ark_bytes.len(), 48, "G1 compressed must be 48 bytes");
+    let mut zcash = [0u8; 48];
+
+    // Extract ark flags from last byte
+    let ark_flags = ark_bytes[47];
+    let y_largest = (ark_flags >> 7) & 1;
+    let infinity = (ark_flags >> 6) & 1;
+
+    // Reverse byte order (little-endian → big-endian)
+    for i in 0..48 {
+        zcash[i] = ark_bytes[47 - i];
+    }
+
+    // Clear flag bits from byte[0] (was byte[47] with ark flags)
+    zcash[0] &= 0x1F;
+
+    // Set ZCash flags in byte[0]
+    zcash[0] |= 0x80; // bit 7: compressed (always 1)
+    if infinity == 1 {
+        zcash[0] |= 0x40; // bit 6: infinity
+    }
+    if y_largest == 1 {
+        zcash[0] |= 0x20; // bit 5: y-sign (largest)
+    }
+
+    zcash
+}
+
+/// Convert an arkworks-compressed G2 point (96 bytes) to ZCash/Chia format.
+///
+/// Arkworks Fp2 = c0 + c1*u, serialized as: c0 (LE, 48 bytes) || c1 (LE, 48 bytes).
+/// Flags in MSB of byte[95] (last byte of c1).
+///
+/// ZCash Fp2 serialized as: c1 (BE, 48 bytes) || c0 (BE, 48 bytes).
+/// Flags in MSB of byte[0] (first byte of c1).
+pub fn ark_g2_to_zcash(ark_bytes: &[u8]) -> [u8; 96] {
+    assert_eq!(ark_bytes.len(), 96, "G2 compressed must be 96 bytes");
+    let mut zcash = [0u8; 96];
+
+    // Extract flags from ark byte[95] (last byte of c1)
+    let ark_flags = ark_bytes[95];
+    let y_largest = (ark_flags >> 7) & 1;
+    let infinity = (ark_flags >> 6) & 1;
+
+    // Reverse c1 (ark[48..96]) → zcash[0..48] (ZCash puts c1 first, big-endian)
+    for i in 0..48 {
+        zcash[i] = ark_bytes[95 - i];
+    }
+
+    // Reverse c0 (ark[0..48]) → zcash[48..96]
+    for i in 0..48 {
+        zcash[48 + i] = ark_bytes[47 - i];
+    }
+
+    // Clear flag bits from zcash[0] (was byte[95] with ark flags)
+    zcash[0] &= 0x1F;
+
+    // Set ZCash flags
+    zcash[0] |= 0x80; // compressed
+    if infinity == 1 {
+        zcash[0] |= 0x40; // infinity
+    }
+    if y_largest == 1 {
+        zcash[0] |= 0x20; // y-sign
+    }
+
+    zcash
+}
+
 /// Convert bytes to a BLS12-381 scalar field element.
 ///
 /// The `scalar()` function converts public input values to BLS12-381 scalar
@@ -203,9 +286,17 @@ pub fn bytes_to_scalar(bytes: &[u8]) -> Fr {
     hasher.update(bytes);
     let hash: [u8; 32] = hasher.finalize().into();
 
-    // Interpret hash as big-endian 256-bit integer
-    let big_int = BigUint::from_bytes_be(&hash);
-
-    // Convert to field element (automatically reduces mod r)
-    Fr::from(big_int)
+    // CLVM's g1_multiply interprets scalar atoms as SIGNED big-endian integers.
+    // A 32-byte atom with MSB set is treated as negative (two's complement).
+    // We must match this convention so the circuit's public inputs produce
+    // the same vk_input as the Rue puzzle's on-chain computation.
+    if hash[0] & 0x80 != 0 {
+        // Negative in CLVM: compute absolute value via two's complement
+        let complement: Vec<u8> = hash.iter().map(|&b| !b).collect();
+        let abs_val = BigUint::from_bytes_be(&complement) + 1u64;
+        -Fr::from(abs_val)
+    } else {
+        // Positive: interpret directly as unsigned big-endian
+        Fr::from(BigUint::from_bytes_be(&hash))
+    }
 }

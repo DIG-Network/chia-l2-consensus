@@ -6,6 +6,8 @@
 //! proof against `validator_merkle_root`, whose G1 sum equals `agg_signers`,
 //! and where 2k > `validator_count`."
 
+use ark_bls12_381::Fr;
+use ark_crypto_primitives::sponge::poseidon::PoseidonConfig;
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 
 use crate::merkle::{MerkleProof, TREE_DEPTH};
@@ -105,10 +107,36 @@ pub struct ConsensusCircuit {
 
     /// Number of actual signers (k). May be less than MAX_SIGNERS.
     actual_signers: usize,
+
+    // ========================================================================
+    // CIR-002: Poseidon Merkle Witnesses
+    // ========================================================================
+    /// Poseidon hash parameters (must match off-chain tree).
+    poseidon_config: Option<PoseidonConfig<Fr>>,
+
+    /// Poseidon Merkle root (Fr field element, private witness).
+    poseidon_merkle_root: Option<Fr>,
+
+    /// Poseidon Merkle proofs: (leaf Fr, siblings Vec<Fr>, slot index).
+    /// One per signing pubkey.
+    poseidon_proofs: Vec<(Fr, Vec<Fr>, u64)>,
+
+    /// Number of signer slots to verify in the circuit.
+    /// Equals MAX_SIGNERS for production; smaller for tests.
+    /// The trusted setup and prover MUST use the same value.
+    circuit_max_signers: usize,
+
+    /// Depth of the Poseidon Merkle tree for in-circuit verification.
+    /// May differ from TREE_DEPTH (the on-chain SHA-256 tree depth).
+    poseidon_tree_depth: u32,
 }
 
 impl ConsensusCircuit {
     /// Create a new empty circuit for constraint system setup.
+    ///
+    /// Uses dummy majority witness (k=1, n=0) so the setup circuit is satisfiable.
+    /// The trusted setup only needs a satisfiable circuit to generate the CRS;
+    /// the actual witness values don't affect the proving/verification keys.
     pub fn new() -> Self {
         Self {
             validator_merkle_root: [0u8; 32],
@@ -119,11 +147,18 @@ impl ConsensusCircuit {
             checkpoint_message: [0u8; 32],
             signing_pubkeys: Vec::new(),
             merkle_proofs: Vec::new(),
-            actual_signers: 0,
+            actual_signers: 1, // dummy: 2*1 > 0
+            poseidon_config: None,
+            poseidon_merkle_root: None,
+            poseidon_proofs: Vec::new(),
+            circuit_max_signers: 0,
+            poseidon_tree_depth: 0,
         }
     }
 
-    /// Create a circuit with public inputs only (for testing).
+    /// Create a circuit with public inputs and majority witness.
+    ///
+    /// `actual_signers` is the private witness k. The circuit enforces 2k > validator_count.
     pub fn with_public_inputs(
         validator_merkle_root: [u8; 32],
         validator_count: u64,
@@ -131,6 +166,7 @@ impl ConsensusCircuit {
         new_validator_count: u64,
         agg_signers: [u8; 48],
         checkpoint_message: [u8; 32],
+        actual_signers: usize,
     ) -> Self {
         Self {
             validator_merkle_root,
@@ -141,7 +177,50 @@ impl ConsensusCircuit {
             checkpoint_message,
             signing_pubkeys: Vec::new(),
             merkle_proofs: Vec::new(),
-            actual_signers: 0,
+            actual_signers,
+            poseidon_config: None,
+            poseidon_merkle_root: None,
+            poseidon_proofs: Vec::new(),
+            circuit_max_signers: 0,
+            poseidon_tree_depth: 0,
+        }
+    }
+
+    /// Create a circuit with Poseidon Merkle proofs for CIR-002 verification.
+    ///
+    /// `poseidon_proofs` contains (leaf, siblings, slot) for each signer.
+    /// `circuit_max_signers` controls the loop iteration count (must match setup).
+    /// Unused slots (beyond actual signers) are padded with dummy proofs.
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_merkle_proofs(
+        validator_merkle_root: [u8; 32],
+        validator_count: u64,
+        new_validator_merkle_root: [u8; 32],
+        new_validator_count: u64,
+        agg_signers: [u8; 48],
+        checkpoint_message: [u8; 32],
+        actual_signers: usize,
+        poseidon_config: PoseidonConfig<Fr>,
+        poseidon_merkle_root: Fr,
+        poseidon_proofs: Vec<(Fr, Vec<Fr>, u64)>,
+        circuit_max_signers: usize,
+        poseidon_tree_depth: u32,
+    ) -> Self {
+        Self {
+            validator_merkle_root,
+            validator_count,
+            new_validator_merkle_root,
+            new_validator_count,
+            agg_signers,
+            checkpoint_message,
+            signing_pubkeys: Vec::new(),
+            merkle_proofs: Vec::new(),
+            actual_signers,
+            poseidon_config: Some(poseidon_config),
+            poseidon_merkle_root: Some(poseidon_merkle_root),
+            poseidon_proofs,
+            circuit_max_signers,
+            poseidon_tree_depth,
         }
     }
 
@@ -168,6 +247,11 @@ impl ConsensusCircuit {
             signing_pubkeys,
             merkle_proofs,
             actual_signers,
+            poseidon_config: None,
+            poseidon_merkle_root: None,
+            poseidon_proofs: Vec::new(),
+            circuit_max_signers: 0,
+            poseidon_tree_depth: 0,
         }
     }
 
@@ -275,15 +359,146 @@ impl Default for ConsensusCircuit {
 impl ConstraintSynthesizer<ark_bls12_381::Fr> for ConsensusCircuit {
     fn generate_constraints(
         self,
-        _cs: ConstraintSystemRef<ark_bls12_381::Fr>,
+        cs: ConstraintSystemRef<ark_bls12_381::Fr>,
     ) -> Result<(), SynthesisError> {
-        // CIR-001: Circuit statement has three components:
-        // 1. Merkle membership for each signer (CIR-002)
-        // 2. G1 sum equals agg_signers (CIR-003)
-        // 3. Majority threshold: 2k > validator_count (CIR-004)
+        use super::serialize::bytes_to_scalar;
+        use ark_bls12_381::Fr;
+        use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 
-        // TODO: Implement constraints in CIR-002, CIR-003, CIR-004
-        // For now, this allows the circuit to be instantiated
+        // ================================================================
+        // CIR-005: Allocate 6 public inputs (VK gets 7 IC points)
+        // ================================================================
+        let vmr = self.validator_merkle_root;
+        let vc_be8 = self.validator_count.to_be_bytes();
+        let nvmr = self.new_validator_merkle_root;
+        let nvc_be8 = self.new_validator_count.to_be_bytes();
+        let agg = self.agg_signers;
+        let cm = self.checkpoint_message;
+
+        let _ = cs.new_input_variable(|| Ok(bytes_to_scalar(&vmr)))?;
+        let _ = cs.new_input_variable(|| Ok(bytes_to_scalar(&vc_be8)))?;
+        let _ = cs.new_input_variable(|| Ok(bytes_to_scalar(&nvmr)))?;
+        let _ = cs.new_input_variable(|| Ok(bytes_to_scalar(&nvc_be8)))?;
+        let _ = cs.new_input_variable(|| Ok(bytes_to_scalar(&agg)))?;
+        let _ = cs.new_input_variable(|| Ok(bytes_to_scalar(&cm)))?;
+
+        // ================================================================
+        // CIR-004: Majority threshold — 2k > validator_count
+        //
+        // Private witnesses: k (actual_signers), n (validator_count).
+        // Constraint: 2k - n - 1 >= 0, enforced via 64-bit decomposition.
+        //
+        // Security binding: n is tied to the public input via the on-chain
+        // scalar assertion sha256(vc_be8) == scalars.s2. A prover who lies
+        // about n produces a proof that fails bls_pairing_identity on-chain.
+        // See DESIGN_DECISIONS.md Decision 3.
+        // ================================================================
+
+        let k = self.actual_signers as u64;
+        let n = self.validator_count;
+
+        let k_var = FpVar::<Fr>::new_witness(cs.clone(), || Ok(Fr::from(k)))?;
+        let n_var = FpVar::<Fr>::new_witness(cs.clone(), || Ok(Fr::from(n)))?;
+
+        // diff = 2k - n - 1 (must be non-negative for strict majority)
+        let two_k = k_var.double()?;
+        let diff = &two_k - &n_var - FpVar::<Fr>::one();
+
+        // Enforce diff >= 0 by decomposing into 64 boolean bits and
+        // reconstructing. If the witness doesn't satisfy 2k > n, the
+        // bit decomposition can't reconstruct diff (which would be negative
+        // in the field, i.e. a huge number that doesn't fit in 64 bits).
+        let diff_val = if 2 * k > n { 2 * k - n - 1 } else { 0 };
+        let bit_witnesses: Vec<bool> = (0..64).map(|i| (diff_val >> i) & 1 == 1).collect();
+
+        let mut reconstructed = FpVar::<Fr>::zero();
+        let mut power = FpVar::<Fr>::one();
+        let two_const = FpVar::<Fr>::constant(Fr::from(2u64));
+        for &b in &bit_witnesses {
+            let bit = Boolean::new_witness(cs.clone(), || Ok(b))?;
+            reconstructed += FpVar::from(bit) * &power;
+            power *= &two_const;
+        }
+        diff.enforce_equal(&reconstructed)?;
+
+        // ================================================================
+        // CIR-002: Poseidon Merkle membership verification
+        //
+        // For each signer slot (up to circuit_max_signers):
+        // 1. Allocate leaf, siblings, and slot index as witnesses
+        // 2. Walk from leaf to root using Poseidon two-to-one hash
+        // 3. Enforce computed root == poseidon_merkle_root witness
+        //
+        // Unused slots (padding) use the empty leaf + valid dummy proof.
+        // The root is a private witness; binding to public inputs
+        // comes via CIR-003 (G1 aggregation, future) and the BLS
+        // signature check on-chain.
+        // ================================================================
+
+        if let (Some(config), Some(expected_root)) =
+            (&self.poseidon_config, self.poseidon_merkle_root)
+        {
+            use ark_crypto_primitives::crh::poseidon::constraints::TwoToOneCRHGadget;
+            use ark_crypto_primitives::crh::TwoToOneCRHSchemeGadget;
+            use ark_crypto_primitives::sponge::poseidon::constraints::PoseidonSpongeVar;
+
+            // Allocate the Poseidon config as a constant
+            let config_var = <TwoToOneCRHGadget<Fr> as TwoToOneCRHSchemeGadget<
+                ark_crypto_primitives::crh::poseidon::TwoToOneCRH<Fr>,
+                Fr,
+            >>::ParametersVar::new_constant(cs.clone(), config)?;
+
+            // Allocate the expected root as a private witness
+            let root_var = FpVar::<Fr>::new_witness(cs.clone(), || Ok(expected_root))?;
+
+            let tree_depth = self.poseidon_tree_depth as usize;
+
+            for slot_idx in 0..self.circuit_max_signers {
+                // Get the proof for this slot (or dummy if beyond actual signers)
+                let (leaf, siblings, index) = if slot_idx < self.poseidon_proofs.len() {
+                    let (l, s, i) = &self.poseidon_proofs[slot_idx];
+                    (*l, s.clone(), *i)
+                } else {
+                    // Padding: empty leaf with dummy siblings
+                    let empty = crate::merkle::poseidon::poseidon_empty_leaf(config);
+                    (empty, vec![Fr::default(); tree_depth], 0)
+                };
+
+                // Allocate leaf as witness
+                let mut current = FpVar::<Fr>::new_witness(cs.clone(), || Ok(leaf))?;
+
+                // Walk from leaf to root
+                let mut idx = index;
+                for level in 0..tree_depth {
+                    let sibling_val = if level < siblings.len() {
+                        siblings[level]
+                    } else {
+                        Fr::default()
+                    };
+                    let sibling = FpVar::<Fr>::new_witness(cs.clone(), || Ok(sibling_val))?;
+
+                    let is_right = idx % 2 == 1;
+                    let (left, right) = if is_right {
+                        (sibling.clone(), current)
+                    } else {
+                        (current, sibling.clone())
+                    };
+
+                    // Poseidon two-to-one hash gadget
+                    current = <TwoToOneCRHGadget<Fr> as TwoToOneCRHSchemeGadget<
+                        ark_crypto_primitives::crh::poseidon::TwoToOneCRH<Fr>,
+                        Fr,
+                    >>::evaluate(&config_var, &left, &right)?;
+
+                    idx /= 2;
+                }
+
+                // Enforce computed root == expected root
+                current.enforce_equal(&root_var)?;
+            }
+        }
+
+        // CIR-003: Aggregate key — Phase 3 (non-native G1 arithmetic)
 
         Ok(())
     }

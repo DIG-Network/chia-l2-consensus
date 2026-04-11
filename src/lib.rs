@@ -8,50 +8,45 @@
 //! - Chain indexer
 //!
 //! The L2 system uses only [`ConsensusClient`] and the types it returns.
+//! Internal types for integration testing are in the [`testing`] module.
 //!
 //! See [spec-consensus-crate.md](../docs/resources/spec-consensus-crate.md).
 
 #![allow(unused)] // Temporary during initial development
 
-// Public modules
+// ============================================================================
+// Public API — types L2 consumers import directly
+// ============================================================================
+
 mod client;
 mod config;
 mod error;
 mod state;
 
-// Internal modules
-pub(crate) mod indexer;
-pub mod merkle;
-pub(crate) mod prover;
-pub(crate) mod puzzles;
+pub use client::ConsensusClient;
+pub use config::{DeploymentArtifacts, NetworkConfig, VkJson};
+pub use error::{ConsensusError, ConsensusResult};
+pub use state::{CheckpointSingletonState, NetworkCoinState, ValidatorSet};
 
-// Public re-exports (the only types exposed to L2 system)
+// Re-exported Chia protocol types
 pub use chia_protocol::Bytes32;
 pub use chia_protocol::SpendBundle;
 
-pub use client::ConsensusClient;
-pub use config::NetworkConfig;
-pub use error::{ConsensusError, ConsensusResult};
-pub use state::{CheckpointSingletonState, ValidatorSet};
+// ============================================================================
+// Internal modules — pub(crate) for use within the crate only
+// ============================================================================
 
-// Wire format functions and constants (spec-wire-format.md)
-pub use prover::{
-    bytes_to_scalar, compute_checkpoint_message, compute_membership_announcement_message,
-    compute_registration_message, ClvmProof, G1_COMPRESSED_SIZE, G2_COMPRESSED_SIZE,
-    GROTH16_PROOF_SIZE,
-};
+pub(crate) mod indexer;
+pub(crate) mod merkle;
+pub(crate) mod prover;
+pub(crate) mod puzzles;
+pub(crate) mod validator;
 
-// Groth16 circuit (spec-groth16-circuit.md)
-pub use prover::{public_input_index, ConsensusCircuit, MAX_SIGNERS, PUBLIC_INPUT_COUNT};
+// ============================================================================
+// Testing module — re-exports internal types for VV integration tests
+//
+// L2 consumers should NOT depend on this module. It is not stable API.
+// VV tests import via: `use chia_l2_consensus::testing::{...};`
+// ============================================================================
 
-// G1 pubkey aggregation (CIR-003)
-pub use prover::{
-    add_g1, aggregate_pubkeys, deserialize_g1, g1_identity, negate_g1, serialize_g1,
-    verify_aggregate, AggregateError,
-};
-
-// Majority threshold (CIR-004)
-pub use prover::{is_at_least_half, is_majority, minimum_signers};
-
-// Re-export PublicKey type (48-byte BLS public key)
-// TODO: Use proper BLS pubkey type from chia-bls when needed
+pub mod testing;

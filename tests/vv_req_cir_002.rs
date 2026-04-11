@@ -3,233 +3,238 @@
 //!
 //! Spec: `docs/requirements/domains/circuit/specs/CIR-002.md`.
 //!
-//! Verifies that for each signing pubkey, the circuit verifies a Merkle
-//! inclusion proof demonstrating the pubkey exists in the validator set.
+//! Implementation: `src/prover/circuit.rs`, `src/merkle/poseidon.rs`.
+//!
+//! The circuit verifies Poseidon Merkle inclusion proofs for each signing
+//! validator against a witness root. Uses ZK-friendly Poseidon hash
+//! (~300 constraints per hash vs ~25,000 for SHA-256).
 
-use chia_l2_consensus::merkle::{active_leaf, compute_slot, SparseMerkleTree, TREE_DEPTH};
-use sha2::{Digest, Sha256};
+use ark_bls12_381::{Bls12_381, Fr};
+use ark_groth16::Groth16;
+use chia_l2_consensus::testing::poseidon::{poseidon_config, poseidon_leaf, PoseidonMerkleTree};
+use chia_l2_consensus::testing::ConsensusCircuit;
+
+/// Small tree depth for fast tests (2^4 = 16 slots).
+const TEST_DEPTH: u32 = 4;
+
+/// Helper: build a Poseidon tree with given pubkeys and return proofs.
+fn build_tree_and_proofs(
+    pubkeys: &[[u8; 48]],
+) -> (PoseidonMerkleTree, Fr, Vec<(Fr, Vec<Fr>, u64)>) {
+    let config = poseidon_config();
+    let mut tree = PoseidonMerkleTree::new(config.clone(), TEST_DEPTH);
+
+    let mut slots = Vec::new();
+    for pk in pubkeys {
+        let slot = tree.insert_validator(pk);
+        slots.push(slot);
+    }
+
+    let root = tree.root();
+    let proofs: Vec<_> = pubkeys
+        .iter()
+        .zip(slots.iter())
+        .map(|(pk, &slot)| {
+            let leaf = poseidon_leaf(&config, pk);
+            let proof = tree.prove(slot);
+            (leaf, proof.siblings, slot)
+        })
+        .collect();
+
+    (tree, root, proofs)
+}
+
+/// Helper: run trusted setup for a circuit with given max_signers.
+fn setup_for(max_signers: usize) -> ark_groth16::ProvingKey<Bls12_381> {
+    // Setup must be satisfiable: use empty tree root + valid padding proofs.
+    let config = poseidon_config();
+    let empty_tree = PoseidonMerkleTree::new(config.clone(), TEST_DEPTH);
+    let empty_root = empty_tree.root();
+
+    // Build valid padding proofs (empty leaf proofs against the empty tree)
+    let mut padding_proofs = Vec::new();
+    let empty_leaf = chia_l2_consensus::testing::poseidon::poseidon_empty_leaf(&config);
+    for i in 0..max_signers {
+        let proof = empty_tree.prove(i as u64);
+        padding_proofs.push((empty_leaf, proof.siblings, i as u64));
+    }
+
+    let setup_circuit = ConsensusCircuit::with_merkle_proofs(
+        [0; 32],
+        0,
+        [0; 32],
+        0,
+        [0; 48],
+        [0; 32],
+        1, // dummy majority (2*1 > 0)
+        config,
+        empty_root,
+        padding_proofs,
+        max_signers,
+        TEST_DEPTH,
+    );
+    use ark_std::rand::SeedableRng;
+    let mut rng = ark_std::rand::rngs::StdRng::seed_from_u64(42);
+    Groth16::<Bls12_381>::generate_random_parameters_with_reduction(setup_circuit, &mut rng)
+        .expect("setup")
+}
+
+/// Helper: try to generate a proof. Returns true if satisfiable.
+fn try_prove(circuit: ConsensusCircuit, params: &ark_groth16::ProvingKey<Bls12_381>) -> bool {
+    use ark_std::rand::SeedableRng;
+    let mut rng = ark_std::rand::rngs::StdRng::seed_from_u64(1337);
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        Groth16::<Bls12_381>::create_random_proof_with_reduction(circuit, params, &mut rng)
+    }));
+    result.is_ok() && result.unwrap().is_ok()
+}
+
+// ── CIR-002: Off-chain Poseidon tree basics ───────────────────────────
 
 #[test]
-fn vv_req_cir_002_leaf_is_sha256_of_pubkey() {
-    // CIR-002: Leaf value is sha256(pubkey) for active validators
-    let pubkey = [0x11u8; 48];
+fn vv_req_cir_002_poseidon_tree_insert_and_verify() {
+    let config = poseidon_config();
+    let pk = [0xAAu8; 48];
+    let mut tree = PoseidonMerkleTree::new(config.clone(), TEST_DEPTH);
+    let slot = tree.insert_validator(&pk);
 
-    let leaf = active_leaf(&pubkey);
-
-    // Manual computation
-    let mut hasher = Sha256::new();
-    hasher.update(&pubkey);
-    let expected: [u8; 32] = hasher.finalize().into();
-
-    assert_eq!(leaf, expected, "CIR-002: Leaf must be sha256(pubkey)");
+    let leaf = poseidon_leaf(&config, &pk);
+    let proof = tree.prove(slot);
+    assert!(
+        tree.verify(leaf, &proof),
+        "CIR-002: Valid proof must verify"
+    );
 }
 
 #[test]
-fn vv_req_cir_002_merkle_proof_verifies_membership() {
-    // CIR-002: Valid Merkle proof verifies against root
-    let pubkey = [0x22u8; 48];
+fn vv_req_cir_002_poseidon_tree_wrong_leaf_fails() {
+    let config = poseidon_config();
+    let pk = [0xAAu8; 48];
+    let mut tree = PoseidonMerkleTree::new(config.clone(), TEST_DEPTH);
+    let slot = tree.insert_validator(&pk);
 
-    let mut tree = SparseMerkleTree::new();
-    tree.insert_validator(&pubkey);
-
-    let root = tree.root();
-    let proof = tree.prove_validator(&pubkey);
-
-    // Verify the proof using pubkey
-    let verified = proof.verify_for_pubkey(&pubkey, root);
-    assert!(verified, "CIR-002: Valid Merkle proof must verify");
+    let wrong_leaf = poseidon_leaf(&config, &[0xBB; 48]);
+    let proof = tree.prove(slot);
+    assert!(
+        !tree.verify(wrong_leaf, &proof),
+        "CIR-002: Wrong leaf must not verify"
+    );
 }
 
+// ── CIR-002: Circuit with valid Merkle proofs ─────────────────────────
+
 #[test]
-fn vv_req_cir_002_invalid_proof_fails() {
-    // CIR-002: Invalid proof (wrong sibling) must fail
-    let pubkey = [0x33u8; 48];
+fn vv_req_cir_002_valid_merkle_proofs_accepted() {
+    let pk1 = [0xAAu8; 48];
+    let pk2 = [0xBBu8; 48];
+    let (_, root, proofs) = build_tree_and_proofs(&[pk1, pk2]);
 
-    let mut tree = SparseMerkleTree::new();
-    tree.insert_validator(&pubkey);
+    eprintln!("Root: {:?}", root);
+    for (i, (leaf, siblings, slot)) in proofs.iter().enumerate() {
+        eprintln!(
+            "Proof {}: leaf={:?}, slot={}, siblings={}",
+            i,
+            leaf,
+            slot,
+            siblings.len()
+        );
+    }
 
-    let root = tree.root();
-    let mut proof = tree.prove_validator(&pubkey);
+    let params = setup_for(2);
+
+    let circuit = ConsensusCircuit::with_merkle_proofs(
+        [0; 32],
+        2,
+        [0; 32],
+        2,
+        [0; 48],
+        [0; 32],
+        2,
+        poseidon_config(),
+        root,
+        proofs,
+        2,
+        TEST_DEPTH,
+    );
+
+    assert!(
+        try_prove(circuit, &params),
+        "CIR-002: Valid Merkle proofs (k=2) must produce valid proof"
+    );
+    eprintln!("CIR-002: Valid Merkle proofs (k=2) accepted");
+}
+
+// ── CIR-002: Invalid Merkle proof rejected ────────────────────────────
+
+#[test]
+fn vv_req_cir_002_invalid_merkle_proof_rejected() {
+    let pk1 = [0xAAu8; 48];
+    let (_, root, mut proofs) = build_tree_and_proofs(&[pk1]);
 
     // Corrupt the first sibling
-    if !proof.siblings.is_empty() {
-        proof.siblings[0] = [0xFFu8; 32];
+    if !proofs[0].1.is_empty() {
+        proofs[0].1[0] = Fr::from(9999u64);
     }
 
-    let verified = proof.verify_for_pubkey(&pubkey, root);
-    assert!(!verified, "CIR-002: Invalid proof must fail verification");
-}
+    let params = setup_for(1);
 
-#[test]
-fn vv_req_cir_002_wrong_root_fails() {
-    // CIR-002: Proof against wrong root must fail
-    let pubkey = [0x44u8; 48];
-
-    let mut tree = SparseMerkleTree::new();
-    tree.insert_validator(&pubkey);
-
-    let proof = tree.prove_validator(&pubkey);
-
-    // Use a different (wrong) root
-    let wrong_root = [0xABu8; 32];
-
-    let verified = proof.verify_for_pubkey(&pubkey, wrong_root);
-    assert!(!verified, "CIR-002: Proof against wrong root must fail");
-}
-
-#[test]
-fn vv_req_cir_002_wrong_pubkey_fails() {
-    // CIR-002: Proof for wrong pubkey must fail
-    let pubkey1 = [0x55u8; 48];
-    let pubkey2 = [0x66u8; 48];
-
-    let mut tree = SparseMerkleTree::new();
-    tree.insert_validator(&pubkey1);
-
-    let root = tree.root();
-    let proof = tree.prove_validator(&pubkey1);
-
-    // Try to verify with wrong pubkey
-    let verified = proof.verify_for_pubkey(&pubkey2, root);
-    assert!(!verified, "CIR-002: Proof for wrong pubkey must fail");
-}
-
-#[test]
-fn vv_req_cir_002_multiple_validators_each_verifies() {
-    // CIR-002: Each validator's proof verifies independently
-    let pubkeys: Vec<[u8; 48]> = (0..5).map(|i| [i as u8 + 1; 48]).collect();
-
-    let mut tree = SparseMerkleTree::new();
-    for pk in &pubkeys {
-        tree.insert_validator(pk);
-    }
-
-    let root = tree.root();
-
-    // Each pubkey should have a valid proof
-    for pk in &pubkeys {
-        let proof = tree.prove_validator(pk);
-        let verified = proof.verify_for_pubkey(pk, root);
-        assert!(verified, "CIR-002: Each validator's proof must verify");
-    }
-}
-
-#[test]
-fn vv_req_cir_002_proof_depth_matches_tree_depth() {
-    // CIR-002: Proof has TREE_DEPTH siblings
-    let pubkey = [0x77u8; 48];
-
-    let mut tree = SparseMerkleTree::new();
-    tree.insert_validator(&pubkey);
-
-    let proof = tree.prove_validator(&pubkey);
-
-    assert_eq!(
-        proof.siblings.len(),
-        TREE_DEPTH as usize,
-        "CIR-002: Proof must have TREE_DEPTH siblings"
-    );
-}
-
-#[test]
-fn vv_req_cir_002_sibling_ordering_left_first() {
-    // CIR-002: Sibling ordering: left child first in hash computation
-    // At each level, if index bit = 0: current is LEFT, sibling is RIGHT
-    // At each level, if index bit = 1: current is RIGHT, sibling is LEFT
-    // Hash is always sha256(left || right)
-
-    let pubkey = [0x88u8; 48];
-    let slot = compute_slot(&pubkey);
-
-    let mut tree = SparseMerkleTree::new();
-    tree.insert_validator(&pubkey);
-
-    let proof = tree.prove_validator(&pubkey);
-
-    // Manually verify path computation
-    let leaf = active_leaf(&pubkey);
-    let mut current = leaf;
-    let mut index = slot;
-
-    for sibling in &proof.siblings {
-        // Compute parent hash with correct ordering
-        let mut hasher = Sha256::new();
-
-        // Left child first in concatenation
-        // If index is even (bit=0), current is left child
-        if index % 2 == 0 {
-            hasher.update(current);
-            hasher.update(sibling);
-        } else {
-            hasher.update(sibling);
-            hasher.update(current);
-        }
-
-        current = hasher.finalize().into();
-        index >>= 1;
-    }
-
-    assert_eq!(
-        current,
-        tree.root(),
-        "CIR-002: Manual path computation must match root"
-    );
-}
-
-#[test]
-fn vv_req_cir_002_index_from_pubkey_deterministic() {
-    // CIR-002: Index (slot) is derived deterministically from pubkey
-    let pubkey = [0x99u8; 48];
-
-    let slot1 = compute_slot(&pubkey);
-    let slot2 = compute_slot(&pubkey);
-    let slot3 = compute_slot(&pubkey);
-
-    assert_eq!(
-        slot1, slot2,
-        "CIR-002: Slot computation must be deterministic"
-    );
-    assert_eq!(
-        slot2, slot3,
-        "CIR-002: Slot computation must be deterministic"
+    let circuit = ConsensusCircuit::with_merkle_proofs(
+        [0; 32],
+        1,
+        [0; 32],
+        1,
+        [0; 48],
+        [0; 32],
+        1,
+        poseidon_config(),
+        root,
+        proofs,
+        1,
+        TEST_DEPTH,
     );
 
-    // Slot must fit in TREE_DEPTH bits
-    let max_slot = (1u64 << TREE_DEPTH) - 1;
     assert!(
-        slot1 <= max_slot,
-        "CIR-002: Slot must fit in TREE_DEPTH bits"
+        !try_prove(circuit, &params),
+        "CIR-002: Corrupted Merkle proof must fail"
     );
+    eprintln!("CIR-002: Invalid Merkle proof correctly rejected");
 }
 
+// ── CIR-002: Wrong root rejected ──────────────────────────────────────
+
 #[test]
-fn vv_req_cir_002_all_proofs_verify_against_same_root() {
-    // CIR-002: All k proofs must verify against the same root
-    let pubkeys: Vec<[u8; 48]> = (0..10).map(|i| [(i as u8) * 17 + 1; 48]).collect();
+fn vv_req_cir_002_wrong_root_rejected() {
+    let pk1 = [0xAAu8; 48];
+    let (_, _real_root, proofs) = build_tree_and_proofs(&[pk1]);
 
-    let mut tree = SparseMerkleTree::new();
-    for pk in &pubkeys {
-        tree.insert_validator(pk);
-    }
+    let wrong_root = Fr::from(12345u64);
+    let params = setup_for(1);
 
-    let root = tree.root();
+    let circuit = ConsensusCircuit::with_merkle_proofs(
+        [0; 32],
+        1,
+        [0; 32],
+        1,
+        [0; 48],
+        [0; 32],
+        1,
+        poseidon_config(),
+        wrong_root,
+        proofs,
+        1,
+        TEST_DEPTH,
+    );
 
-    // All proofs must verify against THIS root
-    for pk in &pubkeys {
-        let proof = tree.prove_validator(pk);
-        assert!(
-            proof.verify_for_pubkey(pk, root),
-            "CIR-002: All proofs must verify against same root"
-        );
-    }
+    assert!(
+        !try_prove(circuit, &params),
+        "CIR-002: Wrong Merkle root must fail"
+    );
+    eprintln!("CIR-002: Wrong root correctly rejected");
+}
 
-    // Different root should fail for all
-    let different_root = [0x00u8; 32];
-    for pk in &pubkeys {
-        let proof = tree.prove_validator(pk);
-        assert!(
-            !proof.verify_for_pubkey(pk, different_root),
-            "CIR-002: Different root must fail for all proofs"
-        );
-    }
+// ── Spec ───────────────────────────────────────────────────────────
+
+#[test]
+fn vv_req_cir_002_spec_exists() {
+    assert!(std::path::Path::new("docs/requirements/domains/circuit/specs/CIR-002.md").exists());
 }

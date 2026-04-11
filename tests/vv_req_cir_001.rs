@@ -12,8 +12,8 @@
 
 use ark_bls12_381::Fr;
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem};
-use chia_l2_consensus::merkle::TREE_DEPTH;
-use chia_l2_consensus::ConsensusCircuit;
+use chia_l2_consensus::testing::ConsensusCircuit;
+use chia_l2_consensus::testing::TREE_DEPTH;
 
 #[test]
 fn vv_req_cir_001_circuit_can_be_created() {
@@ -61,6 +61,7 @@ fn vv_req_cir_001_circuit_with_public_inputs() {
         new_validator_count,
         agg_signers,
         checkpoint_message,
+        validator_count as usize,
     );
 
     // Verify public inputs are stored
@@ -184,6 +185,7 @@ fn vv_req_cir_001_public_input_order() {
         101,          // new_validator_count
         [0x03u8; 48], // agg_signers
         [0x04u8; 32], // checkpoint_message
+        100,          // actual_signers (majority: 2*100 > 100)
     );
 
     // Verify order by checking accessor methods return expected values

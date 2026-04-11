@@ -48,10 +48,7 @@ fn vv_req_net_001_puzzle_compiles() {
 fn vv_req_net_001_puzzle_produces_clvm() {
     // NET-001: Compiled puzzle produces valid CLVM output
     let clvm = get_puzzle_clvm("puzzles/network_coin_inner.rue");
-    assert!(
-        clvm.is_some(),
-        "NET-001: Puzzle must produce CLVM output"
-    );
+    assert!(clvm.is_some(), "NET-001: Puzzle must produce CLVM output");
 
     let clvm = clvm.unwrap();
     // CLVM starts with (a or (q or similar
@@ -166,7 +163,8 @@ fn vv_req_net_001_inner_puzzle_pattern() {
 
     // Should document that singleton wrapper handles recreation
     assert!(
-        puzzle_source.contains("NET-004") || puzzle_source.contains("recreation")
+        puzzle_source.contains("NET-004")
+            || puzzle_source.contains("recreation")
             || puzzle_source.contains("wrapper"),
         "NET-001: Puzzle should document singleton wrapper handles recreation"
     );

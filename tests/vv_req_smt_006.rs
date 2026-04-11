@@ -5,7 +5,7 @@
 //!
 //! Verifies that empty subtrees use precomputed hashes for efficient computation.
 
-use chia_l2_consensus::merkle::{
+use chia_l2_consensus::testing::{
     compute_empty_nodes, SparseMerkleTree, EMPTY_LEAF, EMPTY_TREE_ROOT, TREE_DEPTH,
 };
 use sha2::{Digest, Sha256};

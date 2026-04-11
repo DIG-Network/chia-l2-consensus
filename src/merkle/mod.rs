@@ -2,6 +2,7 @@
 //!
 //! See [spec-consensus-crate.md Lines 414-664](../docs/resources/spec-consensus-crate.md).
 
+pub mod poseidon;
 mod proof;
 mod sparse;
 

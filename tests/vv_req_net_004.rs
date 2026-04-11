@@ -65,22 +65,23 @@ fn vv_req_net_004_inner_puzzle_returns_conditions() {
 }
 
 #[test]
-fn vv_req_net_004_puzzle_does_not_create_self() {
-    // NET-004: Inner puzzle should NOT create self - wrapper does this
-    // Check that there's no explicit self-recreation in the inner puzzle
+fn vv_req_net_004_puzzle_creates_recreation_coin() {
+    // NET-004: Inner puzzle emits CreateCoin with INNER_MOD_HASH for singleton morphing.
+    // The singleton_top_layer intercepts the odd-amount CREATE_COIN and transforms
+    // it to the full singleton puzzle hash.
 
     let puzzle_source = std::fs::read_to_string("puzzles/network_coin_inner.rue")
         .expect("Failed to read puzzle source");
 
     // Count CreateCoin struct instantiations (with opening brace)
-    // This excludes comments that just mention CreateCoin
     let create_coin_struct_count = puzzle_source.matches("CreateCoin {").count();
 
-    // Should have exactly one CreateCoin struct (for registration coin)
-    // Self-recreation is handled by wrapper
+    // Should have exactly two CreateCoin structs:
+    // 1. Registration coin (NET-003, amount = collateral)
+    // 2. Self-recreation (NET-004, amount = 1, puzzle_hash = INNER_MOD_HASH)
     assert!(
-        create_coin_struct_count == 1,
-        "NET-004: Inner puzzle should only create registration coin (found {} CreateCoin structs). Self-recreation handled by wrapper.",
+        create_coin_struct_count == 2,
+        "NET-004: Inner puzzle should create registration coin + recreation coin (found {} CreateCoin structs).",
         create_coin_struct_count
     );
 }
@@ -121,8 +122,8 @@ fn vv_req_net_004_no_my_puzzle_hash_in_inner() {
         .expect("Failed to read puzzle source");
 
     // MY_PUZZLE_HASH is a singleton concept, not used in inner puzzle
-    let has_my_puzzle_hash = puzzle_source.contains("MY_PUZZLE_HASH")
-        || puzzle_source.contains("my_puzzle_hash");
+    let has_my_puzzle_hash =
+        puzzle_source.contains("MY_PUZZLE_HASH") || puzzle_source.contains("my_puzzle_hash");
 
     assert!(
         !has_my_puzzle_hash,

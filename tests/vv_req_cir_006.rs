@@ -6,8 +6,8 @@
 //! Verifies that the circuit parameters MAX_SIGNERS and TREE_DEPTH are
 //! compile-time constants that are consistent across all components.
 
-use chia_l2_consensus::merkle::{SparseMerkleTree, TREE_DEPTH};
-use chia_l2_consensus::{ConsensusCircuit, MAX_SIGNERS};
+use chia_l2_consensus::testing::{ConsensusCircuit, MAX_SIGNERS};
+use chia_l2_consensus::testing::{SparseMerkleTree, TREE_DEPTH};
 
 #[test]
 fn vv_req_cir_006_max_signers_is_constant() {

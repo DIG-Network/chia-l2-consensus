@@ -31,8 +31,7 @@ fn vv_req_net_005_puzzle_documents_driver_responsibility() {
     assert!(
         puzzle_source.contains("Driver adds pubkey memo")
             || puzzle_source.contains("driver adds")
-            || puzzle_source.contains("Driver")
-                && puzzle_source.contains("memo"),
+            || puzzle_source.contains("Driver") && puzzle_source.contains("memo"),
         "NET-005: Puzzle should document that driver adds pubkey memo"
     );
 }
@@ -61,8 +60,7 @@ fn vv_req_net_005_memo_format_documented() {
 
     // Verify the expected size
     assert_eq!(
-        BLS_PUBKEY_SIZE,
-        48,
+        BLS_PUBKEY_SIZE, 48,
         "NET-005: BLS pubkey memo must be 48 bytes"
     );
 }
@@ -147,7 +145,11 @@ fn vv_req_net_005_puzzle_header_mentions_memo() {
         .expect("Failed to read puzzle source");
 
     // Check header comments (first 10 lines)
-    let header: String = puzzle_source.lines().take(10).collect::<Vec<_>>().join("\n");
+    let header: String = puzzle_source
+        .lines()
+        .take(10)
+        .collect::<Vec<_>>()
+        .join("\n");
 
     assert!(
         header.contains("NET-005") || header.contains("memo"),

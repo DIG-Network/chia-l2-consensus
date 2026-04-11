@@ -10,7 +10,7 @@ use ark_bls12_381::{Fr, G1Affine, G2Affine};
 use ark_ec::AffineRepr;
 use ark_ff::UniformRand;
 use ark_serialize::CanonicalSerialize;
-use chia_l2_consensus::{G1_COMPRESSED_SIZE, G2_COMPRESSED_SIZE, GROTH16_PROOF_SIZE};
+use chia_l2_consensus::testing::{G1_COMPRESSED_SIZE, G2_COMPRESSED_SIZE, GROTH16_PROOF_SIZE};
 use rand::thread_rng;
 
 #[test]

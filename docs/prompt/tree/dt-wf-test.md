@@ -128,6 +128,105 @@ fn vv_req_wire_001_test_vectors() {
 }
 ```
 
+## HARD REQUIREMENT: CLVM Execution + Simulator for Puzzle Domains
+
+For **all puzzle-domain requirements** (NET, REG, CHK), source-inspection tests
+alone are **never sufficient**. Every VV test file MUST include:
+
+### Tier 1: CLVM Execution Tests (MUST)
+
+Deserialize the compiled `.hex`, curry with parameters, run with a solution,
+and assert the exact output conditions:
+
+```rust
+use clvmr::{Allocator, ChiaDialect, run_program, serde::node_from_bytes};
+use clvm_traits::{ToClvm, FromClvm};
+use clvm_utils::CurriedProgram;
+
+#[test]
+fn vv_req_reg_001_clvm_produces_assert_announcement() {
+    let mut a = Allocator::new();
+
+    // 1. Deserialize compiled puzzle hex
+    let puzzle_bytes = hex::decode(include_str!("../puzzles/compiled/registration_coin.hex")).unwrap();
+    let mod_ptr = node_from_bytes(&mut a, &puzzle_bytes).unwrap();
+
+    // 2. Curry with test params
+    let curried = CurriedProgram {
+        program: mod_ptr,
+        args: RegistrationCoinArgs {
+            validator_pubkey: test_pubkey(),
+            checkpoint_singleton_id: test_checkpoint_id(),
+        },
+    }.to_clvm(&mut a).unwrap();
+
+    // 3. Build solution
+    let solution = RegistrationCoinSolution {
+        epoch: 5u64,
+        collateral_destination: dest_hash(),
+        collateral_amount: 1_000_000u64,
+        conditions: vec![],
+    }.to_clvm(&mut a).unwrap();
+
+    // 4. Run CLVM
+    let result = run_program(&mut a, &ChiaDialect::new(0), curried, solution, 11_000_000_000);
+    assert!(result.is_ok(), "CLVM execution must succeed");
+
+    // 5. Parse and assert conditions
+    let conditions = parse_conditions(&a, result.unwrap().1);
+    assert!(conditions.contains_opcode(61)); // ASSERT_COIN_ANNOUNCEMENT
+    assert!(conditions.contains_opcode(51)); // CREATE_COIN
+}
+```
+
+### Tier 2: Simulator Spend Tests (MUST)
+
+Use `chia-sdk-test::Simulator` to test full spend bundle lifecycle:
+
+```rust
+use chia_sdk_test::Simulator;
+use chia_sdk_driver::SpendContext;
+
+#[test]
+fn vv_req_reg_001_simulator_spend_lifecycle() {
+    let mut sim = Simulator::new();
+
+    // 1. Create coins
+    let coin = sim.new_coin(puzzle_hash, 1_000_000);
+
+    // 2. Build spend bundle via SpendContext
+    let ctx = &mut SpendContext::new();
+    // ... build coin spends ...
+
+    // 3. Submit to simulator
+    let result = sim.spend_coins(ctx.take(), &[sk]);
+
+    // 4. Verify resulting coin states
+    assert!(result.is_ok());
+    let children = sim.children(coin.coin_id());
+    assert_eq!(children.len(), expected);
+}
+```
+
+### Tier 3: Failure Case Tests (MUST)
+
+Every puzzle test MUST verify rejection of invalid inputs:
+
+- Wrong pubkey / checkpoint ID → CLVM failure or wrong conditions
+- Invalid epoch → announcement hash mismatch → simulator rejects
+- Missing announcement → `AssertCoinAnnouncement` fails
+- Wrong collateral amount → coin amount mismatch
+
+### Required Permutation Matrix
+
+| Dimension | Min test cases |
+|-----------|---------------|
+| Valid spend (happy path) | 1+ per spend path |
+| Wrong curried param | 1+ per curried param |
+| Wrong solution field | 1+ per solution field |
+| Edge values | 0, max, boundary |
+| Cross-impl hash check | 1+ per hash computation |
+
 ## When to skip test-first
 
 Skip only for:

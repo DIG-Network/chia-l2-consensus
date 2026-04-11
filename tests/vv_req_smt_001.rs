@@ -5,7 +5,7 @@
 //!
 //! Verifies that the sparse Merkle tree has the correct fixed-depth structure.
 
-use chia_l2_consensus::merkle::{SparseMerkleTree, EMPTY_LEAF, TREE_DEPTH};
+use chia_l2_consensus::testing::{SparseMerkleTree, EMPTY_LEAF, TREE_DEPTH};
 use sha2::{Digest, Sha256};
 
 #[test]
@@ -69,7 +69,7 @@ fn vv_req_smt_001_tree_capacity_is_2_pow_depth() {
 #[test]
 fn vv_req_smt_001_empty_nodes_precomputed() {
     // SMT-001: Empty nodes at each level are precomputed
-    use chia_l2_consensus::merkle::compute_empty_nodes;
+    use chia_l2_consensus::testing::compute_empty_nodes;
 
     let empty_nodes = compute_empty_nodes(TREE_DEPTH);
 
@@ -108,7 +108,7 @@ fn vv_req_smt_001_empty_nodes_precomputed() {
 #[test]
 fn vv_req_smt_001_empty_tree_root_equals_top_empty_node() {
     // SMT-001: Empty tree root is empty_nodes[TREE_DEPTH]
-    use chia_l2_consensus::merkle::compute_empty_nodes;
+    use chia_l2_consensus::testing::compute_empty_nodes;
 
     let tree = SparseMerkleTree::new();
     let empty_nodes = compute_empty_nodes(TREE_DEPTH);

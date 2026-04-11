@@ -10,7 +10,7 @@
 use ark_bls12_381::{Fr, G1Affine, G1Projective};
 use ark_ec::AffineRepr;
 use ark_ff::UniformRand;
-use chia_l2_consensus::{
+use chia_l2_consensus::testing::{
     add_g1, aggregate_pubkeys, g1_identity, negate_g1, serialize_g1, verify_aggregate,
 };
 use rand::thread_rng;
@@ -193,7 +193,7 @@ fn vv_req_cir_003_many_signers() {
 
     // Should produce a valid G1 point
     assert!(
-        chia_l2_consensus::deserialize_g1(&aggregate).is_some(),
+        chia_l2_consensus::testing::deserialize_g1(&aggregate).is_some(),
         "CIR-003: Aggregate of many pubkeys must be valid G1 point"
     );
 
