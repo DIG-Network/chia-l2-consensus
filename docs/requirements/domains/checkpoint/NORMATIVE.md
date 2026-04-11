@@ -69,7 +69,16 @@
 
 ---
 
-## §9 End-to-End Integration Test
+---
+
+## §9 Validator Attestation Binding
+
+<a id="CHK-013"></a>**CHK-013** Validators MUST sign a message that attests to the epoch number, network ID (network_coin_launcher_id), and state hash (new_state_root). The CLVM puzzle MUST verify via `bls_verify` that the aggregate signature is over the checkpoint_message containing all three fields. The Groth16 proof MUST prove the signers form a legitimate majority. Together, this proves a majority of validators attested to the specific epoch + network + state combination.
+> **Spec:** [`CHK-013.md`](specs/CHK-013.md)
+
+---
+
+## §10 End-to-End Integration Test
 
 <a id="CHK-008"></a>**CHK-008** A full end-to-end integration test MUST exercise the complete lifecycle: deploy network coin + checkpoint singleton, register validators, collect signatures, generate a real Groth16 proof, submit a checkpoint spend via chia-wallet-sdk simulator, verify state update, then execute collateral recovery via membership query + registration coin spend in the same bundle.
 > **Spec:** [`CHK-008.md`](../../../design/requirements/checkpoint/CHK-008.md)

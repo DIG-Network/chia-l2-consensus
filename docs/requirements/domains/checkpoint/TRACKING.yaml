@@ -139,3 +139,12 @@ items:
       - tests/vv_req_chk_012.rs::vv_req_chk_012_zero_network_id_valid
       - tests/vv_req_chk_012.rs::vv_req_chk_012_preimage_112_bytes
     notes: "IMPLEMENTED: network_coin_launcher_id added as curried param in checkpoint_inner.rue and 5th arg in compute_checkpoint_message(). Preimage grew from 80→112 bytes."
+
+  - id: CHK-013
+    section: "Validator Attestation Binding"
+    summary: "Validators sign epoch+network+state; bls_verify + Groth16 prove majority attestation"
+    status: verified
+    spec_ref: "docs/requirements/domains/checkpoint/specs/CHK-013.md"
+    tests:
+      - tests/vv_req_chk_013.rs
+    notes: "11 VV tests: message includes all 3 fields, signature verifies, changing any field invalidates, multi-validator aggregation, proof bound to message, puzzle recomputes internally, two-check design present, complete attestation flow."
