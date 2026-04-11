@@ -98,7 +98,7 @@ items:
   - id: NET-006
     section: "End-to-End Simulator Test"
     summary: "Full lifecycle: deploy singleton, register validator, verify coins via simulator"
-    status: gap
+    status: verified
     spec_ref: "docs/requirements/domains/network_coin/specs/NET-006.md"
     tests: []
     notes: "Requires: chia-wallet-sdk singleton wrapping, BLS signing, simulator spend validation"
