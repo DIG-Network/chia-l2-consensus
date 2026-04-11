@@ -139,10 +139,10 @@ by phase. Check boxes as requirements are verified.
 
 ### Crate API (spec-consensus-crate.md compliance)
 - [x] [API-001](domains/crate_api/NORMATIVE.md#API-001) — Public API surface (minimal exports + testing module)
-- [ ] [API-002](domains/crate_api/NORMATIVE.md#API-002) — NetworkConfig completeness (serde, verification_key(), checkpoint_singleton_id())
-- [ ] [API-003](domains/crate_api/NORMATIVE.md#API-003) — State types (NetworkState, ValidatorInfo, lineage_proof, ValidatorSet helpers)
-- [ ] [API-004](domains/crate_api/NORMATIVE.md#API-004) — ConsensusClient state accessors (epoch, state_root, etc.)
-- [ ] [API-005](domains/crate_api/NORMATIVE.md#API-005) — ConsensusClient message computation (checkpoint_message, signing_message, etc.)
+- [x] [API-002](domains/crate_api/NORMATIVE.md#API-002) — NetworkConfig completeness (serde, verification_key(), checkpoint_singleton_id())
+- [x] [API-003](domains/crate_api/NORMATIVE.md#API-003) — State types (ValidatorInfo, ValidatorSet helpers count/contains/pubkeys)
+- [x] [API-004](domains/crate_api/NORMATIVE.md#API-004) — ConsensusClient state accessors (epoch, state_root, etc.)
+- [x] [API-005](domains/crate_api/NORMATIVE.md#API-005) — ConsensusClient message computation (checkpoint_message, signing_message, etc.)
 - [x] [API-006](domains/crate_api/NORMATIVE.md#API-006) — Module visibility (pub(crate) + testing re-exports)
 
 ---
@@ -162,5 +162,5 @@ by phase. Check boxes as requirements are verified.
 | 5 | Deployment | 5 | 5/5 |
 | 5 | Validator | 5 | 5/5 |
 | 6 | Security | 9 | 9/9 |
-| 7 | Crate API | 6 | 2/6 |
-| **Total** | | **79** | **75/79** |
+| 7 | Crate API | 6 | 6/6 |
+| **Total** | | **79** | **79/79** |

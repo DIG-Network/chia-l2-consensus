@@ -26,7 +26,7 @@ mod state;
 pub use client::ConsensusClient;
 pub use config::{DeploymentArtifacts, NetworkConfig, VkJson};
 pub use error::{ConsensusError, ConsensusResult};
-pub use state::{CheckpointSingletonState, NetworkCoinState, ValidatorSet};
+pub use state::{CheckpointSingletonState, NetworkCoinState, ValidatorInfo, ValidatorSet};
 
 // Re-exported Chia protocol types
 pub use chia_protocol::Bytes32;

@@ -137,3 +137,41 @@ pub struct ValidatorSet {
     /// Verified against on-chain `validator_merkle_root` (IDX-003).
     pub merkle_root: Bytes32,
 }
+
+impl ValidatorSet {
+    /// Number of active validators.
+    ///
+    /// See [spec-consensus-crate.md Lines 399-400](../docs/resources/spec-consensus-crate.md).
+    pub fn count(&self) -> u64 {
+        self.validators.len() as u64
+    }
+
+    /// Check if a pubkey is in the active validator set.
+    ///
+    /// See [spec-consensus-crate.md Lines 402-404](../docs/resources/spec-consensus-crate.md).
+    pub fn contains(&self, pubkey: &[u8]) -> bool {
+        self.validators.iter().any(|v| v.pubkey == pubkey)
+    }
+
+    /// Get all pubkeys in the active set.
+    ///
+    /// See [spec-consensus-crate.md Lines 406-408](../docs/resources/spec-consensus-crate.md).
+    pub fn pubkeys(&self) -> Vec<Vec<u8>> {
+        self.validators.iter().map(|v| v.pubkey.clone()).collect()
+    }
+}
+
+/// A single active validator with their registration coin (API-003).
+///
+/// This is the per-validator info returned by the ValidatorSet.
+/// The `pubkey` identifies the validator; the `registration_coin`
+/// holds their locked collateral.
+///
+/// See [spec-consensus-crate.md Lines 389-396](../docs/resources/spec-consensus-crate.md).
+#[derive(Debug, Clone)]
+pub struct ValidatorInfo {
+    /// BLS12-381 G1 public key (48 bytes compressed).
+    pub pubkey: [u8; 48],
+    /// The unspent registration coin holding collateral.
+    pub registration_coin: Coin,
+}
