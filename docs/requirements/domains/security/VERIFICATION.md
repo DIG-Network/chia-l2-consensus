@@ -9,4 +9,8 @@
 | [SEC-005](NORMATIVE.md#SEC-005) | ✅ | Lineage enforcement | Invalid parent rejected; puzzle hash alone insufficient; wrong collateral rejected; O(1) HashSet; 10 VV tests |
 | [SEC-006](NORMATIVE.md#SEC-006) | ✅ | Epoch replay | Epoch in inner hash + coin ID in outer hash; full replay scenario; adjacent/boundary epochs; 11 VV tests |
 
+| [SEC-007](NORMATIVE.md#SEC-007) | ❌ | CLVM vulnerability audit | Assess 9 known vulnerabilities against Rue puzzles; verify mitigations; identify gaps |
+| [SEC-008](NORMATIVE.md#SEC-008) | ❌ | Condition injection | Verify passthrough conditions are safe or removed in all 3 puzzles |
+| [SEC-009](NORMATIVE.md#SEC-009) | ❌ | Destination binding | Verify registration coin destination is signed or risk documented |
+
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap
