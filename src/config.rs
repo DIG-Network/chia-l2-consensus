@@ -11,28 +11,59 @@
 //! See [spec-consensus-crate.md Lines 226-315](../docs/resources/spec-consensus-crate.md)
 //! for the full NetworkConfig specification.
 
-use chia_protocol::Bytes32;
+use chia_protocol::{Bytes32, Coin};
+use chia_puzzles::singleton::SINGLETON_LAUNCHER_PUZZLE_HASH;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+use crate::error::{ConsensusError, ConsensusResult};
+
+// ── Custom serde for Bytes32 (0x-prefixed hex strings) ──────────────
+
+mod bytes32_hex {
+    use super::*;
+
+    pub fn serialize<S: Serializer>(val: &Bytes32, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&format!("0x{}", hex::encode(val.as_ref())))
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Bytes32, D::Error> {
+        let s: String = Deserialize::deserialize(d)?;
+        let trimmed = s.trim_start_matches("0x");
+        let bytes = hex::decode(trimmed).map_err(serde::de::Error::custom)?;
+        if bytes.len() != 32 {
+            return Err(serde::de::Error::custom(format!(
+                "expected 32 bytes, got {}",
+                bytes.len()
+            )));
+        }
+        let mut arr = [0u8; 32];
+        arr.copy_from_slice(&bytes);
+        Ok(arr.into())
+    }
+}
 
 /// All parameters that define a specific L2 network deployment.
 ///
 /// Fixed at deployment time and never change for the life of the deployment.
-/// Produced by `ConsensusClient::deploy()` and saved to disk.
+/// Produced by `ConsensusClient::deploy()` and saved to disk as JSON.
 /// Loaded on every subsequent node startup.
 ///
 /// See [spec-consensus-crate.md Lines 233-297](../docs/resources/spec-consensus-crate.md).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkConfig {
     /// Launcher ID of the network coin singleton.
     /// Permanent identifier for this L2 network's registration authority.
     /// Used to derive the current network coin puzzle hash for on-chain lookups.
     ///
     /// See [spec-network-coin.md Lines 50-80](../docs/resources/spec-network-coin.md) — Deployment.
+    #[serde(with = "bytes32_hex")]
     pub network_coin_launcher_id: Bytes32,
 
     /// Launcher ID of the checkpoint singleton.
     /// Used to find the current checkpoint coin and derive `checkpoint_singleton_id()`.
     ///
     /// See [spec-checkpoint-singleton.md Lines 50-80](../docs/resources/spec-checkpoint-singleton.md) — Deployment.
+    #[serde(with = "bytes32_hex")]
     pub checkpoint_launcher_id: Bytes32,
 
     /// Tree hash of the base registration coin puzzle BEFORE currying.
@@ -41,10 +72,12 @@ pub struct NetworkConfig {
     ///
     /// See [spec-registration-coin.md Lines 100-150](../docs/resources/spec-registration-coin.md) —
     /// Computing the Registration Coin Puzzle Hash.
+    #[serde(with = "bytes32_hex")]
     pub registration_coin_mod_hash: Bytes32,
 
     /// Tree hash of the base checkpoint inner puzzle BEFORE currying.
     /// Used to rebuild the inner puzzle with current state on each spend.
+    #[serde(with = "bytes32_hex")]
     pub checkpoint_inner_mod_hash: Bytes32,
 
     /// Required collateral per validator in mojos.
@@ -82,7 +115,53 @@ pub struct NetworkConfig {
     ///
     /// See [spec-wire-format.md Lines 466-500](../docs/resources/spec-wire-format.md) —
     /// Individual Signatures.
+    #[serde(with = "bytes32_hex")]
     pub genesis_challenge: Bytes32,
+}
+
+impl NetworkConfig {
+    /// Deserialize the Groth16 verification key from the hex string.
+    ///
+    /// The VK is stored as hex-encoded 672 bytes in `verification_key_hex`.
+    /// This method deserializes it into an arkworks `VerifyingKey` for use
+    /// in proof verification.
+    ///
+    /// See [spec-consensus-crate.md Lines 300-303](../docs/resources/spec-consensus-crate.md).
+    pub fn verification_key(
+        &self,
+    ) -> ConsensusResult<ark_groth16::VerifyingKey<ark_bls12_381::Bls12_381>> {
+        let bytes = hex::decode(&self.verification_key_hex)
+            .map_err(|e| ConsensusError::SerializationError(format!("VK hex decode: {}", e)))?;
+        // The VK hex can be either:
+        // 1. Arkworks compressed format (CanonicalSerialize) — used by run_test_setup()
+        // 2. Flat 672-byte format (vk_to_bytes) — used by deploy_both_singletons()
+        // Try arkworks format first, fall back to reconstructing from flat bytes
+        crate::prover::deserialize_verification_key(&bytes).map_err(|_| {
+            ConsensusError::SerializationError(
+                "VK must be in arkworks compressed format (from run_test_setup output)".to_string(),
+            )
+        })
+    }
+
+    /// Derive the checkpoint singleton coin ID from the launcher ID.
+    ///
+    /// The singleton coin ID is: `sha256(launcher_id + SINGLETON_LAUNCHER_PUZZLE_HASH + 1)`.
+    /// This is the coin ID used in registration coin assertions and announcement
+    /// binding. It changes every checkpoint spend (new coin created).
+    ///
+    /// Note: This returns the FIRST (eve) singleton coin ID. After the first
+    /// checkpoint spend, the actual coin ID changes. Use sync() to get the
+    /// current coin ID.
+    ///
+    /// See [spec-consensus-crate.md Lines 310-312](../docs/resources/spec-consensus-crate.md).
+    pub fn checkpoint_singleton_id(&self) -> Bytes32 {
+        let launcher_coin = Coin::new(
+            self.checkpoint_launcher_id,
+            SINGLETON_LAUNCHER_PUZZLE_HASH.into(),
+            1, // singleton amount
+        );
+        launcher_coin.coin_id()
+    }
 }
 
 // ============================================================================
