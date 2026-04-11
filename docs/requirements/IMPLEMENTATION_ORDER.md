@@ -87,7 +87,7 @@ by phase. Check boxes as requirements are verified.
 - [x] [CHK-009](domains/checkpoint/NORMATIVE.md#CHK-009) — Epoch binding (proof bound to specific epoch via checkpoint_message)
 - [x] [CHK-010](domains/checkpoint/NORMATIVE.md#CHK-010) — Single checkpoint per epoch (singleton + epoch hash + BLS)
 - [x] [CHK-011](domains/checkpoint/NORMATIVE.md#CHK-011) — State hash binding (state_root in checkpoint_message)
-- [ ] [CHK-012](domains/checkpoint/NORMATIVE.md#CHK-012) — Network ID binding (network_coin_launcher_id in checkpoint_message)
+- [x] [CHK-012](domains/checkpoint/NORMATIVE.md#CHK-012) — Network ID binding (network_coin_launcher_id in checkpoint_message)
 
 ---
 
@@ -157,10 +157,10 @@ by phase. Check boxes as requirements are verified.
 | 2 | Circuit | 6 | 6/6 |
 | 3 | Network Coin | 6 | 6/6 |
 | 3 | Registration Coin | 7 | 7/7 |
-| 3 | Checkpoint | 12 (7+7sub+4) | 11/12 |
+| 3 | Checkpoint | 12 (7+7sub+4) | 12/12 |
 | 4 | Indexer | 5 | 5/5 |
 | 5 | Deployment | 5 | 5/5 |
 | 5 | Validator | 5 | 5/5 |
 | 6 | Security | 9 | 6/9 |
 | 7 | Crate API | 6 | 2/6 |
-| **Total** | | **79** | **71/79** |
+| **Total** | | **79** | **72/79** |
