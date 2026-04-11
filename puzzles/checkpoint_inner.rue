@@ -38,7 +38,7 @@
 //   When the singleton wrapper calls (inner_puzzle inner_solution), the
 //   Chia curry pattern prepends these before the solution parameters.
 //
-//   The remaining parameters (is_checkpoint through conditions) are the
+//   The remaining parameters (is_checkpoint through is_member) are the
 //   "solution": provided fresh by the spender at spend time.
 //
 //   After currying, the CLVM env seen by this code is:
@@ -240,8 +240,8 @@ fn main(
     siblings: HashCons,                // Merkle proof sibling hashes
     is_member: Bool,                   // true = prove membership, false = prove non-membership
 
-    // ── Solution: additional conditions ──────────────────────────────
-    conditions: List<Condition>,       // Extra conditions (spread into output via ...conditions)
+    // SEC-008: No conditions passthrough — prevents condition injection attacks.
+    // Fees are handled at the outer spend bundle level (P2 coin pays fees).
 ) -> List<Condition> {
 
     if is_checkpoint {
@@ -397,8 +397,8 @@ fn main(
             ),
         };
 
-        // Output: CREATE_COIN (recreation) + announcement + any extra conditions
-        [recreate, announce, ...conditions]
+        // SEC-008: Only recreation + announcement — no passthrough conditions
+        [recreate, announce]
 
     } else {
 
@@ -479,7 +479,7 @@ fn main(
             message: announcement,
         };
 
-        // Output: CREATE_COIN (recreation) + announcement + any extra conditions
-        [recreate, announce, ...conditions]
+        // SEC-008: Only recreation + announcement — no passthrough conditions
+        [recreate, announce]
     }
 }

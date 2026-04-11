@@ -172,13 +172,14 @@ fn vv_req_reg_001_has_collateral_amount_solution_param() {
 }
 
 #[test]
-fn vv_req_reg_001_has_conditions_solution_param() {
-    // REG-001: Solution includes conditions for additional conditions
+fn vv_req_reg_001_no_conditions_passthrough() {
+    // SEC-008: conditions parameter REMOVED to prevent injection attacks.
+    // The puzzle outputs only [assert_announcement, create_collateral].
     let src = puzzle_source();
 
     assert!(
-        src.contains("conditions: List<Condition>"),
-        "REG-001: Puzzle must have conditions: List<Condition> solution parameter"
+        !src.contains("conditions: List<Condition>"),
+        "REG-001/SEC-008: Puzzle must NOT have conditions passthrough (injection prevention)"
     );
 }
 

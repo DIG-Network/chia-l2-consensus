@@ -26,10 +26,10 @@ fn main(
 
     // Solution parameters (provided at spend time)
     epoch: Int,                          // Current checkpoint epoch
-    // TODO: Add a requirement where the destination is the puzzle hash of the registration coin owner
     collateral_destination: Bytes32,     // Where to send collateral
     collateral_amount: Int,              // Amount to return
-    conditions: List<Condition>,         // Additional conditions
+    // SEC-008: No conditions passthrough — prevents CREATE_COIN/RESERVE_FEE injection.
+    // Fees are handled at the outer spend bundle level (P2 coin pays fees).
 ) -> List<Condition> {
 
     // REG-004: Compute expected membership announcement
@@ -61,6 +61,6 @@ fn main(
         memos: nil,
     };
 
-    // Return conditions: assert announcement + create collateral + passthrough
-    [assert_announcement, create_collateral, ...conditions]
+    // SEC-008: Only two conditions — no passthrough, no injection surface
+    [assert_announcement, create_collateral]
 }
