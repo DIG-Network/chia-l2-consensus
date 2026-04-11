@@ -147,6 +147,16 @@ by phase. Check boxes as requirements are verified.
 
 ---
 
+## Phase 8 — RPC Integration (Deferred)
+
+### RPC (requires Chia full node client)
+- [ ] [RPC-001](domains/rpc/NORMATIVE.md#RPC-001) — Chia full node RPC client infrastructure
+- [ ] [RPC-002](domains/rpc/NORMATIVE.md#RPC-002) — Puzzle driver spend bundle construction (8 todo!() stubs)
+- [ ] [RPC-003](domains/rpc/NORMATIVE.md#RPC-003) — Indexer sync algorithm (3 todo!() stubs)
+- [ ] [RPC-004](domains/rpc/NORMATIVE.md#RPC-004) — ConsensusClient operation methods (5 todo!() stubs)
+
+---
+
 ## Summary
 
 | Phase | Domain | Requirements | Status |
@@ -163,4 +173,5 @@ by phase. Check boxes as requirements are verified.
 | 5 | Validator | 5 | 5/5 |
 | 6 | Security | 9 | 9/9 |
 | 7 | Crate API | 6 | 6/6 |
-| **Total** | | **79** | **79/79** |
+| 8 | RPC | 4 | 0/4 |
+| **Total** | | **83** | **79/83** |
