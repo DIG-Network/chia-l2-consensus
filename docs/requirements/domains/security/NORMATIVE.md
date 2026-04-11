@@ -43,3 +43,24 @@
 
 <a id="SEC-006"></a>**SEC-006** The epoch included in membership announcements MUST prevent replay attacks where old non-membership proofs are reused after a validator re-registers.
 > **Spec:** [`SEC-006.md`](../../../design/requirements/security/SEC-006.md)
+
+---
+
+## §7 CLVM Vulnerability Audit
+
+<a id="SEC-007"></a>**SEC-007** All known Chialisp/CLVM vulnerabilities from the Chia knowledge graph MUST be assessed against the three Rue puzzles. Mitigated vulnerabilities (CATbleed, AGG_SIG_UNSAFE, flash loans) MUST be verified as mitigated. Gaps (condition injection, unsigned destinations, cross-network replay) MUST have remediation requirements.
+> **Spec:** [`SEC-007.md`](specs/SEC-007.md)
+
+---
+
+## §8 Condition Injection Protection
+
+<a id="SEC-008"></a>**SEC-008** Passthrough `conditions` from puzzle solutions MUST be either removed, filtered to a safe whitelist, or signed via AGG_SIG_ME to prevent malicious condition injection (CREATE_COIN theft, RESERVE_FEE drain, AGG_SIG_UNSAFE injection).
+> **Spec:** [`SEC-008.md`](specs/SEC-008.md)
+
+---
+
+## §9 Registration Coin Destination Binding
+
+<a id="SEC-009"></a>**SEC-009** The registration coin's `collateral_destination` MUST be protected against RBF/mempool substitution attacks, either by requiring a validator signature over the destination hash or by documenting the risk as mitigated by the announcement requirement.
+> **Spec:** [`SEC-009.md`](specs/SEC-009.md)

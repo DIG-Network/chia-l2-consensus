@@ -129,6 +129,9 @@ by phase. Check boxes as requirements are verified.
 - [x] [SEC-004](domains/security/NORMATIVE.md#SEC-004) — Trusted setup ceremony
 - [x] [SEC-005](domains/security/NORMATIVE.md#SEC-005) — Lineage enforcement
 - [x] [SEC-006](domains/security/NORMATIVE.md#SEC-006) — Epoch replay protection
+- [ ] [SEC-007](domains/security/NORMATIVE.md#SEC-007) — CLVM vulnerability audit (9 vulns assessed, verify mitigations)
+- [ ] [SEC-008](domains/security/NORMATIVE.md#SEC-008) — Condition injection protection (remove/filter/sign passthrough conditions)
+- [ ] [SEC-009](domains/security/NORMATIVE.md#SEC-009) — Registration coin destination binding (sign destination or document risk)
 
 ---
 
@@ -158,6 +161,6 @@ by phase. Check boxes as requirements are verified.
 | 4 | Indexer | 5 | 5/5 |
 | 5 | Deployment | 5 | 5/5 |
 | 5 | Validator | 5 | 5/5 |
-| 6 | Security | 6 | 6/6 |
+| 6 | Security | 9 | 6/9 |
 | 7 | Crate API | 6 | 2/6 |
-| **Total** | | **76** | **70/76** |
+| **Total** | | **79** | **70/79** |
