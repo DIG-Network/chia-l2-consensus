@@ -100,5 +100,6 @@ items:
     summary: "Full lifecycle: deploy singleton, register validator, verify coins via simulator"
     status: verified
     spec_ref: "docs/requirements/domains/network_coin/specs/NET-006.md"
-    tests: []
-    notes: "Requires: chia-wallet-sdk singleton wrapping, BLS signing, simulator spend validation"
+    tests:
+      - tests/vv_req_net_006.rs
+    notes: "4 tests: flat env construction, singleton deploy, validator registration, sequential registrations."

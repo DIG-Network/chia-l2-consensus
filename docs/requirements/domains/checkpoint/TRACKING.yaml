@@ -8,64 +8,74 @@ items:
     summary: "Checkpoint singleton is canonical L2 state authority"
     status: verified
     spec_ref: "docs/design/requirements/checkpoint/CHK-001.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_chk_001_to_007.rs
+    notes: "5 tests: hex/hash artifacts exist, puzzle loads into CLVM, is inner puzzle."
 
   - id: CHK-002
     section: "State Tracking"
     summary: "Track state_root, epoch, validator_merkle_root, validator_count"
     status: verified
     spec_ref: "docs/design/requirements/checkpoint/CHK-002.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_chk_001_to_007.rs
+    notes: "2 tests: source has 4 state params + TREE_DEPTH."
 
   - id: CHK-003
     section: "Checkpoint Spend Path"
     summary: "Verify Groth16 proof and BLS aggregate signature"
     status: verified
     spec_ref: "docs/design/requirements/checkpoint/CHK-003.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_chk_003.rs
+      - tests/vv_req_chk_008.rs
+    notes: "15 tests in chk_003 (scalar verification, VK input, pairing); 13 tests in chk_008 (E2E with real proofs)."
 
   - id: CHK-004
     section: "Checkpoint Spend Path"
     summary: "Update state, increment epoch, emit announcement"
     status: verified
     spec_ref: "docs/design/requirements/checkpoint/CHK-004.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_chk_001_to_007.rs
+      - tests/vv_req_chk_008.rs
+    notes: "1 test in chk_001_to_007 (CLVM checkpoint path produces CREATE_COIN + announcement); verified in chk_008 E2E."
 
   - id: CHK-005
     section: "Membership Query"
     summary: "Verify Merkle proof and emit membership announcement"
     status: verified
     spec_ref: "docs/design/requirements/checkpoint/CHK-005.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_chk_001_to_007.rs
+    notes: "3 tests: membership query runs at depth=0, announcement cross-impl hash match, non-membership announcement."
 
   - id: CHK-006
     section: "Membership Query"
     summary: "Permissionless - no signature required"
     status: verified
     spec_ref: "docs/design/requirements/checkpoint/CHK-006.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_chk_001_to_007.rs
+    notes: "1 test: no AGG_SIG_ME/UNSAFE in membership query CLVM output."
 
   - id: CHK-007
     section: "Verification Key"
     summary: "VK curried in at deployment, immutable"
     status: verified
     spec_ref: "docs/design/requirements/checkpoint/CHK-007.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_chk_001_to_007.rs
+    notes: "2 tests: VK_HASH curried in, included in curry_tree_hash recreation."
 
   - id: CHK-008
     section: "End-to-End Integration Test"
     summary: "Full lifecycle: deploy, register, checkpoint, exit, collateral recovery"
     status: verified
     spec_ref: "docs/design/requirements/checkpoint/CHK-008.md"
-    tests: []
-    notes: "Requires: Groth16 prover, trusted setup, chia-wallet-sdk simulator, singleton wrapping"
+    tests:
+      - tests/vv_req_chk_008.rs
+    notes: "13 tests: trusted setup, proof generation, VK IC points, pairing check, simulator checkpoint spend, two-epoch E2E, invalid proof rejection, format compatibility."
 
   - id: CHK-009
     section: "Epoch Binding"
