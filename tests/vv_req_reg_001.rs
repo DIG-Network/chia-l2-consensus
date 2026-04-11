@@ -3,9 +3,46 @@
 //!
 //! Spec: `docs/requirements/domains/registration_coin/specs/REG-001.md`.
 //!
-//! Verifies that the registration coin puzzle is curried with exactly two
-//! parameters: VALIDATOR_PUBKEY (48-byte BLS G1 point) and
-//! CHECKPOINT_SINGLETON_ID (32-byte coin ID of the checkpoint singleton).
+//! ## Normative Statement
+//!
+//! The registration coin puzzle is curried with exactly two parameters:
+//! `VALIDATOR_PUBKEY` (48-byte BLS12-381 G1 point, compressed ZCash format) and
+//! `CHECKPOINT_SINGLETON_ID` (32-byte coin ID -- NOT launcher ID -- of the
+//! checkpoint singleton). Solution parameters include epoch, collateral_-
+//! destination, and collateral_amount. The puzzle must NOT have a conditions
+//! passthrough (SEC-008 injection prevention).
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Tests verify: puzzle compiles with rue, produces valid deterministic CLVM,
+//! has VALIDATOR_PUBKEY: PublicKey curried, has CHECKPOINT_SINGLETON_ID: Bytes32
+//! curried, has exactly 2 curried parameters (UPPERCASE convention), has epoch/
+//! collateral_destination/collateral_amount solution params, does NOT have
+//! conditions passthrough, returns List<Condition>, documents coin ID vs
+//! launcher ID, is a standalone puzzle (not inner), compiled .hex and .hash
+//! artifacts exist and match fresh builds.
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] Puzzle accepts exactly 2 curried parameters
+//! - [x] First parameter is 48-byte pubkey (PublicKey type)
+//! - [x] Second parameter is 32-byte checkpoint singleton coin ID (Bytes32)
+//! - [x] Puzzle compiles and produces deterministic CLVM
+//! - [x] Puzzle returns List<Condition>
+//! - [x] Compiled .hex and .hash artifacts exist
+//! - [x] Artifacts match fresh rue build output
+//! - [x] No conditions passthrough (SEC-008)
+//! - [x] Coin ID vs launcher ID documented
+//! - [x] Standalone puzzle (not inner)
+//! - [ ] Puzzle hash is deterministically computable (not directly computed)
+//! - [ ] Decurrying returns exactly these two parameters (not tested)
+//!
+//! ## Gaps
+//!
+//! Tests do not actually curry the puzzle with values and verify the puzzle
+//! hash, nor do they decurry a curried instance. These would require CLVM-
+//! level testing. The puzzle is tested structurally via source inspection
+//! and compilation.
 
 use std::process::Command;
 
@@ -41,6 +78,8 @@ fn puzzle_source() -> String {
 
 // ── Compilation ──────────────────────────────────────────────────────
 
+// Verifies `rue build puzzles/registration_coin.rue` succeeds. This is the
+// basic gate for puzzle correctness.
 #[test]
 fn vv_req_reg_001_puzzle_compiles() {
     // REG-001: Registration coin puzzle must compile with rue build
@@ -50,6 +89,7 @@ fn vv_req_reg_001_puzzle_compiles() {
     );
 }
 
+// Verifies the compiler output is non-empty CLVM starting with '('.
 #[test]
 fn vv_req_reg_001_puzzle_produces_clvm() {
     // REG-001: Compiled puzzle produces valid CLVM output
@@ -63,6 +103,7 @@ fn vv_req_reg_001_puzzle_produces_clvm() {
     );
 }
 
+// Verifies compilation determinism: two builds produce identical output.
 #[test]
 fn vv_req_reg_001_puzzle_is_deterministic() {
     // REG-001: Puzzle compilation is deterministic — same source always
@@ -80,6 +121,7 @@ fn vv_req_reg_001_puzzle_is_deterministic() {
 
 // ── Curried parameters (exactly 2) ──────────────────────────────────
 
+// Verifies the first curried parameter is VALIDATOR_PUBKEY: PublicKey.
 #[test]
 fn vv_req_reg_001_has_validator_pubkey_curried() {
     // REG-001: First curried parameter is VALIDATOR_PUBKEY: PublicKey
@@ -92,6 +134,8 @@ fn vv_req_reg_001_has_validator_pubkey_curried() {
     );
 }
 
+// Verifies the second curried parameter is CHECKPOINT_SINGLETON_ID: Bytes32.
+// This is the coin ID (not launcher ID) per the spec-wire-format.
 #[test]
 fn vv_req_reg_001_has_checkpoint_singleton_id_curried() {
     // REG-001: Second curried parameter is CHECKPOINT_SINGLETON_ID: Bytes32
@@ -104,6 +148,9 @@ fn vv_req_reg_001_has_checkpoint_singleton_id_curried() {
     );
 }
 
+// Counts UPPERCASE parameters in the fn main signature (Rue convention for
+// curried params) and verifies exactly 2. More would increase puzzle
+// complexity; fewer would lose binding.
 #[test]
 fn vv_req_reg_001_exactly_two_curried_params() {
     // REG-001: The puzzle must have exactly 2 curried parameters.
@@ -138,6 +185,8 @@ fn vv_req_reg_001_exactly_two_curried_params() {
 
 // ── Solution parameters ─────────────────────────────────────────────
 
+// Verifies the epoch: Int solution parameter exists (for announcement replay
+// protection).
 #[test]
 fn vv_req_reg_001_has_epoch_solution_param() {
     // REG-001: Solution includes epoch for announcement construction
@@ -149,6 +198,8 @@ fn vv_req_reg_001_has_epoch_solution_param() {
     );
 }
 
+// Verifies collateral_destination: Bytes32 solution parameter (where to send
+// returned collateral).
 #[test]
 fn vv_req_reg_001_has_collateral_destination_solution_param() {
     // REG-001: Solution includes collateral_destination for fund recovery
@@ -160,6 +211,7 @@ fn vv_req_reg_001_has_collateral_destination_solution_param() {
     );
 }
 
+// Verifies collateral_amount: Int solution parameter (amount to return).
 #[test]
 fn vv_req_reg_001_has_collateral_amount_solution_param() {
     // REG-001: Solution includes collateral_amount for fund recovery
@@ -171,6 +223,9 @@ fn vv_req_reg_001_has_collateral_amount_solution_param() {
     );
 }
 
+// SEC-008: Verifies the puzzle does NOT have a `conditions: List<Condition>`
+// parameter, preventing condition injection attacks. The puzzle outputs only
+// a fixed set of conditions (assert_announcement + create_collateral).
 #[test]
 fn vv_req_reg_001_no_conditions_passthrough() {
     // SEC-008: conditions parameter REMOVED to prevent injection attacks.
@@ -185,6 +240,7 @@ fn vv_req_reg_001_no_conditions_passthrough() {
 
 // ── Return type ─────────────────────────────────────────────────────
 
+// Verifies the puzzle declares `-> List<Condition>` return type.
 #[test]
 fn vv_req_reg_001_returns_list_condition() {
     // REG-001: Puzzle must return List<Condition>
@@ -198,6 +254,8 @@ fn vv_req_reg_001_returns_list_condition() {
 
 // ── Coin ID vs Launcher ID ─────────────────────────────────────────
 
+// Verifies the puzzle documents that CHECKPOINT_SINGLETON_ID is the coin ID,
+// not the launcher ID. This distinction matters for AssertCoinAnnouncement.
 #[test]
 fn vv_req_reg_001_documents_coin_id_not_launcher_id() {
     // REG-001: The CHECKPOINT_SINGLETON_ID parameter is the coin ID,
@@ -216,6 +274,8 @@ fn vv_req_reg_001_documents_coin_id_not_launcher_id() {
 
 // ── Puzzle identity ─────────────────────────────────────────────────
 
+// Verifies the registration coin is a standalone puzzle (not an inner puzzle).
+// Unlike network_coin_inner.rue, it is NOT wrapped by a singleton.
 #[test]
 fn vv_req_reg_001_is_standalone_puzzle() {
     // REG-001: Registration coin is NOT a singleton inner puzzle.
@@ -238,6 +298,7 @@ fn vv_req_reg_001_is_standalone_puzzle() {
     );
 }
 
+// Traceability: verifies the puzzle references registration coin specification.
 #[test]
 fn vv_req_reg_001_puzzle_documents_reg_001() {
     // REG-001: The puzzle or its spec reference should be traceable
@@ -254,6 +315,8 @@ fn vv_req_reg_001_puzzle_documents_reg_001() {
 
 // ── Compiled artifacts (.hex and .hash) ────────────────────────────
 
+// Verifies the compiled .hex artifact exists, is non-empty, and contains
+// only hex characters. This file is embedded via include_str! in the driver.
 #[test]
 fn vv_req_reg_001_compiled_hex_exists() {
     // REG-001: Compiled hex artifact must exist in puzzles/compiled/
@@ -276,6 +339,9 @@ fn vv_req_reg_001_compiled_hex_exists() {
     );
 }
 
+// Verifies the compiled .hash artifact exists and is a 0x-prefixed 32-byte
+// hex string (66 chars). This is the REGISTRATION_COIN_MOD_HASH used by the
+// network coin and indexer.
 #[test]
 fn vv_req_reg_001_compiled_hash_exists() {
     // REG-001: Compiled hash artifact must exist in puzzles/compiled/
@@ -296,6 +362,8 @@ fn vv_req_reg_001_compiled_hash_exists() {
     );
 }
 
+// Verifies the stored .hex matches a fresh `rue build -x` output. This
+// catches stale artifacts that would cause puzzle hash mismatches.
 #[test]
 fn vv_req_reg_001_compiled_hex_matches_live_build() {
     // REG-001: The stored .hex must match a fresh `rue build -x`
@@ -320,6 +388,7 @@ fn vv_req_reg_001_compiled_hex_matches_live_build() {
     );
 }
 
+// Verifies the stored .hash matches a fresh `rue build --hash` output.
 #[test]
 fn vv_req_reg_001_compiled_hash_matches_live_build() {
     // REG-001: The stored .hash must match a fresh `rue build --hash`

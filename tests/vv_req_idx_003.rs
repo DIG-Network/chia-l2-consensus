@@ -5,9 +5,23 @@
 //!
 //! Implementation: `src/indexer/validator_set.rs`.
 //!
-//! After every sync, the indexer rebuilds the sparse Merkle tree from
-//! registration coins and verifies the computed root matches the on-chain
-//! `validator_merkle_root`. Mismatches return `StateMismatch` error.
+//! ## Normative statement
+//! After every sync, the indexer MUST rebuild the sparse Merkle tree from
+//! registration coins and verify the computed root matches the on-chain
+//! `validator_merkle_root`. Mismatches MUST return a StateMismatch error.
+//! The tree MUST be insertion-order independent.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Matching root succeeds**: Built tree root matches expected.
+//! 2. **Mismatch detected**: Wrong root returns error with "mismatch" message.
+//! 3. **Empty set**: Empty tree root matches empty set.
+//! 4. **Empty set wrong root**: Non-empty root with no validators fails.
+//! 5. **Order independent**: Forward, reverse, shuffled orders all produce same root.
+//! 6. **Missing validator mismatch**: Omitting one validator causes failure.
+//! 7. **Spec exists**: IDX-003.md on disk.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test with large validator sets (thousands of validators).
 
 use chia_protocol::Bytes32;
 

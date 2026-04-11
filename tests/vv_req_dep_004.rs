@@ -5,10 +5,26 @@
 //!
 //! Implementation: `src/prover/setup.rs`.
 //!
-//! Verifies that a deployed VK (as raw bytes) can be validated for structure
-//! correctness and hash-matched against a published VK hash. This is the
-//! post-deployment verification step operators run to confirm the on-chain
-//! singleton contains the expected VK.
+//! ## Normative statement
+//! Operators MUST be able to verify a deployed VK by: (1) validating its
+//! structural correctness (size, field sizes), (2) hash-matching against
+//! a published VK hash, and (3) extracting individual components (alpha_g1,
+//! beta_g2, gamma_g2, delta_g2, 7 IC points) for comparison.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Hash matches**: verify_vk_hash succeeds for matching VK.
+//! 2. **Hash mismatch detected**: Wrong hash returns false.
+//! 3. **Corrupted VK detected**: Flipping one byte fails hash check.
+//! 4. **Validation succeeds**: Valid VK bytes pass validate_vk_bytes.
+//! 5. **Wrong length rejected**: 671 bytes and 673 bytes both fail.
+//! 6. **Empty rejected**: Zero bytes fails.
+//! 7. **VK_BYTE_SIZE = 672**: Constant verified.
+//! 8. **Components match**: Extracted components from bytes match original.
+//! 9. **Full workflow**: setup -> serialize -> verify end-to-end.
+//! 10. **Different setup detected**: Modified VK fails hash check.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test against a real on-chain singleton read.
 
 use chia_l2_consensus::testing::{
     compute_vk_hash, deserialize_proving_key, extract_vk_components, run_test_setup,

@@ -5,13 +5,45 @@
 //!
 //! Implementation: `puzzles/checkpoint_inner.rue` (compiled to CLVM).
 //!
-//! Verifies the checkpoint spend path performs:
-//! 1. bls_pairing_identity (Groth16 proof verification)
-//! 2. bls_verify (BLS aggregate signature verification)
-//! 3. Scalar verification (sha256 of public inputs)
-//! 4. VK input computation (IC linear combination)
-//! 5. CREATE_COIN (singleton recreation with new state)
-//! 6. CREATE_COIN_ANNOUNCEMENT (checkpoint announcement)
+//! ## Normative statement
+//! The checkpoint spend path MUST perform: (1) Groth16 proof verification via
+//! `bls_pairing_identity`, (2) BLS aggregate signature verification via
+//! `bls_verify`, (3) scalar verification ensuring each public input scalar
+//! equals sha256(input), (4) VK input computation as the linear combination
+//! `IC[0] + s1*IC[1] + ... + s6*IC[6]`, (5) singleton recreation via
+//! CREATE_COIN with updated state, (6) checkpoint announcement via
+//! CREATE_COIN_ANNOUNCEMENT.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Source-level operator presence**: Rue source contains `bls_pairing_identity`,
+//!    `bls_verify`, `g1_multiply`, `g1_negate` function calls.
+//! 2. **Compiled CLVM operator presence**: Compiled s-expression output
+//!    contains the operator names (verified via `rue build` stdout).
+//! 3. **CLVM execution -- checkpoint path**: Builds a full checkpoint env with
+//!    correct scalars and runs the puzzle. With test data (not real crypto),
+//!    the puzzle passes scalar verification and reaches the BLS/pairing check,
+//!    which fails as expected. A BLS/pairing error confirms the puzzle reached
+//!    the cryptographic verification stage.
+//! 4. **Wrong scalar rejected**: Corrupting scalar[0] causes puzzle failure,
+//!    proving scalar verification is enforced (not skipped).
+//! 5. **Scalar computation**: Source checks confirm sha256-based scalar
+//!    verification for all 6 public inputs.
+//! 6. **VK input formula**: Source checks confirm IC[0-6] usage and the
+//!    `ic0 + ic1*s1 + ... + ic6*s6` formula.
+//! 7. **Pairing equation**: Source checks confirm the 4-pair pairing equation
+//!    `e(A,B) * e(-alpha,beta) * e(-vk_input,gamma) * e(-C,delta) = 1`.
+//! 8. **BLS verify arguments**: Source confirms `bls_verify(agg_sig, agg_signers,
+//!    checkpoint_message)`.
+//!
+//! ## Completeness: HIGH (structural), MODERATE (execution)
+//! All operators, formulas, and arguments are verified at source and compiled
+//! levels. CLVM execution confirms scalar verification works and the puzzle
+//! reaches the pairing check. Full end-to-end with real crypto requires
+//! integration with the prover.
+//!
+//! ## Gaps
+//! - Cannot verify the pairing check succeeds with test data (would need a
+//!   real Groth16 proof). Full E2E tested at integration level.
 
 mod common;
 
@@ -196,6 +228,8 @@ fn compute_checkpoint_message(
 
 // ── CHK-003: Puzzle compiles with Groth16 operators ────────────────
 
+/// Verifies the Rue source calls bls_pairing_identity (the Groth16 verifier).
+/// Without this operator, proofs would not be checked on-chain.
 #[test]
 fn vv_req_chk_003_puzzle_has_bls_pairing_identity() {
     let src = std::fs::read_to_string("puzzles/checkpoint_inner.rue").unwrap();
@@ -205,6 +239,8 @@ fn vv_req_chk_003_puzzle_has_bls_pairing_identity() {
     );
 }
 
+/// Verifies the Rue source calls bls_verify (BLS aggregate signature check).
+/// Without this, validators' signatures would not be verified on-chain.
 #[test]
 fn vv_req_chk_003_puzzle_has_bls_verify() {
     let src = std::fs::read_to_string("puzzles/checkpoint_inner.rue").unwrap();
@@ -214,6 +250,8 @@ fn vv_req_chk_003_puzzle_has_bls_verify() {
     );
 }
 
+/// Verifies the compiled CLVM s-expression output contains
+/// bls_pairing_identity, confirming the Rue compiler emitted the opcode.
 #[test]
 fn vv_req_chk_003_compiled_has_pairing_opcode() {
     // The compiled CLVM must contain the bls_pairing_identity opcode
@@ -231,6 +269,7 @@ fn vv_req_chk_003_compiled_has_pairing_opcode() {
     );
 }
 
+/// Verifies the compiled output contains bls_verify in the s-expression.
 #[test]
 fn vv_req_chk_003_compiled_has_bls_verify_opcode() {
     let output = std::process::Command::new("rue")
@@ -244,6 +283,8 @@ fn vv_req_chk_003_compiled_has_bls_verify_opcode() {
     );
 }
 
+/// Verifies g1_multiply is in the compiled output -- needed for VK input
+/// computation (scalar * IC point multiplication).
 #[test]
 fn vv_req_chk_003_compiled_has_g1_multiply() {
     let output = std::process::Command::new("rue")
@@ -257,6 +298,8 @@ fn vv_req_chk_003_compiled_has_g1_multiply() {
     );
 }
 
+/// Verifies g1_negate is in the compiled output -- needed for the pairing
+/// equation's negated terms (-alpha, -vk_input, -C).
 #[test]
 fn vv_req_chk_003_compiled_has_g1_negate() {
     let output = std::process::Command::new("rue")
@@ -272,6 +315,12 @@ fn vv_req_chk_003_compiled_has_g1_negate() {
 
 // ── CHK-003: CLVM Execution — checkpoint path runs ─────────────────
 
+/// CLVM execution test for the checkpoint spend path. Builds a full env
+/// with correct scalars (sha256 of each public input) and runs the puzzle.
+/// With test data (not real BLS points), the puzzle passes scalar verification
+/// and reaches bls_pairing_identity, which fails as expected. A BLS/pairing
+/// error confirms all pre-crypto checks passed. If it unexpectedly succeeds,
+/// we verify CREATE_COIN and CREATE_COIN_ANNOUNCEMENT are present.
 #[test]
 fn vv_req_chk_003_checkpoint_path_executes() {
     // This test verifies the checkpoint path runs through scalar verification,
@@ -376,6 +425,9 @@ fn vv_req_chk_003_checkpoint_path_executes() {
     }
 }
 
+/// Negative test: corrupting scalar[0] causes the puzzle to fail, proving
+/// the scalar verification assertions are enforced and not dead code.
+/// The puzzle checks sha256(input) == scalar for each public input.
 #[test]
 fn vv_req_chk_003_wrong_scalar_rejected() {
     // CHK-003: If a scalar doesn't match sha256(input), the puzzle fails.
@@ -430,6 +482,9 @@ fn vv_req_chk_003_wrong_scalar_rejected() {
 
 // ── CHK-003: Scalar computation matches spec ───────────────────────
 
+/// Verifies the Rue source checks scalar1 = sha256(validator_merkle_root)
+/// and scalar6 = sha256(checkpoint_message). These are the first and last
+/// of the 6 scalar verifications, confirming the pattern.
 #[test]
 fn vv_req_chk_003_scalar_is_sha256() {
     // CHK-003: scalar(bytes) = sha256(bytes) per spec
@@ -444,6 +499,8 @@ fn vv_req_chk_003_scalar_is_sha256() {
     );
 }
 
+/// Verifies all 6 scalars (s1..s6) are referenced in the source, confirming
+/// no public input is skipped in the VK input computation.
 #[test]
 fn vv_req_chk_003_six_scalars_verified() {
     // CHK-003: All 6 public input scalars must be verified
@@ -459,6 +516,8 @@ fn vv_req_chk_003_six_scalars_verified() {
 
 // ── CHK-003: VK input computation ──────────────────────────────────
 
+/// Verifies all 7 IC points (IC.ic0 through IC.ic6) are referenced in source,
+/// confirming the VK input computation uses the complete IC vector.
 #[test]
 fn vv_req_chk_003_vk_input_uses_all_ic_points() {
     let src = std::fs::read_to_string("puzzles/checkpoint_inner.rue").unwrap();
@@ -471,6 +530,8 @@ fn vv_req_chk_003_vk_input_uses_all_ic_points() {
     }
 }
 
+/// Verifies the VK input formula: ic0 + ic1*s1 + ... + ic6*s6. Checks for
+/// IC.ic0 (constant term), IC.ic1*scalars.s1, and IC.ic6*scalars.s6 in source.
 #[test]
 fn vv_req_chk_003_vk_input_formula() {
     // CHK-003: vk_input = ic0 + ic1*s1 + ic2*s2 + ... + ic6*s6
@@ -485,6 +546,9 @@ fn vv_req_chk_003_vk_input_formula() {
 
 // ── CHK-003: Pairing equation structure ────────────────────────────
 
+/// Verifies the Groth16 pairing equation has the correct 4 pairs in order:
+/// (proof.a, proof.b), (-VK.alpha, VK.beta), (-vk_input, VK.gamma),
+/// (-proof.c, VK.delta). This is the standard Groth16 verification equation.
 #[test]
 fn vv_req_chk_003_pairing_equation_correct() {
     // CHK-003: e(A,B) * e(-alpha,beta) * e(-vk_input,gamma) * e(-C,delta) = 1
@@ -510,6 +574,9 @@ fn vv_req_chk_003_pairing_equation_correct() {
 
 // ── CHK-003: BLS signature verification ────────────────────────────
 
+/// Verifies bls_verify is called with the correct 3 arguments:
+/// (agg_sig, agg_signers, checkpoint_message). This ensures the BLS
+/// check verifies that agg_signers actually signed the checkpoint message.
 #[test]
 fn vv_req_chk_003_bls_verify_args() {
     // CHK-003: bls_verify(agg_sig, agg_signers, checkpoint_message)
@@ -522,6 +589,7 @@ fn vv_req_chk_003_bls_verify_args() {
 
 // ── Spec ───────────────────────────────────────────────────────────
 
+/// Traceability: confirms the CHK-003 spec file exists.
 #[test]
 fn vv_req_chk_003_spec_exists() {
     assert!(std::path::Path::new("docs/requirements/domains/checkpoint/specs/CHK-003.md").exists());

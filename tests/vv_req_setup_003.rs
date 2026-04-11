@@ -1,12 +1,27 @@
-//! REQUIREMENT: SETUP-003 — Project structure
+//! REQUIREMENT: SETUP-003 — Project Structure
 //! (`docs/requirements/domains/setup/NORMATIVE.md#SETUP-003`).
 //!
 //! Spec: `docs/requirements/domains/setup/specs/SETUP-003.md`.
 //!
-//! Verifies that the project structure matches the specification.
+//! ## Normative statement
+//! The project MUST have the specified directory structure: src/ modules
+//! (lib.rs, client.rs, config.rs, state.rs, error.rs), submodules
+//! (puzzles, merkle, prover, indexer), Rue puzzle source files, and compiled
+//! puzzle output directory. Public API types MUST be re-exported and
+//! ConsensusError MUST be Send + Sync for async usage.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Directory structure**: All expected files verified as existing.
+//! 2. **Public API compiles**: Types are importable and usable in function
+//!    signatures; ConsensusError is Send + Sync.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test for absence of unexpected files.
 
 use std::path::Path;
 
+/// Verifies all required source files, submodules, Rue puzzle sources,
+/// and the compiled output directory exist on disk.
 #[test]
 fn vv_req_setup_003_directory_structure_exists() {
     // Verify src/ modules exist
@@ -68,6 +83,8 @@ fn vv_req_setup_003_directory_structure_exists() {
     );
 }
 
+/// Verifies public API types are re-exported and usable. ConsensusError
+/// must be Send + Sync for use in async contexts.
 #[test]
 fn vv_req_setup_003_public_api_compiles() {
     // Verify public types are accessible via re-exports

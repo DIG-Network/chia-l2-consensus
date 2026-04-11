@@ -5,8 +5,25 @@
 //!
 //! Implementation: `src/indexer/mod.rs`, `src/state.rs`.
 //!
-//! Verifies the indexer tracks: network coin state, checkpoint singleton
-//! state, registration coins, and checkpoint history.
+//! ## Normative statement
+//! The indexer MUST track: network coin state (`NetworkCoinState`), checkpoint
+//! singleton state (`CheckpointSingletonState` with epoch, validator_count,
+//! validator_merkle_root, state_root), registration coins (`Validator` with
+//! pubkey, slot, registration_coin_id), and the validator set (`ValidatorSet`).
+//! The indexer module MUST provide async sync, lineage checking, cache, and
+//! reorg handling submodules.
+//!
+//! ## How the tests prove the requirement
+//! 1. **State types exist**: Source contains NetworkCoinState, CheckpointSingletonState,
+//!    Validator, ValidatorSet with required fields.
+//! 2. **Indexer module structure**: mod.rs, validator_set.rs, cache.rs, reorg.rs exist.
+//! 3. **IndexerState with async sync**: Source has the type and method.
+//! 4. **LineageChecker available**: Constructible from testing module.
+//! 5. **CheckpointSingletonState constructible**: Fields accessible.
+//! 6. **Spec exists**: IDX-001.md on disk.
+//!
+//! ## Completeness: MODERATE (structural checks)
+//! ## Gaps: Does not exercise the indexer with live blockchain data.
 
 use chia_protocol::Bytes32;
 

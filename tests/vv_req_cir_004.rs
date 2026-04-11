@@ -3,11 +3,51 @@
 //!
 //! Spec: `docs/requirements/domains/circuit/specs/CIR-004.md`.
 //!
-//! Verifies that the circuit enforces 2k > validator_count where k is the
-//! number of signing validators. This prevents minority attacks.
+//! ## Normative Statement
+//!
+//! The circuit enforces `2k > validator_count` where k is the number of signing
+//! validators. This is a strict majority (>), not at-least-half (>=). With 100
+//! validators, k=51 is the minimum. This prevents minority attacks and
+//! guarantees unique consensus.
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Tests exercise `is_majority(k, count)` and `minimum_signers(count)` across
+//! boundary values, edge cases, the spec's edge-case table, large counts, and
+//! overflow scenarios. The strict-vs-half distinction is explicitly tested by
+//! comparing `is_majority` and `is_at_least_half` at the exact 50% boundary.
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] 2k > validator_count enforced (boundary 51/100 and 50/100)
+//! - [x] Strict majority (>) not half (>=) (explicit is_at_least_half comparison)
+//! - [x] Boundary: k=51, count=100 passes; k=50, count=100 fails
+//! - [x] Edge case: count=1 k=1 passes (2 > 1)
+//! - [x] Edge case: count=2 k=2 passes, k=1 fails
+//! - [x] Edge case: count=3 k=2 passes, k=1 fails
+//! - [x] Edge case: count=0 degenerate
+//! - [x] k=0 (no signers) always fails
+//! - [x] minimum_signers formula verified for even and odd counts
+//! - [x] minimum_signers is sufficient (passes) and min-1 fails
+//! - [x] Large counts up to MAX_SIGNERS=20,000
+//! - [x] Overflow protection with near-u64::MAX values
+//! - [x] Spec table from CIR-004.md reproduced exactly
+//! - [x] All validators signing is always majority
+//! - [x] k > count is majority (degenerate but safe)
+//!
+//! ## Gaps
+//!
+//! - In-circuit enforcement (R1CS constraint with range check) is not tested
+//!   here; these tests exercise the off-chain helper functions. The in-circuit
+//!   constraint uses the same formula and is bound via public inputs.
+//! - The property that `validator_count` is a public input (not prover-
+//!   controlled) is architectural, not testable at this level.
 
 use chia_l2_consensus::testing::{is_at_least_half, is_majority, minimum_signers};
 
+// Verifies the fundamental majority formula at the canonical boundary:
+// k=51/count=100 passes (102 > 100) and k=50/count=100 fails (100 > 100
+// is false). A passing result confirms strict inequality (>).
 #[test]
 fn vv_req_cir_004_majority_threshold_enforced() {
     // CIR-004: 2k > validator_count must be enforced
@@ -24,6 +64,10 @@ fn vv_req_cir_004_majority_threshold_enforced() {
     );
 }
 
+// Explicitly distinguishes strict majority (>) from at-least-half (>=).
+// At exactly 50%, is_majority MUST return false while is_at_least_half
+// returns true. This prevents a 50-50 split from producing two conflicting
+// valid checkpoints.
 #[test]
 fn vv_req_cir_004_strict_majority_not_half() {
     // CIR-004: Must be strict majority (>), not half (>=)
@@ -45,6 +89,8 @@ fn vv_req_cir_004_strict_majority_not_half() {
     assert!(is_majority(51, 100), "CIR-004: 51/100 is strict majority");
 }
 
+// Boundary test: the minimum sufficient k for 100 validators is 51.
+// Confirms both is_majority and minimum_signers agree on this threshold.
 #[test]
 fn vv_req_cir_004_boundary_51_100_passes() {
     // CIR-004: k=51, count=100 → passes (boundary test)
@@ -56,12 +102,15 @@ fn vv_req_cir_004_boundary_51_100_passes() {
     );
 }
 
+// Boundary test: k=50 for 100 validators must fail. 2*50=100 is NOT > 100.
 #[test]
 fn vv_req_cir_004_boundary_50_100_fails() {
     // CIR-004: k=50, count=100 → fails (boundary test)
     assert!(!is_majority(50, 100), "CIR-004: k=50, count=100 must fail");
 }
 
+// Edge case: single-validator network. k=1, count=1 must pass (2>1).
+// minimum_signers(1) must return 1.
 #[test]
 fn vv_req_cir_004_edge_case_count_1_k_1() {
     // CIR-004: count=1, k=1 → passes (2 > 1)
@@ -73,6 +122,8 @@ fn vv_req_cir_004_edge_case_count_1_k_1() {
     );
 }
 
+// Edge case: two-validator network. Both must sign (k=2, 4>2). A single
+// signer is insufficient (k=1, 2>2 is false). minimum_signers(2) = 2.
 #[test]
 fn vv_req_cir_004_edge_case_count_2() {
     // CIR-004: count=2, k=2 → passes (4 > 2)
@@ -91,6 +142,8 @@ fn vv_req_cir_004_edge_case_count_2() {
     );
 }
 
+// Edge case: three-validator network. k=2 is sufficient (4>3) but k=1
+// is not (2>3 is false). minimum_signers(3) = 2.
 #[test]
 fn vv_req_cir_004_edge_case_count_3() {
     // CIR-004: count=3, k=2 → passes (4 > 3)
@@ -109,6 +162,8 @@ fn vv_req_cir_004_edge_case_count_3() {
     );
 }
 
+// Degenerate case: zero validators. k=1 passes (2>0), k=0 fails (0>0).
+// minimum_signers(0) = 1 because at least one signer is always needed.
 #[test]
 fn vv_req_cir_004_edge_case_count_0() {
     // CIR-004: count=0 is degenerate but k=1 should technically pass
@@ -129,6 +184,9 @@ fn vv_req_cir_004_edge_case_count_0() {
     );
 }
 
+// Verifies that zero signers always fails: 2*0=0 is never > any positive
+// count. This is the ultimate floor -- a checkpoint with no signers is
+// never valid.
 #[test]
 fn vv_req_cir_004_zero_signers_fails() {
     // CIR-004: k=0 (no signers) → fails for any positive validator count
@@ -143,6 +201,8 @@ fn vv_req_cir_004_zero_signers_fails() {
     );
 }
 
+// Verifies the minimum_signers formula: k = floor(count/2) + 1. Tested
+// for both even and odd counts. This formula is the inverse of 2k > count.
 #[test]
 fn vv_req_cir_004_minimum_signers_formula() {
     // CIR-004: Verify minimum_signers formula
@@ -159,6 +219,10 @@ fn vv_req_cir_004_minimum_signers_formula() {
     assert_eq!(minimum_signers(999), 500); // 999/2 + 1 = 499 + 1 = 500
 }
 
+// Verifies consistency between minimum_signers and is_majority across a
+// wide range of counts: minimum_signers(count) always passes is_majority,
+// and minimum_signers(count)-1 always fails. This proves the formula and
+// the comparison function agree.
 #[test]
 fn vv_req_cir_004_minimum_signers_is_sufficient() {
     // CIR-004: minimum_signers result must pass is_majority
@@ -183,6 +247,9 @@ fn vv_req_cir_004_minimum_signers_is_sufficient() {
     }
 }
 
+// Tests the majority formula at the MAX_SIGNERS scale (count=20,000).
+// minimum_signers(20000) = 10001, and 10000 must fail. Ensures the formula
+// does not degrade at the expected production scale.
 #[test]
 fn vv_req_cir_004_large_validator_counts() {
     // CIR-004: Test with large validator counts (up to MAX_SIGNERS = 20,000)
@@ -200,6 +267,8 @@ fn vv_req_cir_004_large_validator_counts() {
     );
 }
 
+// Verifies that near-u64::MAX values do not cause arithmetic overflow or
+// panic. The `2k` computation could overflow u64 if not handled carefully.
 #[test]
 fn vv_req_cir_004_overflow_protection() {
     // CIR-004: Test that large values don't cause overflow
@@ -216,6 +285,8 @@ fn vv_req_cir_004_overflow_protection() {
     assert!(result2, "CIR-004: is_at_least_half with large values");
 }
 
+// Reproduces the exact edge-case table from the CIR-004 spec, ensuring
+// the implementation matches the specification document line by line.
 #[test]
 fn vv_req_cir_004_table_from_spec() {
     // CIR-004: Verify the edge case table from the spec
@@ -234,6 +305,8 @@ fn vv_req_cir_004_table_from_spec() {
     assert!(!is_majority(50, 100), "CIR-004: 100 > 100 is false");
 }
 
+// Verifies that if all n validators sign (k=n), it is always a majority.
+// 2n > n is trivially true for all n >= 1.
 #[test]
 fn vv_req_cir_004_all_signers_is_majority() {
     // CIR-004: If all validators sign, it's definitely a majority
@@ -246,6 +319,9 @@ fn vv_req_cir_004_all_signers_is_majority() {
     }
 }
 
+// Verifies the degenerate case where k > count. While this should not
+// happen in practice (more signers than validators), the formula should
+// still return true without error.
 #[test]
 fn vv_req_cir_004_more_than_all_signers() {
     // CIR-004: k > validator_count is technically possible (shouldn't happen in practice)

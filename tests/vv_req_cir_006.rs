@@ -3,12 +3,48 @@
 //!
 //! Spec: `docs/requirements/domains/circuit/specs/CIR-006.md`.
 //!
-//! Verifies that the circuit parameters MAX_SIGNERS and TREE_DEPTH are
-//! compile-time constants that are consistent across all components.
+//! ## Normative Statement
+//!
+//! The circuit is parameterized by two compile-time constants fixed at trusted
+//! setup: `MAX_SIGNERS` (maximum simultaneous signers the circuit can verify)
+//! and `TREE_DEPTH` (depth of the sparse Merkle tree, supports 2^TREE_DEPTH
+//! slots). These parameters cannot be changed without a new trusted setup.
+//! All components (circuit, SMT, checkpoint singleton) must use identical values.
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Tests verify: both constants are compile-time (const assignment compiles),
+//! TREE_DEPTH=32 and MAX_SIGNERS=20,000 match spec, the circuit's accessors
+//! agree with the global constants, Merkle proofs have exactly TREE_DEPTH
+//! siblings, tree capacity is 2^32, the circuit enforces k <= MAX_SIGNERS
+//! structurally, and all components (circuit, SMT) use consistent values.
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] MAX_SIGNERS is compile-time constant
+//! - [x] TREE_DEPTH is compile-time constant
+//! - [x] Checkpoint singleton TREE_DEPTH matches circuit (via SMT consistency)
+//! - [x] k <= MAX_SIGNERS enforced (witness structure size)
+//! - [x] Merkle proofs have exactly TREE_DEPTH siblings
+//! - [x] MAX_SIGNERS = 20,000 (spec value)
+//! - [x] TREE_DEPTH = 32 (spec value)
+//! - [x] Parameters match across circuit and SMT components
+//! - [ ] VK is bound to specific parameter values (requires trusted setup test)
+//! - [ ] Network config documents both parameters (config file not tested)
+//!
+//! ## Gaps
+//!
+//! - Does not test that a VK generated for one set of parameters rejects
+//!   proofs from a different parameter set. This would require generating
+//!   two VKs and cross-verifying.
+//! - validator_count can exceed MAX_SIGNERS (up to 2*MAX_SIGNERS-1) is
+//!   documented but not tested against the circuit.
 
 use chia_l2_consensus::testing::{ConsensusCircuit, MAX_SIGNERS};
 use chia_l2_consensus::testing::{SparseMerkleTree, TREE_DEPTH};
 
+// Verifies MAX_SIGNERS is a compile-time constant by assigning it to a const.
+// If MAX_SIGNERS were a runtime value, this line would not compile.
 #[test]
 fn vv_req_cir_006_max_signers_is_constant() {
     // CIR-006: MAX_SIGNERS is a compile-time constant
@@ -19,6 +55,8 @@ fn vv_req_cir_006_max_signers_is_constant() {
     assert!(MAX_SIGNERS >= 1, "CIR-006: MAX_SIGNERS must be at least 1");
 }
 
+// Verifies TREE_DEPTH is a compile-time constant (const assignment compiles)
+// and that its value is exactly 32 per the spec.
 #[test]
 fn vv_req_cir_006_tree_depth_is_constant() {
     // CIR-006: TREE_DEPTH is a compile-time constant
@@ -29,6 +67,9 @@ fn vv_req_cir_006_tree_depth_is_constant() {
     assert_eq!(TREE_DEPTH, 32, "CIR-006: TREE_DEPTH must be 32");
 }
 
+// Verifies that the circuit's tree_depth() accessor returns the same value
+// as the global TREE_DEPTH constant. A mismatch would mean the circuit
+// expects different-length Merkle proofs than the SMT produces.
 #[test]
 fn vv_req_cir_006_circuit_tree_depth_matches_smt() {
     // CIR-006: Circuit TREE_DEPTH must match SMT TREE_DEPTH
@@ -41,6 +82,9 @@ fn vv_req_cir_006_circuit_tree_depth_matches_smt() {
     );
 }
 
+// Verifies the circuit's max_signers() accessor matches the global
+// MAX_SIGNERS constant. This ensures the circuit's witness array is sized
+// consistently with the system-wide limit.
 #[test]
 fn vv_req_cir_006_circuit_max_signers_matches_constant() {
     // CIR-006: Circuit max_signers() must match MAX_SIGNERS constant
@@ -53,6 +97,9 @@ fn vv_req_cir_006_circuit_max_signers_matches_constant() {
     );
 }
 
+// Verifies that a Merkle proof from the SparseMerkleTree has exactly
+// TREE_DEPTH sibling hashes. The circuit expects this exact count;
+// fewer or more siblings would make the proof incompatible.
 #[test]
 fn vv_req_cir_006_merkle_proofs_have_tree_depth_siblings() {
     // CIR-006: Merkle proofs have exactly TREE_DEPTH siblings
@@ -69,6 +116,9 @@ fn vv_req_cir_006_merkle_proofs_have_tree_depth_siblings() {
     );
 }
 
+// Verifies that 2^TREE_DEPTH = 4,294,967,296 (2^32) -- the maximum
+// number of validator slots the tree can hold. This confirms the tree
+// is large enough for any practical validator set.
 #[test]
 fn vv_req_cir_006_tree_capacity_from_depth() {
     // CIR-006: Tree capacity is 2^TREE_DEPTH
@@ -81,12 +131,16 @@ fn vv_req_cir_006_tree_capacity_from_depth() {
     );
 }
 
+// Verifies the spec-mandated value: MAX_SIGNERS = 20,000.
 #[test]
 fn vv_req_cir_006_max_signers_value() {
     // CIR-006: MAX_SIGNERS should be set to 20,000 for large validator sets
     assert_eq!(MAX_SIGNERS, 20_000, "CIR-006: MAX_SIGNERS must be 20,000");
 }
 
+// Verifies parameter types: MAX_SIGNERS is usize and TREE_DEPTH is u32.
+// If these types were changed, dependent code using them in array sizing
+// or bitwise operations would break.
 #[test]
 fn vv_req_cir_006_parameters_are_usize_and_u32() {
     // CIR-006: Verify parameter types
@@ -99,6 +153,9 @@ fn vv_req_cir_006_parameters_are_usize_and_u32() {
     // Types are correct if this compiles
 }
 
+// Verifies that even a proof for a non-existent key in an empty tree
+// still has exactly TREE_DEPTH siblings. This is needed for padding
+// witnesses (unused signer slots need valid-length proofs).
 #[test]
 fn vv_req_cir_006_empty_tree_proofs_still_have_tree_depth() {
     // CIR-006: Even proofs in empty tree have TREE_DEPTH siblings
@@ -114,6 +171,9 @@ fn vv_req_cir_006_empty_tree_proofs_still_have_tree_depth() {
     );
 }
 
+// Documents that k <= MAX_SIGNERS is enforced structurally: the circuit's
+// witness arrays are sized to MAX_SIGNERS, so providing more signers is
+// impossible. Verifies via max_signers() accessor.
 #[test]
 fn vv_req_cir_006_circuit_constraint_would_enforce_k_le_max_signers() {
     // CIR-006: k ≤ MAX_SIGNERS constraint
@@ -131,6 +191,10 @@ fn vv_req_cir_006_circuit_constraint_would_enforce_k_le_max_signers() {
     );
 }
 
+// Documents and verifies the relationship between MAX_SIGNERS and the
+// maximum feasible validator_count. With MAX_SIGNERS=20,000, the network
+// can have up to 39,999 validators (2*20,000-1) while still achieving
+// majority with k=20,000 signers.
 #[test]
 fn vv_req_cir_006_validator_count_can_exceed_max_signers() {
     // CIR-006: validator_count can be > MAX_SIGNERS
@@ -153,6 +217,8 @@ fn vv_req_cir_006_validator_count_can_exceed_max_signers() {
     );
 }
 
+// Verifies that both parameters are accessible via the circuit API and
+// prints their values for diagnostic purposes.
 #[test]
 fn vv_req_cir_006_circuit_parameters_documented() {
     // CIR-006: Circuit parameters should be accessible
@@ -170,6 +236,9 @@ fn vv_req_cir_006_circuit_parameters_documented() {
     println!("CIR-006: TREE_DEPTH = {}", tree_depth);
 }
 
+// Cross-component consistency test: verifies that the circuit, the SMT,
+// the global constants, and actual proof generation all agree on
+// TREE_DEPTH and MAX_SIGNERS. This is the definitive coordination check.
 #[test]
 fn vv_req_cir_006_parameters_match_across_components() {
     // CIR-006: All components must use the same parameter values

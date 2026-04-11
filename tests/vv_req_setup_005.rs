@@ -3,11 +3,25 @@
 //!
 //! Spec: `docs/requirements/domains/setup/specs/SETUP-005.md`.
 //!
-//! Verifies that Rue tooling is available for compiling puzzles.
+//! ## Normative statement
+//! The Rue compiler MUST be available in the development environment for
+//! compiling Chialisp/Rue puzzle sources to CLVM. All three puzzle source
+//! files and the compiled output directory MUST exist.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Rue compiler available**: `rue --help` succeeds and shows "build" command.
+//! 2. **Puzzle source files exist**: All three .rue files present.
+//! 3. **Compiled directory exists**: puzzles/compiled/ is a directory.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not verify a specific Rue version.
 
 use std::path::Path;
 use std::process::Command;
 
+/// Verifies the `rue` CLI is installed and `rue --help` succeeds. The
+/// output must mention the "build" subcommand, confirming the compiler
+/// is operational.
 #[test]
 fn vv_req_setup_005_rue_compiler_available() {
     // Check if rue command is available
@@ -38,6 +52,7 @@ fn vv_req_setup_005_rue_compiler_available() {
     }
 }
 
+/// Verifies all three Rue puzzle source files exist on disk.
 #[test]
 fn vv_req_setup_005_puzzle_source_files_exist() {
     // Verify Rue source files exist
@@ -55,6 +70,7 @@ fn vv_req_setup_005_puzzle_source_files_exist() {
     );
 }
 
+/// Verifies the compiled puzzle output directory exists and is a directory.
 #[test]
 fn vv_req_setup_005_compiled_directory_exists() {
     // Verify compiled output directory exists

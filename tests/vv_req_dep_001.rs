@@ -5,10 +5,37 @@
 //!
 //! Implementation: `src/prover/setup.rs`.
 //!
-//! Verifies that the trusted setup produces valid proving and verification
-//! keys, that the VK has the correct structure (672 bytes, 7 IC points),
-//! and that deployment artifact helpers (validation, hashing, serialization)
-//! work correctly.
+//! **Normative statement:** A Groth16 trusted setup ceremony produces a proving
+//! key (PK) and a verification key (VK) bound to the circuit's parameters
+//! (MAX_SIGNERS, TREE_DEPTH). The VK has exactly 7 IC points (6 public inputs
+//! + 1 constant), totals 672 bytes when serialized, and its SHA-256 hash is
+//! deterministic. Both keys must round-trip through serialization. A test proof
+//! generated with the PK must verify with the VK.
+//!
+//! **How the tests prove this:**
+//! - `setup_produces_valid_keys` runs the setup and verifies both PK and VK
+//!   are non-empty and deserializable.
+//! - `vk_has_seven_ic_points` extracts VK components and checks IC count.
+//! - `vk_component_sizes` verifies alpha_g1 (48B), beta/gamma/delta_g2 (96B
+//!   each), and all IC points (48B each).
+//! - `vk_total_672_bytes` serializes the full VK and checks the byte count.
+//! - `vk_hash_deterministic` computes the VK hash twice and compares.
+//! - `validate_vk_succeeds` runs structural validation on the VK.
+//! - `pk_roundtrip` and `vk_roundtrip` serialize then deserialize and
+//!   compare byte-for-byte.
+//! - `proof_verifies_with_setup_vk` generates a real Groth16 proof with the
+//!   consensus circuit and verifies it with the VK using arkworks.
+//! - `vk_bytes_match_components` confirms vk_to_bytes equals the concatenation
+//!   of extracted components.
+//! - `vk_hash_matches_manual` computes sha256(vk_to_bytes) independently.
+//! - `circuit_parameters_in_vk` checks gamma_abc_g1.len() and non-degeneracy.
+//!
+//! **Acceptance-criteria coverage (from spec):**
+//! - [x] Trusted setup completed before deployment
+//! - [x] Circuit parameters match deployment config (7 IC points)
+//! - [x] VK has correct structure (672 bytes, 7 IC points)
+//! - [x] Test proof verifies in Rust
+//! - [ ] Ceremony uses MPC (production concern; dev uses run_test_setup)
 
 use chia_l2_consensus::testing::{
     deserialize_proving_key, deserialize_verification_key, extract_vk_components, generate_proof,
@@ -17,6 +44,9 @@ use chia_l2_consensus::testing::{
 
 // ── Setup produces valid keys ──────────────────────────────────────
 
+/// Verifies that run_test_setup produces non-empty, deserializable PK and VK.
+/// Strategy: run the full Groth16 setup and attempt deserialization.
+/// Confidence: the setup pipeline produces structurally valid keys.
 #[test]
 fn vv_req_dep_001_setup_produces_valid_keys() {
     let (pk_bytes, vk_bytes) = run_test_setup().expect("DEP-001: Setup must succeed");
@@ -37,6 +67,9 @@ fn vv_req_dep_001_setup_produces_valid_keys() {
 
 // ── VK has exactly 7 IC points ─────────────────────────────────────
 
+/// Verifies the VK contains exactly 7 IC points (PUBLIC_INPUT_COUNT + 1).
+/// Strategy: extract VK components and check ic_points.len().
+/// Confidence: the circuit has exactly 6 public inputs, producing 7 IC points.
 #[test]
 fn vv_req_dep_001_vk_has_seven_ic_points() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
@@ -52,6 +85,10 @@ fn vv_req_dep_001_vk_has_seven_ic_points() {
 
 // ── VK component sizes match spec ──────────────────────────────────
 
+/// Verifies each VK component has the correct byte size per WIRE-002/WIRE-003.
+/// Strategy: extract components and check alpha_g1=48, beta/gamma/delta_g2=96,
+/// each IC point=48.
+/// Confidence: the VK serialization matches the wire format specification.
 #[test]
 fn vv_req_dep_001_vk_component_sizes() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
@@ -91,6 +128,10 @@ fn vv_req_dep_001_vk_component_sizes() {
 
 // ── VK serializes to exactly 672 bytes ─────────────────────────────
 
+/// Verifies the full VK serialization is exactly 672 bytes:
+/// 48 (alpha) + 96 (beta) + 96 (gamma) + 96 (delta) + 7*48 (IC) = 672.
+/// Strategy: call vk_to_bytes and check the length.
+/// Confidence: the on-chain VK curried into the singleton has the expected size.
 #[test]
 fn vv_req_dep_001_vk_total_672_bytes() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
@@ -107,6 +148,9 @@ fn vv_req_dep_001_vk_total_672_bytes() {
 
 // ── VK hash is deterministic ───────────────────────────────────────
 
+/// Verifies the VK hash is deterministic and 32 bytes (SHA-256).
+/// Strategy: compute the hash twice and compare.
+/// Confidence: the published VK hash can be reliably verified.
 #[test]
 fn vv_req_dep_001_vk_hash_deterministic() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
@@ -125,6 +169,9 @@ fn vv_req_dep_001_vk_hash_deterministic() {
 
 // ── VK validation succeeds for valid VK ────────────────────────────
 
+/// Verifies the structural validation of a valid VK passes.
+/// Strategy: call validate_vk and assert Ok.
+/// Confidence: the validation routine accepts well-formed keys.
 #[test]
 fn vv_req_dep_001_validate_vk_succeeds() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
@@ -140,6 +187,9 @@ fn vv_req_dep_001_validate_vk_succeeds() {
 
 // ── PK round-trip serialization ────────────────────────────────────
 
+/// Verifies the proving key survives a serialize/deserialize round-trip.
+/// Strategy: deserialize the PK bytes, re-serialize, and compare byte-for-byte.
+/// Confidence: the PK can be stored and reloaded without data loss.
 #[test]
 fn vv_req_dep_001_pk_roundtrip() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
@@ -161,6 +211,9 @@ fn vv_req_dep_001_pk_roundtrip() {
 
 // ── VK round-trip serialization ────────────────────────────────────
 
+/// Verifies the verification key survives a serialize/deserialize round-trip.
+/// Strategy: deserialize the VK bytes, re-serialize, and compare byte-for-byte.
+/// Confidence: the VK can be distributed and reloaded without data loss.
 #[test]
 fn vv_req_dep_001_vk_roundtrip() {
     let (_, vk_bytes) = run_test_setup().expect("Setup");
@@ -182,6 +235,12 @@ fn vv_req_dep_001_vk_roundtrip() {
 
 // ── Test proof verifies with setup VK ──────────────────────────────
 
+/// End-to-end test: generates a Groth16 proof using the consensus circuit with
+/// valid majority (k=1, n=1) and verifies it against the VK using arkworks.
+/// Strategy: construct a ConsensusCircuit with known public inputs, generate a
+/// proof, deserialize it, prepare the public input scalars, and call
+/// Groth16::verify_proof.
+/// Confidence: the full pipeline (setup -> prove -> verify) works end-to-end.
 #[test]
 fn vv_req_dep_001_proof_verifies_with_setup_vk() {
     let (pk_bytes, vk_bytes) = run_test_setup().expect("Setup");
@@ -228,6 +287,10 @@ fn vv_req_dep_001_proof_verifies_with_setup_vk() {
 
 // ── VK bytes match component concatenation ─────────────────────────
 
+/// Verifies vk_to_bytes equals the manual concatenation of extracted components.
+/// Strategy: extract alpha_g1, beta_g2, gamma_g2, delta_g2, and IC points,
+/// concatenate them, and compare to vk_to_bytes output.
+/// Confidence: the serialization helper is consistent with component extraction.
 #[test]
 fn vv_req_dep_001_vk_bytes_match_components() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
@@ -254,6 +317,9 @@ fn vv_req_dep_001_vk_bytes_match_components() {
 
 // ── VK hash matches manual computation ─────────────────────────────
 
+/// Verifies compute_vk_hash equals sha256(vk_to_bytes) computed independently.
+/// Strategy: compute both and compare.
+/// Confidence: the hash function uses the correct serialization as input.
 #[test]
 fn vv_req_dep_001_vk_hash_matches_manual() {
     use sha2::{Digest, Sha256};
@@ -278,6 +344,10 @@ fn vv_req_dep_001_vk_hash_matches_manual() {
 
 // ── Circuit parameters reflected in VK ─────────────────────────────
 
+/// Verifies the VK reflects the circuit's public input count (gamma_abc_g1.len()
+/// = PUBLIC_INPUT_COUNT + 1 = 7) and that IC points are not all identical.
+/// Strategy: check the length and assert at least two IC points differ.
+/// Confidence: the setup was bound to the correct circuit parameters.
 #[test]
 fn vv_req_dep_001_circuit_parameters_in_vk() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");

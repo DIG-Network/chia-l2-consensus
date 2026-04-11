@@ -3,14 +3,52 @@
 //!
 //! Spec: `docs/requirements/domains/circuit/specs/CIR-005.md`.
 //!
-//! Verifies that the circuit accepts exactly 6 public inputs in the correct
-//! fixed order. The order must match the VK IC point assignment.
+//! ## Normative Statement
+//!
+//! The circuit accepts exactly 6 public inputs in a fixed order. The order
+//! must match the VK IC point assignment: (1) validator_merkle_root,
+//! (2) validator_count, (3) new_validator_merkle_root, (4) new_validator_count,
+//! (5) agg_signers, (6) checkpoint_message. Each input has a specific byte
+//! size, and the VK has 7 IC points (1 constant + 6 inputs). A wrong order
+//! causes silent verification failure.
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Tests verify: the PUBLIC_INPUT_COUNT constant is 6, named index constants
+//! are consecutive 1..6, public_inputs_bytes() returns inputs in the correct
+//! order with correct sizes, accessors match the byte representation, the
+//! scalar() function produces valid and distinct field elements, count fields
+//! use big-endian encoding, the VK IC point count is 7, and the with_witnesses
+//! constructor preserves public inputs.
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] Exactly 6 public inputs allocated
+//! - [x] Order matches specification (index constants verified)
+//! - [x] Input sizes match specification (32, 8, 32, 8, 48, 32 bytes)
+//! - [x] scalar() applied to each input produces valid, distinct scalars
+//! - [x] VK IC point count = 7 (PUBLIC_INPUT_COUNT + 1)
+//! - [x] Accessors consistent with public_inputs_bytes()
+//! - [x] Counts encoded as big-endian u64
+//! - [x] Empty circuit initializes all inputs to zero
+//! - [x] with_witnesses preserves public input values
+//! - [ ] Wrong order -> verification fails (requires on-chain test)
+//! - [ ] Missing input -> proof generation fails (requires circuit integration)
+//!
+//! ## Gaps
+//!
+//! - The test does not generate a Groth16 proof with mismatched input order
+//!   to verify the silent-failure mode. This would require a full trusted
+//!   setup and verification round.
 
 use ark_ff::Zero;
 use chia_l2_consensus::testing::{
     bytes_to_scalar, public_input_index, ConsensusCircuit, PUBLIC_INPUT_COUNT,
 };
 
+// Verifies that the PUBLIC_INPUT_COUNT constant is exactly 6 and that
+// the circuit's public_input_count() method agrees. Any deviation would
+// cause VK IC point misalignment and proof verification failure.
 #[test]
 fn vv_req_cir_005_exactly_6_public_inputs() {
     // CIR-005: Circuit has exactly 6 public inputs
@@ -28,6 +66,9 @@ fn vv_req_cir_005_exactly_6_public_inputs() {
     );
 }
 
+// Verifies each named index constant matches its position (1-6). If any
+// constant were wrong, the circuit would multiply the wrong scalar by the
+// wrong IC point, causing all proofs to fail silently.
 #[test]
 fn vv_req_cir_005_public_input_order() {
     // CIR-005: Public inputs must be in specified order
@@ -72,6 +113,9 @@ fn vv_req_cir_005_public_input_order() {
     );
 }
 
+// Verifies public_inputs_bytes() returns the six inputs in specification
+// order by using distinct sentinel values and checking each array index.
+// This is the end-to-end serialization check for the public input vector.
 #[test]
 fn vv_req_cir_005_public_inputs_bytes_order() {
     // CIR-005: public_inputs_bytes() returns inputs in correct order
@@ -139,6 +183,9 @@ fn vv_req_cir_005_public_inputs_bytes_order() {
     );
 }
 
+// Verifies the byte sizes of each public input: 32, 8, 32, 8, 48, 32.
+// Incorrect sizes would cause scalar() to hash the wrong number of bytes,
+// producing a different field element and failing verification.
 #[test]
 fn vv_req_cir_005_public_input_sizes() {
     // CIR-005: Public inputs have correct sizes
@@ -179,6 +226,9 @@ fn vv_req_cir_005_public_input_sizes() {
     );
 }
 
+// Verifies that the individual accessor methods (e.g., validator_merkle_root())
+// return the same values as public_inputs_bytes(). This ensures there is no
+// divergence between the two access paths.
 #[test]
 fn vv_req_cir_005_accessors_match_public_inputs() {
     // CIR-005: Individual accessors return same values as public_inputs_bytes
@@ -232,6 +282,9 @@ fn vv_req_cir_005_accessors_match_public_inputs() {
     );
 }
 
+// Verifies that bytes_to_scalar produces valid (non-zero) field elements
+// for each public input. The scalar() function is sha256(bytes) mod r,
+// and a zero output for non-zero input would indicate a bug.
 #[test]
 fn vv_req_cir_005_scalar_applied_to_inputs() {
     // CIR-005: scalar() function can be applied to each public input
@@ -268,6 +321,9 @@ fn vv_req_cir_005_scalar_applied_to_inputs() {
     }
 }
 
+// Verifies that PUBLIC_INPUT_COUNT + 1 = 7, matching the expected number
+// of IC points in the Groth16 verification key. IC[0] is the constant
+// term; IC[1..7] correspond to the 6 public inputs.
 #[test]
 fn vv_req_cir_005_vk_ic_point_count() {
     // CIR-005: VK has 7 IC points (1 constant + 6 for public inputs)
@@ -278,6 +334,8 @@ fn vv_req_cir_005_vk_ic_point_count() {
     assert_eq!(expected_ic_count, 7, "CIR-005: VK must have 7 IC points");
 }
 
+// Verifies that a default-constructed circuit has all-zero public inputs.
+// This prevents uninitialized memory from leaking into proofs.
 #[test]
 fn vv_req_cir_005_empty_circuit_has_zero_inputs() {
     // CIR-005: Empty circuit initializes public inputs to zero
@@ -315,6 +373,9 @@ fn vv_req_cir_005_empty_circuit_has_zero_inputs() {
     );
 }
 
+// Verifies that validator_count and new_validator_count are serialized as
+// 8-byte big-endian integers. A wrong byte order would produce different
+// scalar() values and break VK input verification.
 #[test]
 fn vv_req_cir_005_count_as_big_endian_u64() {
     // CIR-005: validator_count and new_validator_count are 8-byte big-endian
@@ -349,6 +410,9 @@ fn vv_req_cir_005_count_as_big_endian_u64() {
     );
 }
 
+// Verifies that different input bytes produce different scalar values.
+// Collision resistance of scalar() (which uses SHA-256) is essential for
+// binding each public input to a distinct IC point multiplier.
 #[test]
 fn vv_req_cir_005_different_inputs_different_scalars() {
     // CIR-005: Different public inputs produce different scalars
@@ -364,6 +428,8 @@ fn vv_req_cir_005_different_inputs_different_scalars() {
     );
 }
 
+// Verifies that the six public input index constants form a consecutive
+// sequence 1..6. A gap or duplicate would misalign IC point assignments.
 #[test]
 fn vv_req_cir_005_public_input_indices_consecutive() {
     // CIR-005: Public input indices are consecutive from 1 to 6
@@ -387,6 +453,9 @@ fn vv_req_cir_005_public_input_indices_consecutive() {
     }
 }
 
+// Verifies that constructing a circuit via with_witnesses preserves the
+// public input values. This ensures adding witness data does not corrupt
+// or overwrite the public inputs.
 #[test]
 fn vv_req_cir_005_with_witnesses_preserves_public_inputs() {
     // CIR-005: with_witnesses constructor preserves public input values

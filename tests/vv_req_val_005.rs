@@ -5,9 +5,27 @@
 //!
 //! Implementation: `src/validator/exit.rs`.
 //!
-//! Verifies that forced exit uses the same recovery mechanism as voluntary
-//! exit, that collateral can be directed to a governance/slash address,
-//! and that multiple validators can be force-exited in one checkpoint.
+//! ## Normative statement
+//! Forced exit MUST use the same on-chain mechanism as voluntary exit (same
+//! Merkle proof, same announcement hash). Collateral CAN be directed to a
+//! governance/slash address. Multiple validators CAN be force-exited in one
+//! checkpoint. The reason for forced exit MUST be recorded.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Same mechanism**: Voluntary and forced exit produce same proof + hash.
+//! 2. **Governance address**: Forced exit sends collateral to slash address.
+//! 3. **Multiple force-exits**: 3 validators force-exited successfully;
+//!    remaining validators still active.
+//! 4. **Active cannot be forced**: Must be excluded first.
+//! 5. **Reason recorded**: ForcedExitReason::KeyCompromise captured.
+//! 6. **All reasons constructible**: KeyCompromise, ValidatorOffline,
+//!    Misbehavior, GovernanceDecision are all Debug-printable.
+//! 7. **Announcement independent of reason**: Same hash regardless of
+//!    voluntary or forced (the reason is off-chain metadata).
+//! 8. **EMPTY_LEAF after exclusion**: Slot contains empty leaf.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Governance/slash is a parameter, not an on-chain enforcement.
 
 use chia_l2_consensus::testing::{
     compute_exit_announcement, generate_validator_keypair, is_validator_excluded,

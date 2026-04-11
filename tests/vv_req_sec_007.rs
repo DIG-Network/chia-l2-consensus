@@ -3,8 +3,24 @@
 //!
 //! Spec: `docs/requirements/domains/security/specs/SEC-007.md`.
 //!
-//! Verifies that all 9 known Chialisp/CLVM vulnerabilities from the Chia
-//! knowledge graph are addressed in the three Rue puzzles.
+//! ## Normative statement
+//! All 9 known Chialisp/CLVM vulnerabilities (V1-V9) from the Chia knowledge
+//! graph MUST be assessed and either mitigated, tracked for resolution, or
+//! documented as not applicable for all three Rue puzzles.
+//!
+//! ## How the tests prove the requirement
+//! - V1 (CATbleed): No manual coin ID sha256; fixed-width int_to_8_bytes_be.
+//! - V2 (AGG_SIG_UNSAFE): Not used; network coin uses AggSigMe.
+//! - V3 (Announcement replay): Epoch + coin_id binding in announcements.
+//! - V4/V5 (Condition injection): Tracked by SEC-008; network coin protected by AggSigMe.
+//! - V6 (Unsigned destination): Mitigated by announcement requirement (SEC-009).
+//! - V7 (Flash loan): Not applicable -- singleton model.
+//! - V8 (Bricked coins): By design -- epoch-scoped registration.
+//! - V9 (Cross-network replay): CHK-012 network_coin_launcher_id implemented.
+//! - All 9 documented in spec: Verified V1-V9 keywords present.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Some mitigations are structural checks, not dynamic execution tests.
 
 /// Network coin inner puzzle source.
 const NET_SRC: &str = include_str!("../puzzles/network_coin_inner.rue");

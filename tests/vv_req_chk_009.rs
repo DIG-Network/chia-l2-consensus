@@ -3,9 +3,30 @@
 //!
 //! Spec: `docs/requirements/domains/checkpoint/specs/CHK-009.md`.
 //!
-//! Verifies that the Groth16 proof is bound to a specific epoch value
-//! through the checkpoint_message hash, and that the CLVM puzzle computes
-//! new_epoch = old_epoch + 1 internally.
+//! ## Normative statement
+//! The Groth16 proof MUST be bound to a specific epoch value through the
+//! checkpoint_message hash. The puzzle MUST compute `new_epoch = old_epoch + 1`
+//! internally (not accept epoch from the solution), and the checkpoint_message
+//! preimage MUST include new_epoch as an 8-byte big-endian field.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Epoch in message**: Different epochs produce different checkpoint_messages.
+//! 2. **Message format**: Manual sha256 of the 112-byte preimage (sr + mr + vc +
+//!    epoch + network_id) matches compute_checkpoint_message output.
+//! 3. **Adjacent epoch uniqueness**: 10 sequential epochs all produce unique messages.
+//! 4. **Proof encodes epoch**: Generating Groth16 proofs for different epochs
+//!    yields different proof bytes (different checkpoint_messages in circuit).
+//! 5. **Scalar s6 changes with epoch**: sha256(checkpoint_message) differs between
+//!    epochs, so the proof's public input scalar changes.
+//! 6. **Puzzle computes epoch internally**: Source contains `epoch + 1` and does
+//!    NOT accept epoch from the solution.
+//! 7. **Epoch in Rue checkpoint_message**: Source references new_epoch in the
+//!    checkpoint_message computation.
+//! 8. **Epoch 0-to-1 transition**: Valid proof generated for the genesis transition.
+//! 9. **Large epoch values**: u64::MAX produces a unique, valid 32-byte message.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: None significant.
 
 use chia_l2_consensus::testing::{
     bytes_to_scalar, compute_checkpoint_message, deserialize_proving_key, generate_proof,
@@ -15,6 +36,9 @@ use sha2::{Digest, Sha256};
 
 // ── Checkpoint message includes epoch in its preimage ───────────────
 
+/// Verifies that checkpoint messages with different epochs MUST differ.
+/// Same state_root, merkle_root, validator_count but epoch 1 vs 2 produce
+/// different hashes, proving epoch contributes to the message.
 #[test]
 fn vv_req_chk_009_checkpoint_message_includes_epoch() {
     let sr = [0xAA; 32];
@@ -32,6 +56,9 @@ fn vv_req_chk_009_checkpoint_message_includes_epoch() {
 
 // ── Checkpoint message format: 80 bytes = sr(32) + mr(32) + vc(8) + epoch(8)
 
+/// Cross-impl: manually computes sha256(sr + mr + vc_be8 + epoch_be8 +
+/// network_id) and asserts it matches compute_checkpoint_message. The
+/// 112-byte preimage includes CHK-012's network_coin_launcher_id field.
 #[test]
 fn vv_req_chk_009_checkpoint_message_format() {
     let sr = [0x11; 32];
@@ -58,6 +85,8 @@ fn vv_req_chk_009_checkpoint_message_format() {
 
 // ── Adjacent epochs produce different messages ──────────────────────
 
+/// Exhaustive pairwise uniqueness for epochs 0-9. All 45 pairs must differ,
+/// proving no two adjacent epochs collide in the checkpoint message.
 #[test]
 fn vv_req_chk_009_adjacent_epochs_differ() {
     let sr = [0x00; 32];
@@ -81,6 +110,9 @@ fn vv_req_chk_009_adjacent_epochs_differ() {
 
 // ── Proof for epoch N encodes that epoch in its public inputs ───────
 
+/// Generates real Groth16 proofs for epoch 5 and epoch 10. The proofs must
+/// differ because their checkpoint_messages (circuit public inputs) differ.
+/// Passing proves the epoch is actually embedded in the proof.
 #[test]
 fn vv_req_chk_009_proof_encodes_epoch() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
@@ -111,6 +143,9 @@ fn vv_req_chk_009_proof_encodes_epoch() {
 
 // ── Scalar s6 changes with epoch ────────────────────────────────────
 
+/// Verifies scalar s6 (sha256 of checkpoint_message) changes between epochs.
+/// Since s6 is a Groth16 public input, different scalars mean a proof for
+/// one epoch cannot verify at another.
 #[test]
 fn vv_req_chk_009_scalar_s6_changes_with_epoch() {
     let sr = [0xAA; 32];
@@ -131,6 +166,9 @@ fn vv_req_chk_009_scalar_s6_changes_with_epoch() {
 
 // ── Rue puzzle computes new_epoch internally ────────────────────────
 
+/// Verifies the Rue puzzle computes new_epoch = old_epoch + 1 internally
+/// and does NOT accept epoch from the solution. This prevents an attacker
+/// from choosing an arbitrary epoch value.
 #[test]
 fn vv_req_chk_009_puzzle_computes_epoch_internally() {
     let source = include_str!("../puzzles/checkpoint_inner.rue");
@@ -154,6 +192,8 @@ fn vv_req_chk_009_puzzle_computes_epoch_internally() {
 
 // ── Epoch is in checkpoint_message computation in Rue ───────────────
 
+/// Verifies the Rue source includes new_epoch in the checkpoint_message
+/// sha256 computation, confirming the epoch binding at the source level.
 #[test]
 fn vv_req_chk_009_rue_includes_epoch_in_message() {
     let source = include_str!("../puzzles/checkpoint_inner.rue");
@@ -173,6 +213,8 @@ fn vv_req_chk_009_rue_includes_epoch_in_message() {
 
 // ── Epoch 0 to 1 transition produces valid proof ────────────────────
 
+/// Genesis transition: generates a valid Groth16 proof for epoch 0 -> 1.
+/// Passing proves the circuit can handle the genesis case.
 #[test]
 fn vv_req_chk_009_epoch_0_to_1_valid() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
@@ -190,6 +232,8 @@ fn vv_req_chk_009_epoch_0_to_1_valid() {
 
 // ── Large epoch values work correctly ───────────────────────────────
 
+/// Boundary: u64::MAX and u64::MAX-1 produce different, valid 32-byte
+/// messages, proving no overflow at the epoch encoding boundary.
 #[test]
 fn vv_req_chk_009_large_epoch() {
     let msg_large = compute_checkpoint_message([0; 32], [0; 32], 0, u64::MAX, [0x00; 32]);

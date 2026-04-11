@@ -5,12 +5,41 @@
 //!
 //! Implementation: `puzzles/registration_coin.rue` (compiled to CLVM).
 //!
-//! Verifies the exact byte-level format of the announcement hash:
-//! - Inner: sha256("membership" + epoch_be8 + pubkey + 0x00) = 67-byte preimage
-//! - Full: sha256(checkpoint_singleton_id + inner_hash) = 64-byte preimage
+//! ## Normative statement
+//! The registration coin MUST assert a non-membership announcement hash with
+//! the exact format: `sha256(checkpoint_singleton_id + sha256("membership" +
+//! epoch_be8 + pubkey + 0x00))`. This two-layer hash construction binds the
+//! assertion to (1) a specific checkpoint coin via its coin ID in the outer
+//! hash, and (2) a specific validator + epoch in the inner hash. The
+//! `is_member` byte `0x00` is hardcoded, ensuring the registration coin can
+//! only ever assert **non-membership** announcements.
 //!
-//! CLVM execution tests run the compiled puzzle and compare output to
-//! hand-computed test vectors.
+//! ## How the tests prove the requirement
+//! 1. **Inner preimage format**: Tests verify the 67-byte preimage layout
+//!    (10-byte "membership" prefix, 8-byte BE epoch, 48-byte pubkey, 1-byte
+//!    is_member=0x00) with field-by-field offset assertions.
+//! 2. **Full hash construction**: Tests verify the 64-byte outer preimage
+//!    (32-byte checkpoint_singleton_id + 32-byte inner_hash).
+//! 3. **CLVM cross-impl verification**: The compiled Rue puzzle is executed
+//!    and its `ASSERT_COIN_ANNOUNCEMENT` hash is compared against an
+//!    independent Rust computation, confirming the on-chain puzzle matches
+//!    the spec exactly.
+//! 4. **Test vectors**: Multiple boundary vectors (all-zeros, all-0xFF,
+//!    epoch 1, realistic hex values) exercise corner cases.
+//! 5. **Permutation tests**: Single-byte changes to pubkey, checkpoint ID,
+//!    or epoch produce different hashes, proving each field contributes.
+//! 6. **Independence**: Changing destination or amount does NOT change the
+//!    announcement hash, confirming the hash depends only on curried params
+//!    plus epoch.
+//!
+//! ## Completeness assessment
+//! HIGH. Byte-level format, cross-impl match, boundary vectors, permutation
+//! sensitivity, and independence from solution-only fields are all covered.
+//!
+//! ## Gaps / limitations
+//! - Does not test with a real BLS public key (tests use fill patterns).
+//! - Does not verify the announcement assertion works end-to-end in a
+//!   simulator spend bundle (covered by REG-007).
 
 mod common;
 
@@ -88,6 +117,10 @@ fn full_hash(ckpt_id: &[u8], epoch: u64, pk: &[u8]) -> [u8; 32] {
 
 // ── Inner preimage format (67 bytes) ───────────────────────────────
 
+/// Verifies the inner announcement preimage is exactly 67 bytes.
+/// This confirms the fixed-width layout: "membership"(10) + epoch(8) +
+/// pubkey(48) + is_member(1) = 67. A passing result means the preimage
+/// builder produces the correct total length, ruling out off-by-one errors.
 #[test]
 fn vv_req_reg_004_inner_preimage_is_67_bytes() {
     // REG-004: Inner announcement preimage = "membership"(10) + epoch(8) + pubkey(48) + is_member(1) = 67 bytes
@@ -99,6 +132,10 @@ fn vv_req_reg_004_inner_preimage_is_67_bytes() {
     );
 }
 
+/// Verifies the first 10 bytes of the inner preimage are the UTF-8 encoding
+/// of "membership" (no null terminator). Both string equality and raw byte
+/// comparison are checked, so a passing result proves the domain separator
+/// is exactly as specified with no encoding ambiguity.
 #[test]
 fn vv_req_reg_004_prefix_is_membership_10_bytes() {
     // REG-004: First 10 bytes of inner preimage = "membership" (UTF-8, no null)
@@ -115,6 +152,10 @@ fn vv_req_reg_004_prefix_is_membership_10_bytes() {
     );
 }
 
+/// Verifies bytes 10-17 encode the epoch as an 8-byte big-endian u64.
+/// Uses epoch=256 (0x0000000000000100) as the test value, confirming
+/// correct byte order and zero-padding. Passing proves the wire format
+/// matches the spec for multi-byte epoch values.
 #[test]
 fn vv_req_reg_004_epoch_is_8_bytes_big_endian() {
     // REG-004: Bytes 10-17 = epoch as 8-byte big-endian u64
@@ -127,6 +168,10 @@ fn vv_req_reg_004_epoch_is_8_bytes_big_endian() {
     );
 }
 
+/// Verifies epoch=0 is encoded as 8 zero bytes (not an empty CLVM atom).
+/// This is critical because CLVM represents 0 as an empty atom, but the
+/// preimage requires fixed-width encoding. Passing proves the
+/// int_to_8_bytes_be helper handles zero correctly.
 #[test]
 fn vv_req_reg_004_epoch_zero_is_8_zero_bytes() {
     // REG-004: Epoch 0 = 8 zero bytes, NOT empty atom
@@ -138,6 +183,10 @@ fn vv_req_reg_004_epoch_zero_is_8_zero_bytes() {
     );
 }
 
+/// Verifies the validator pubkey occupies bytes 18-65 (48 bytes) of the
+/// inner preimage. Uses a distinctive fill pattern (0x42) and checks the
+/// exact slice, proving the pubkey is positioned after the 10-byte prefix
+/// and 8-byte epoch with no padding or overlap.
 #[test]
 fn vv_req_reg_004_pubkey_is_48_bytes_at_offset_18() {
     // REG-004: Bytes 18-65 = validator pubkey (48 bytes compressed G1)
@@ -150,6 +199,11 @@ fn vv_req_reg_004_pubkey_is_48_bytes_at_offset_18() {
     );
 }
 
+/// Verifies the last byte (offset 66) of the inner preimage is 0x00,
+/// the hardcoded non-membership indicator. This proves the registration
+/// coin can only assert non-membership, never membership. Passing
+/// confirms the puzzle cannot be tricked into asserting a membership
+/// announcement.
 #[test]
 fn vv_req_reg_004_is_member_byte_is_0x00() {
     // REG-004: Last byte (offset 66) = 0x00 (non-member)
@@ -162,6 +216,10 @@ fn vv_req_reg_004_is_member_byte_is_0x00() {
 
 // ── Full announcement hash format (64-byte preimage) ───────────────
 
+/// Verifies the full announcement hash is sha256(checkpoint_singleton_id +
+/// inner_hash) with a 64-byte preimage. Manually constructs the preimage
+/// and compares against the full_hash helper, proving the outer layer
+/// correctly binds the announcement to a specific checkpoint coin.
 #[test]
 fn vv_req_reg_004_full_hash_includes_checkpoint_id() {
     // REG-004: Full hash = sha256(checkpoint_singleton_id + inner_hash)
@@ -189,6 +247,10 @@ fn vv_req_reg_004_full_hash_includes_checkpoint_id() {
 
 // ── CLVM execution: format correctness ─────────────────────────────
 
+/// THE CANONICAL CROSS-IMPLEMENTATION TEST. Runs the compiled Rue puzzle
+/// in the CLVM allocator and compares the ASSERT_COIN_ANNOUNCEMENT hash
+/// against an independent Rust computation. Passing proves the on-chain
+/// puzzle produces exactly the spec-defined announcement format.
 #[test]
 fn vv_req_reg_004_clvm_matches_spec_format() {
     // REG-004: CLVM output must match the spec-defined format exactly.
@@ -209,6 +271,10 @@ fn vv_req_reg_004_clvm_matches_spec_format() {
 
 // ── Known test vectors ─────────────────────────────────────────────
 
+/// Test vector with all-zero inputs. Exercises the boundary where CLVM
+/// atoms are empty (epoch=0, pk=0x00*48, ckpt=0x00*32). Passing proves
+/// the puzzle handles zero values correctly despite CLVM's minimal
+/// integer encoding.
 #[test]
 fn vv_req_reg_004_test_vector_all_zeros() {
     // REG-004: Test vector — all-zero inputs
@@ -224,6 +290,9 @@ fn vv_req_reg_004_test_vector_all_zeros() {
     assert_eq!(clvm_hash.len(), 32, "REG-004: Hash must be 32 bytes");
 }
 
+/// Test vector with all-0xFF inputs (epoch=u64::MAX). Exercises the upper
+/// boundary where every byte is maximized. Passing proves no overflow or
+/// truncation occurs at extremes.
 #[test]
 fn vv_req_reg_004_test_vector_all_ff() {
     // REG-004: Test vector — all-0xFF inputs
@@ -241,6 +310,8 @@ fn vv_req_reg_004_test_vector_all_ff() {
     );
 }
 
+/// Test vector for epoch=1 (common first-checkpoint scenario). Verifies
+/// CLVM handles the smallest non-zero epoch correctly.
 #[test]
 fn vv_req_reg_004_test_vector_epoch_1() {
     // REG-004: Test vector — epoch 1 (common first checkpoint)
@@ -254,6 +325,9 @@ fn vv_req_reg_004_test_vector_epoch_1() {
     assert_eq!(clvm_hash.as_slice(), expected.as_slice());
 }
 
+/// Realistic test vector using hex-decoded pubkey and checkpoint ID
+/// values that resemble real on-chain data. Passing gives confidence
+/// the format works with plausible (non-pattern) byte sequences.
 #[test]
 fn vv_req_reg_004_test_vector_realistic() {
     // REG-004: Realistic test vector with plausible values
@@ -275,6 +349,9 @@ fn vv_req_reg_004_test_vector_realistic() {
 
 // ── Permutation: each field changes the hash ───────────────────────
 
+/// Permutation test: flipping a single byte in the pubkey produces a
+/// different CLVM announcement hash. Proves the pubkey contributes to
+/// the hash and is not ignored or truncated.
 #[test]
 fn vv_req_reg_004_changing_one_pubkey_byte_changes_hash() {
     // REG-004: Flipping a single pubkey byte produces a different hash.
@@ -291,6 +368,9 @@ fn vv_req_reg_004_changing_one_pubkey_byte_changes_hash() {
     );
 }
 
+/// Permutation test: flipping a single byte in the checkpoint ID produces
+/// a different CLVM announcement hash. Proves the checkpoint ID contributes
+/// to the outer hash and binds the announcement to a specific checkpoint coin.
 #[test]
 fn vv_req_reg_004_changing_one_ckpt_byte_changes_hash() {
     // REG-004: Flipping a single checkpoint ID byte produces a different hash.
@@ -307,6 +387,9 @@ fn vv_req_reg_004_changing_one_ckpt_byte_changes_hash() {
     );
 }
 
+/// Permutation test: adjacent epochs (100 vs 101) produce different hashes.
+/// Proves the epoch field is not ignored and prevents replay between
+/// consecutive epochs.
 #[test]
 fn vv_req_reg_004_adjacent_epochs_different_hash() {
     // REG-004: Epoch N and N+1 produce different hashes.
@@ -321,6 +404,12 @@ fn vv_req_reg_004_adjacent_epochs_different_hash() {
 
 // ── Announcement does not depend on solution-only fields ───────────
 
+/// Independence test: changing collateral_destination and collateral_amount
+/// does NOT change the announcement hash. This proves the hash depends
+/// only on curried params (pubkey, checkpoint_singleton_id) and the epoch
+/// from the solution -- not on where the collateral goes or how much.
+/// This is important because the announcement is the authorization
+/// mechanism, not the collateral routing.
 #[test]
 fn vv_req_reg_004_hash_independent_of_destination() {
     // REG-004: The announcement hash depends on curried params + epoch only,
@@ -353,6 +442,9 @@ fn vv_req_reg_004_hash_independent_of_destination() {
 
 // ── Spec and documentation ─────────────────────────────────────────
 
+/// Structural check: the Rue puzzle source contains the "membership" prefix
+/// and "0x00" non-membership byte, confirming the announcement format is
+/// documented in the source code itself.
 #[test]
 fn vv_req_reg_004_puzzle_documents_announcement_format() {
     let src = std::fs::read_to_string("puzzles/registration_coin.rue")
@@ -364,6 +456,8 @@ fn vv_req_reg_004_puzzle_documents_announcement_format() {
     );
 }
 
+/// Traceability: confirms the REG-004 spec file exists on disk, ensuring
+/// the requirement is formally documented.
 #[test]
 fn vv_req_reg_004_spec_file_exists() {
     assert!(

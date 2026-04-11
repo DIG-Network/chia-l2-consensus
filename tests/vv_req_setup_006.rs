@@ -1,13 +1,27 @@
-//! REQUIREMENT: SETUP-006 — Build configuration
+//! REQUIREMENT: SETUP-006 — Build Configuration
 //! (`docs/requirements/domains/setup/NORMATIVE.md#SETUP-006`).
 //!
 //! Spec: `docs/requirements/domains/setup/specs/SETUP-006.md`.
 //!
-//! Verifies build configuration: release profile, clippy, fmt.
+//! ## Normative statement
+//! The project MUST have a `[profile.release]` section with `opt-level = 3`
+//! and `lto = true`, pass `cargo fmt --check`, pass `cargo clippy -- -D warnings`,
+//! and have a `rust-toolchain.toml` for reproducible builds.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Release profile**: Cargo.toml has [profile.release] with opt-level=3 and lto=true.
+//! 2. **Formatting**: `cargo fmt --check` passes (no unformatted code).
+//! 3. **Linting**: `cargo clippy -- -D warnings` passes (no warnings).
+//! 4. **Toolchain pinned**: rust-toolchain.toml exists.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not verify specific Rust version in toolchain file.
 
 use std::path::Path;
 use std::process::Command;
 
+/// Verifies Cargo.toml has [profile.release] with opt-level=3 and lto=true
+/// for maximum performance of the cryptographic operations.
 #[test]
 fn vv_req_setup_006_release_profile_configured() {
     // Verify Cargo.toml contains release profile settings
@@ -27,6 +41,8 @@ fn vv_req_setup_006_release_profile_configured() {
     );
 }
 
+/// Runs `cargo fmt --check` to verify all source code is properly formatted.
+/// A passing result means no formatting changes are needed.
 #[test]
 fn vv_req_setup_006_cargo_fmt_check_passes() {
     // Run cargo fmt --check to verify formatting
@@ -42,6 +58,8 @@ fn vv_req_setup_006_cargo_fmt_check_passes() {
     );
 }
 
+/// Runs `cargo clippy -- -D warnings` to verify no lint warnings exist.
+/// Passing means the code follows Rust best practices.
 #[test]
 fn vv_req_setup_006_cargo_clippy_passes() {
     // Run cargo clippy with warnings as errors
@@ -57,6 +75,8 @@ fn vv_req_setup_006_cargo_clippy_passes() {
     );
 }
 
+/// Verifies rust-toolchain.toml exists for reproducible builds across
+/// developer environments and CI.
 #[test]
 fn vv_req_setup_006_rust_toolchain_configured() {
     // Verify rust-toolchain.toml exists

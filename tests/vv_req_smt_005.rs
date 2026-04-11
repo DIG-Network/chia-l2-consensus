@@ -1,10 +1,38 @@
-//! REQUIREMENT: SMT-005 — Cross-implementation consistency
+//! REQUIREMENT: SMT-005 — Cross-Implementation Consistency
 //! (`docs/requirements/domains/smt/NORMATIVE.md#SMT-005`).
 //!
 //! Spec: `docs/requirements/domains/smt/specs/SMT-005.md`.
 //!
-//! Verifies that the Rust SMT implementation matches canonical spec requirements.
-//! Full cross-implementation testing with Rue puzzles will be added when Phase 3 is complete.
+//! **Normative statement:** The Rust implementation (off-chain proof generation)
+//! and Chialisp/Rue implementation (on-chain verification) MUST produce identical
+//! results for: slot computation, active/empty leaf hashes, parent hashes,
+//! sibling ordering, and proof structure. Any divergence causes proofs to fail
+//! silently on-chain.
+//!
+//! **How the tests prove this (Phase 2 -- Rust-only canonical vectors):**
+//! - `empty_leaf_matches_canonical` pins EMPTY_LEAF to hardcoded bytes.
+//! - `slot_computation_matches_canonical` pins compute_slot for the all-zeros
+//!   pubkey to 0x87b081d5.
+//! - `active_leaf_computation_matches_sha256` verifies the active_leaf function
+//!   equals sha256(pubkey).
+//! - `empty_tree_root_is_canonical` ties the empty tree root to compute_empty_nodes.
+//! - `parent_hash_is_left_concat_right` confirms ordering matters.
+//! - `single_validator_root_deterministic` and `multiple_validators_order_independent`
+//!   verify root determinism and insertion-order independence.
+//! - `boundary_slot_zero` and `boundary_slot_max` test edge slots.
+//! - `fuzz_many_validators` stress-tests 50 validators with pseudo-random keys.
+//! - `empty_nodes_chain` re-derives the full precomputed chain.
+//!
+//! **Acceptance-criteria coverage (from spec):**
+//! - [ ] CI test compares Rust and Chialisp roots (Phase 3)
+//! - [x] Test covers empty tree, single entry, multiple entries
+//! - [ ] Test verifies proofs cross-implementation (Phase 3)
+//! - [x] All boundary conditions tested (slot 0, max slot)
+//! - [x] Fuzz testing with random inputs (50 validators)
+//! - [x] No silent failures -- explicit assertions
+//!
+//! **Gaps:** Full cross-implementation tests (Rust proof verified in Rue/CLVM)
+//! are deferred to Phase 3 when Rue puzzles are complete.
 //!
 //! Test vectors defined here MUST be verified against Rue implementation in Phase 3.
 
@@ -65,6 +93,9 @@ mod test_vectors {
     }
 }
 
+/// Pins EMPTY_LEAF to the canonical test-vector bytes.
+/// Strategy: compare the library constant to the hardcoded expected value.
+/// Confidence: any change to the constant will break this regression test.
 #[test]
 fn vv_req_smt_005_empty_leaf_matches_canonical() {
     // SMT-005: EMPTY_LEAF constant must match canonical value
@@ -75,6 +106,9 @@ fn vv_req_smt_005_empty_leaf_matches_canonical() {
     );
 }
 
+/// Pins compute_slot(PUBKEY_ZEROS) to 0x87b081d5.
+/// Strategy: compare the function output to the hardcoded expected slot.
+/// Confidence: the Rust slot algorithm matches the spec's worked example.
 #[test]
 fn vv_req_smt_005_slot_computation_matches_canonical() {
     // SMT-005: Slot computation must match canonical test vector
@@ -87,6 +121,9 @@ fn vv_req_smt_005_slot_computation_matches_canonical() {
     );
 }
 
+/// Verifies active_leaf equals sha256(pubkey) for the all-ones test vector.
+/// Strategy: compare active_leaf to an independently computed sha256.
+/// Confidence: the leaf derivation is spec-correct for a second test pubkey.
 #[test]
 fn vv_req_smt_005_active_leaf_computation_matches_sha256() {
     // SMT-005: Active leaf must be sha256(pubkey) exactly
@@ -98,6 +135,9 @@ fn vv_req_smt_005_active_leaf_computation_matches_sha256() {
     );
 }
 
+/// Verifies the empty tree root equals the top of the precomputed chain.
+/// Strategy: compare tree.root() to compute_empty_nodes[TREE_DEPTH].
+/// Confidence: the tree's initial state matches the spec constant.
 #[test]
 fn vv_req_smt_005_empty_tree_root_is_canonical() {
     // SMT-005: Empty tree root must be the top empty node
@@ -111,6 +151,11 @@ fn vv_req_smt_005_empty_tree_root_is_canonical() {
     );
 }
 
+/// Confirms that parent hash ordering is sha256(left || right) and that
+/// reversing the order produces a different result.
+/// Strategy: hash two distinct 32-byte inputs in both orders and assert
+/// inequality.
+/// Confidence: concatenation-order bugs are caught.
 #[test]
 fn vv_req_smt_005_parent_hash_is_left_concat_right() {
     // SMT-005: Parent hash = sha256(left || right), left always first
@@ -136,6 +181,10 @@ fn vv_req_smt_005_parent_hash_is_left_concat_right() {
     );
 }
 
+/// Verifies two independent trees with the same single validator produce
+/// identical roots.
+/// Strategy: build two trees, insert the same pubkey, compare roots.
+/// Confidence: determinism holds for the simplest non-empty case.
 #[test]
 fn vv_req_smt_005_single_validator_root_deterministic() {
     // SMT-005: Single validator produces deterministic root
@@ -152,6 +201,9 @@ fn vv_req_smt_005_single_validator_root_deterministic() {
     );
 }
 
+/// Verifies the root is independent of validator insertion order.
+/// Strategy: insert three validators in two different orders and compare roots.
+/// Confidence: slot-based addressing means order does not affect the final tree.
 #[test]
 fn vv_req_smt_005_multiple_validators_order_independent() {
     // SMT-005: Tree root is independent of insertion order
@@ -174,6 +226,9 @@ fn vv_req_smt_005_multiple_validators_order_independent() {
     );
 }
 
+/// Boundary test: slot 0 in an empty tree produces a valid proof with EMPTY_LEAF.
+/// Strategy: prove slot 0 and verify.
+/// Confidence: the lowest slot index is handled correctly.
 #[test]
 fn vv_req_smt_005_boundary_slot_zero() {
     // SMT-005: Boundary condition - slot 0
@@ -189,6 +244,9 @@ fn vv_req_smt_005_boundary_slot_zero() {
     assert_eq!(proof.leaf, EMPTY_LEAF, "SMT-005: Slot 0 empty in new tree");
 }
 
+/// Boundary test: slot 2^32-1 (max slot) in an empty tree produces a valid proof.
+/// Strategy: prove the maximum valid slot and verify.
+/// Confidence: the highest slot index is handled correctly.
 #[test]
 fn vv_req_smt_005_boundary_slot_max() {
     // SMT-005: Boundary condition - slot 2^32 - 1 (max slot)
@@ -206,6 +264,9 @@ fn vv_req_smt_005_boundary_slot_max() {
     );
 }
 
+/// Verifies proof sibling count is TREE_DEPTH for a populated tree.
+/// Strategy: insert a validator and check proof.siblings.len().
+/// Confidence: consistent with SMT-004 proof format requirement.
 #[test]
 fn vv_req_smt_005_proof_siblings_count() {
     // SMT-005: Proofs must have exactly TREE_DEPTH siblings
@@ -221,6 +282,11 @@ fn vv_req_smt_005_proof_siblings_count() {
     );
 }
 
+/// Fuzz/stress test: 50 validators with pseudo-random pubkeys all produce
+/// verifiable proofs.
+/// Strategy: deterministic pseudo-random fill pattern, insert all, then
+/// verify every proof. Also checks leaf values.
+/// Confidence: no edge-case failures in a moderately dense tree.
 #[test]
 fn vv_req_smt_005_fuzz_many_validators() {
     // SMT-005: Fuzz test with many validators
@@ -253,6 +319,9 @@ fn vv_req_smt_005_fuzz_many_validators() {
     }
 }
 
+/// Re-derives the entire precomputed empty-nodes chain and verifies each level.
+/// Strategy: compute sha256(empty_nodes[i] || empty_nodes[i]) for all levels.
+/// Confidence: the chain is mathematically self-consistent.
 #[test]
 fn vv_req_smt_005_empty_nodes_chain() {
     // SMT-005: Empty nodes form correct chain

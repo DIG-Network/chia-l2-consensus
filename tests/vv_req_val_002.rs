@@ -5,9 +5,27 @@
 //!
 //! Implementation: `src/validator/registration.rs`.
 //!
-//! Verifies that validators can build and sign the registration message,
-//! that the AGG_SIG_ME message is correctly constructed, and that the
-//! indexer detects valid registrations.
+//! ## Normative statement
+//! Validators MUST build the registration signing message as:
+//! `sha256("register" + pubkey) + genesis_challenge + coin_id` (96 bytes).
+//! The signature MUST verify with the correct key, genesis challenge, and
+//! coin ID, and MUST fail with any wrong component.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Signing message is 96 bytes**: 32 (reg_msg) + 32 (gc) + 32 (coin_id).
+//! 2. **Message format**: Byte ranges verified against expected fields.
+//! 3. **Signature is 96 bytes**: Compressed G2 point.
+//! 4. **Signature verifies**: Correct key passes.
+//! 5. **Wrong key fails**: Different key fails.
+//! 6. **Wrong genesis challenge fails**: Wrong gc fails.
+//! 7. **Wrong coin ID fails**: Wrong coin_id fails.
+//! 8. **Different pubkeys -> different messages**: Pubkey contributes to hash.
+//! 9. **Wire format match**: sha256("register" + pubkey) matches spec.
+//! 10. **Deterministic**: Same inputs -> same signature.
+//! 11. **Config accessible**: Collateral amount from NetworkConfig.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test registration via simulator (covered by REG-007).
 
 use chia_l2_consensus::testing::{
     compute_registration_message, compute_registration_signing_message, generate_validator_keypair,

@@ -5,8 +5,31 @@
 //!
 //! Implementation: `puzzles/registration_coin.rue` (compiled to CLVM).
 //!
-//! Verifies that upon valid spend, the registration coin creates a coin at
-//! the specified collateral_destination with the full collateral_amount.
+//! ## Normative statement
+//! Upon valid spend, the registration coin MUST emit exactly one CREATE_COIN
+//! condition with `puzzle_hash = collateral_destination` and `amount =
+//! collateral_amount`, both taken from the solution. This returns the locked
+//! collateral to the address specified by the spender.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Destination correctness**: CLVM execution extracts the CREATE_COIN
+//!    puzzle_hash and asserts it matches the solution's destination.
+//! 2. **Amount correctness**: CLVM execution extracts the CREATE_COIN amount
+//!    and asserts it matches the solution's collateral_amount for small (1),
+//!    medium (1 XCH), and large (10 XCH) values.
+//! 3. **Exactly one CREATE_COIN**: Counts CREATE_COIN conditions in the
+//!    output and asserts exactly 1, ruling out hidden outputs.
+//! 4. **Independence from curried params**: Same destination regardless of
+//!    pubkey; same amount regardless of epoch. Confirms the CREATE_COIN
+//!    depends only on solution fields.
+//!
+//! ## Completeness: HIGH
+//! Covers destination correctness, amount correctness, exact condition count,
+//! and independence. Boundary values exercised.
+//!
+//! ## Gaps
+//! - Does not test zero-amount collateral (may be disallowed by consensus).
+//! - End-to-end simulator test covered by REG-007.
 
 mod common;
 
@@ -45,6 +68,9 @@ fn run_and_get_create_coin(
 
 // ── CREATE_COIN destination ────────────────────────────────────────
 
+/// Verifies the CREATE_COIN puzzle_hash equals the solution's destination.
+/// Runs the compiled puzzle and extracts the first CREATE_COIN condition.
+/// Passing proves the collateral goes to the address the spender specified.
 #[test]
 fn vv_req_reg_005_create_coin_has_correct_destination() {
     let dest = [0xDD; 32];
@@ -56,6 +82,9 @@ fn vv_req_reg_005_create_coin_has_correct_destination() {
     );
 }
 
+/// Verifies that different destinations in the solution produce different
+/// CREATE_COIN outputs. Proves the puzzle passes the destination through
+/// faithfully rather than using a hardcoded value.
 #[test]
 fn vv_req_reg_005_destination_changes_with_solution() {
     let (d1, _) = run_and_get_create_coin(&[0xAA; 48], &[0xBB; 32], 1, &[0x11; 32], 1000);
@@ -68,6 +97,9 @@ fn vv_req_reg_005_destination_changes_with_solution() {
 
 // ── CREATE_COIN amount ─────────────────────────────────────────────
 
+/// Verifies the CREATE_COIN amount equals the solution's collateral_amount
+/// for a 1 XCH value. Proves the puzzle does not modify, cap, or truncate
+/// the amount.
 #[test]
 fn vv_req_reg_005_create_coin_has_correct_amount() {
     let (_, a) =
@@ -75,12 +107,16 @@ fn vv_req_reg_005_create_coin_has_correct_amount() {
     assert_eq!(a, 1_000_000_000_000, "REG-005: Amount must be 1 XCH");
 }
 
+/// Boundary: smallest non-zero amount (1 mojo). Proves the puzzle handles
+/// single-byte CLVM atoms for small values.
 #[test]
 fn vv_req_reg_005_small_amount() {
     let (_, a) = run_and_get_create_coin(&[0xAA; 48], &[0xBB; 32], 1, &[0xCC; 32], 1);
     assert_eq!(a, 1, "REG-005: 1 mojo must work");
 }
 
+/// Boundary: large amount (10 XCH = 10 trillion mojos). Proves the puzzle
+/// handles multi-byte CLVM atoms for large values without truncation.
 #[test]
 fn vv_req_reg_005_large_amount() {
     let (_, a) =
@@ -90,6 +126,9 @@ fn vv_req_reg_005_large_amount() {
 
 // ── Exactly one CREATE_COIN ────────────────────────────────────────
 
+/// Verifies the puzzle emits exactly 1 CREATE_COIN condition, ruling out
+/// hidden extra outputs that could redirect collateral. This is a critical
+/// security property: no surplus coins can be created.
 #[test]
 fn vv_req_reg_005_exactly_one_create_coin() {
     let mut a = Allocator::new();
@@ -106,6 +145,9 @@ fn vv_req_reg_005_exactly_one_create_coin() {
 
 // ── Independence from curried params ───────────────────────────────
 
+/// Independence test: same destination regardless of which pubkey is
+/// curried. Proves the CREATE_COIN destination comes from the solution,
+/// not from curried parameters.
 #[test]
 fn vv_req_reg_005_destination_independent_of_pubkey() {
     let dest = [0xCC; 32];
@@ -114,6 +156,8 @@ fn vv_req_reg_005_destination_independent_of_pubkey() {
     assert_eq!(d1, d2, "REG-005: Same destination regardless of pubkey");
 }
 
+/// Independence test: same amount regardless of epoch. Proves the
+/// CREATE_COIN amount comes from the solution, not from the epoch.
 #[test]
 fn vv_req_reg_005_amount_independent_of_epoch() {
     let (_, a1) = run_and_get_create_coin(&[0xAA; 48], &[0xBB; 32], 1, &[0xCC; 32], 5_000_000);
@@ -123,6 +167,7 @@ fn vv_req_reg_005_amount_independent_of_epoch() {
 
 // ── Spec ───────────────────────────────────────────────────────────
 
+/// Traceability: confirms the REG-005 spec file exists.
 #[test]
 fn vv_req_reg_005_spec_file_exists() {
     assert!(
@@ -131,6 +176,8 @@ fn vv_req_reg_005_spec_file_exists() {
     );
 }
 
+/// Structural check: the Rue source mentions collateral return via
+/// REG-005 reference, "collateral" keyword, or CreateCoin usage.
 #[test]
 fn vv_req_reg_005_puzzle_documents_collateral_return() {
     let src = std::fs::read_to_string("puzzles/registration_coin.rue").unwrap();

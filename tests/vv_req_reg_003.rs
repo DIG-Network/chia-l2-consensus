@@ -5,14 +5,51 @@
 //!
 //! Implementation: `puzzles/registration_coin.rue` (compiled to CLVM).
 //!
-//! Verifies that the registration coin holds collateral and MUST NOT be
-//! spendable without a non-membership announcement from the checkpoint
-//! singleton. Tests execute the compiled CLVM bytecode.
+//! ## Normative Statement
 //!
-//! NOTE: Full simulator cross-coin announcement testing (checkpoint +
-//! registration in same bundle) is blocked until CHK-005 is implemented.
-//! These tests verify the CLVM-level lock mechanism: the puzzle ALWAYS
-//! emits ASSERT_COIN_ANNOUNCEMENT with the correct non-membership hash.
+//! The registration coin holds collateral and MUST remain locked until the
+//! validator has exited the active set. The only unlock path is proving non-
+//! membership via a checkpoint singleton announcement. The puzzle always emits
+//! `ASSERT_COIN_ANNOUNCEMENT(sha256(CHECKPOINT_ID, sha256("membership" +
+//! epoch_be8 + pubkey + 0x00)))`. Without the matching announcement in the
+//! spend bundle, the spend fails.
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Tests execute the compiled CLVM bytecode directly and verify:
+//! - ASSERT_COIN_ANNOUNCEMENT (opcode 61) is always emitted (no code path
+//!   skips it)
+//! - Exactly 1 announcement assertion exists
+//! - The hash corresponds to non-membership (is_member=0x00), verified via
+//!   cross-implementation Rust computation
+//! - The hash is NOT the membership=true hash
+//! - Different pubkeys, checkpoint IDs, and epochs produce different hashes
+//!   (binding verification)
+//! - CREATE_COIN always emitted for collateral return
+//! - Collateral amount in CREATE_COIN matches the solution parameter
+//! - Cross-implementation hash verified at epoch 0, 1,000,000, and near-max
+//! - Exactly 2 conditions with empty passthrough (lock + collateral)
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] Spend without checkpoint announcement fails (ASSERT_COIN_ANNOUNCEMENT
+//!       always present, so the spend requires a matching announcement)
+//! - [x] Announcement is non-membership (is_member=0x00, not 0x01)
+//! - [x] Announcement binds to pubkey, checkpoint ID, and epoch
+//! - [x] Collateral amount passed through to CREATE_COIN
+//! - [x] Cross-implementation hash verification (Rust vs CLVM)
+//! - [x] Exactly 2 conditions (lock + collateral return)
+//! - [ ] Spend with membership=true announcement fails (requires cross-coin
+//!       simulator test with checkpoint singleton)
+//! - [ ] Spend with membership=false announcement succeeds (requires CHK-005)
+//! - [ ] Collateral cannot be partially withdrawn (implicit from puzzle
+//!       structure -- full amount in CREATE_COIN)
+//!
+//! ## Gaps
+//!
+//! Full cross-coin announcement testing (checkpoint + registration in same
+//! spend bundle) is blocked until CHK-005 is implemented. These tests prove
+//! the CLVM-level lock mechanism but cannot verify the happy-path unlock flow.
 
 mod common;
 
@@ -78,6 +115,9 @@ fn expected_announcement_hash(ckpt_id: &[u8], epoch: u64, pk: &[u8], is_member: 
 
 // ── CLVM Execution: Lock is always present ─────────────────────────
 
+// Executes the compiled CLVM and verifies ASSERT_COIN_ANNOUNCEMENT (opcode
+// 61) is present in the output. There is no code path that skips it -- this
+// IS the collateral lock.
 #[test]
 fn vv_req_reg_003_always_emits_assert_announcement() {
     // REG-003: The puzzle MUST always emit ASSERT_COIN_ANNOUNCEMENT.
@@ -95,6 +135,8 @@ fn vv_req_reg_003_always_emits_assert_announcement() {
     );
 }
 
+// Verifies exactly 1 ASSERT_COIN_ANNOUNCEMENT condition. Multiple assertions
+// would impose additional requirements; zero would remove the lock.
 #[test]
 fn vv_req_reg_003_exactly_one_assert_announcement() {
     // REG-003: Exactly one ASSERT_COIN_ANNOUNCEMENT — the non-membership check.
@@ -113,6 +155,9 @@ fn vv_req_reg_003_exactly_one_assert_announcement() {
     );
 }
 
+// Verifies the announcement hash matches non-membership (is_member=0x00) and
+// does NOT match membership (is_member=0x01). The puzzle hardcodes 0x00 --
+// there is no way to make it assert a membership=true announcement.
 #[test]
 fn vv_req_reg_003_announcement_is_non_membership() {
     // REG-003: The announcement hash must correspond to is_member=0x00
@@ -150,6 +195,8 @@ fn vv_req_reg_003_announcement_is_non_membership() {
 
 // ── CLVM Execution: Announcement binds to curried params ───────────
 
+// Verifies different pubkeys produce different announcement hashes, proving
+// the lock is specific to the validator who registered.
 #[test]
 fn vv_req_reg_003_announcement_binds_to_pubkey() {
     // REG-003: Different pubkeys produce different announcement hashes.
@@ -177,6 +224,8 @@ fn vv_req_reg_003_announcement_binds_to_pubkey() {
     );
 }
 
+// Verifies different checkpoint singleton IDs produce different hashes,
+// proving the lock is bound to the specific checkpoint singleton.
 #[test]
 fn vv_req_reg_003_announcement_binds_to_checkpoint_id() {
     // REG-003: Different checkpoint singleton IDs produce different hashes.
@@ -204,6 +253,9 @@ fn vv_req_reg_003_announcement_binds_to_checkpoint_id() {
     );
 }
 
+// Verifies different epochs produce different hashes, providing replay
+// protection. A non-membership proof from epoch N cannot be reused at
+// epoch N+1.
 #[test]
 fn vv_req_reg_003_announcement_binds_to_epoch() {
     // REG-003: Different epochs produce different announcement hashes.
@@ -234,6 +286,8 @@ fn vv_req_reg_003_announcement_binds_to_epoch() {
 
 // ── CLVM Execution: Collateral output ──────────────────────────────
 
+// Verifies the puzzle always emits CREATE_COIN (opcode 51) for the
+// collateral return, alongside the lock assertion.
 #[test]
 fn vv_req_reg_003_always_emits_create_coin() {
     // REG-003: Alongside the lock assertion, the puzzle always creates
@@ -251,6 +305,9 @@ fn vv_req_reg_003_always_emits_create_coin() {
     );
 }
 
+// Verifies the CREATE_COIN amount matches the collateral_amount from the
+// solution (1 XCH = 1,000,000,000,000 mojos in this test). The puzzle passes
+// the amount through without enforcing a minimum.
 #[test]
 fn vv_req_reg_003_collateral_amount_passthrough() {
     // REG-003: The full collateral amount from the solution is passed
@@ -279,6 +336,8 @@ fn vv_req_reg_003_collateral_amount_passthrough() {
 
 // ── CLVM Execution: Cross-implementation hash verification ─────────
 
+// Cross-implementation check at epoch=0 (edge case: CLVM int 0 may be
+// encoded differently than 8-byte big-endian zero).
 #[test]
 fn vv_req_reg_003_cross_impl_hash_epoch_0() {
     // REG-003: Cross-impl check at epoch 0 (edge case).
@@ -302,6 +361,8 @@ fn vv_req_reg_003_cross_impl_hash_epoch_0() {
     );
 }
 
+// Cross-implementation check at epoch=1,000,000 (multi-byte integer
+// encoding test for int_to_8_bytes_be).
 #[test]
 fn vv_req_reg_003_cross_impl_hash_large_epoch() {
     // REG-003: Cross-impl check with large epoch (tests int_to_8_bytes_be).
@@ -325,6 +386,8 @@ fn vv_req_reg_003_cross_impl_hash_large_epoch() {
     );
 }
 
+// Cross-implementation check at near-max epoch (u64::MAX-1) to verify the
+// 8-byte boundary handling.
 #[test]
 fn vv_req_reg_003_cross_impl_hash_max_epoch() {
     // REG-003: Cross-impl at near-max epoch (8-byte boundary).
@@ -350,6 +413,10 @@ fn vv_req_reg_003_cross_impl_hash_max_epoch() {
 
 // ── Exactly two conditions (lock + collateral) ─────────────────────
 
+// Verifies that with empty conditions passthrough, the puzzle produces
+// exactly 2 conditions: ASSERT_COIN_ANNOUNCEMENT (the lock) and CREATE_COIN
+// (the collateral return). This confirms the puzzle's output is minimal and
+// deterministic per SEC-008 (no arbitrary condition injection).
 #[test]
 fn vv_req_reg_003_exactly_two_conditions_with_empty_passthrough() {
     // REG-003: With empty conditions passthrough, puzzle produces exactly 2:
@@ -373,6 +440,7 @@ fn vv_req_reg_003_exactly_two_conditions_with_empty_passthrough() {
 
 // ── Spec and documentation ─────────────────────────────────────────
 
+// Verifies the puzzle source documents the collateral lock mechanism.
 #[test]
 fn vv_req_reg_003_puzzle_documents_collateral_lock() {
     let src = std::fs::read_to_string("puzzles/registration_coin.rue")
@@ -384,6 +452,7 @@ fn vv_req_reg_003_puzzle_documents_collateral_lock() {
     );
 }
 
+// Traceability: verifies the REG-003 spec file exists on disk.
 #[test]
 fn vv_req_reg_003_spec_file_exists() {
     assert!(

@@ -5,9 +5,25 @@
 //!
 //! Implementation: `src/config.rs`.
 //!
-//! Verifies that deployment artifacts can be generated as JSON with all
-//! required fields, that the VK JSON has the correct structure, and that
-//! artifacts are round-trippable (serialize → deserialize → compare).
+//! ## Normative statement
+//! Deployment artifacts MUST serialize to JSON with all required fields
+//! (launcher IDs, mod hashes, collateral, tree_depth, max_signers,
+//! genesis_challenge, vk_hash, verification_key). Bytes32 fields MUST use
+//! 0x-prefix hex encoding. The VK JSON MUST include alpha_g1, beta_g2,
+//! gamma_g2, delta_g2, and 7 IC points with correct byte sizes.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Serializes to JSON**: Non-empty JSON with key fields.
+//! 2. **All required fields**: 10 fields verified present.
+//! 3. **0x prefix**: All hex fields start with "0x".
+//! 4. **Bytes32 = 66 chars**: "0x" + 64 hex chars.
+//! 5. **VK JSON structure**: Correct sizes for all VK components.
+//! 6. **VK hash matches content**: Reconstructed VK bytes match hash.
+//! 7. **JSON roundtrip**: Serialize -> deserialize -> compare succeeds.
+//! 8. **Numeric fields**: collateral, tree_depth, max_signers correct.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test publishing to a real distribution channel.
 
 use chia_l2_consensus::testing::{
     compute_vk_hash, deploy_both_singletons, deserialize_proving_key, extract_vk_components,

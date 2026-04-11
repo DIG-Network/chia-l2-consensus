@@ -1,7 +1,23 @@
 //! REQUIREMENT: API-003 — State Types
 //! (`docs/requirements/domains/crate_api/NORMATIVE.md#API-003`).
 //!
-//! Verifies ValidatorInfo, ValidatorSet helpers, and type consistency.
+//! Spec: `docs/requirements/domains/crate_api/specs/API-003.md`.
+//!
+//! ## Normative statement
+//! The crate MUST export `ValidatorInfo` (pubkey + registration_coin),
+//! `ValidatorSet` (validators list + epoch + merkle_root), and
+//! `CheckpointSingletonState`. ValidatorSet MUST provide `count()`,
+//! `contains()`, and `pubkeys()` helpers.
+//!
+//! ## How the tests prove the requirement
+//! 1. **ValidatorInfo constructible**: Fields accessible.
+//! 2. **ValidatorSet count()**: Returns correct count.
+//! 3. **ValidatorSet contains()**: Finds existing, rejects missing.
+//! 4. **ValidatorSet pubkeys()**: Returns all pubkeys in order.
+//! 5. **Empty set**: count=0, contains=false, pubkeys empty.
+//!
+//! ## Completeness: MODERATE
+//! ## Gaps: Does not test CheckpointSingletonState construction (tested in IDX-001).
 
 use chia_l2_consensus::{CheckpointSingletonState, ValidatorInfo, ValidatorSet};
 use chia_protocol::{Bytes32, Coin};

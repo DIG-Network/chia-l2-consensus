@@ -1,13 +1,40 @@
-//! REQUIREMENT: SMT-002 — Deterministic slot assignment
+//! REQUIREMENT: SMT-002 — Slot Assignment
 //! (`docs/requirements/domains/smt/NORMATIVE.md#SMT-002`).
 //!
 //! Spec: `docs/requirements/domains/smt/specs/SMT-002.md`.
 //!
-//! Verifies that validator slots are computed deterministically from pubkey hashes.
+//! **Normative statement:** Each validator's slot in the SMT is computed as
+//! `first_8_bytes_as_u64_be(sha256(pubkey)) mod 2^TREE_DEPTH`. The assignment
+//! is deterministic: the same pubkey always yields the same slot. Different
+//! pubkeys yield different slots with overwhelming probability.
+//!
+//! **How the tests prove this:**
+//! - `slot_from_sha256_pubkey` manually computes the full algorithm and
+//!   compares to compute_slot, confirming the implementation matches the spec.
+//! - `first_8_bytes_big_endian` ensures big-endian (not little-endian)
+//!   interpretation of the first 8 hash bytes.
+//! - `result_mod_tree_capacity` checks the output is strictly less than 2^32.
+//! - `same_pubkey_same_slot` invokes compute_slot three times on the same key
+//!   to confirm determinism.
+//! - `different_pubkeys_different_slots` generates 100 distinct keys and
+//!   verifies zero collisions (expected given 2^32 slots).
+//! - `known_test_vector` pins the output for pubkey=[0x00;48] to the exact
+//!   hex value 0x87b081d5, providing a cross-implementation anchor.
+//!
+//! **Acceptance-criteria coverage (from spec):**
+//! - [x] Slot computed from sha256(pubkey)
+//! - [x] First 8 bytes interpreted as big-endian u64
+//! - [x] Result reduced mod 2^TREE_DEPTH
+//! - [x] Same pubkey -> same slot every time
+//! - [x] Different pubkeys -> different slots (with high probability)
+//! - [ ] Rust and Chialisp compute identical slots (cross-impl; Phase 3)
 
 use chia_l2_consensus::testing::{compute_slot, TREE_DEPTH};
 use sha2::{Digest, Sha256};
 
+/// Verifies the slot algorithm end-to-end: sha256 -> first 8 bytes BE u64 -> mod 2^32.
+/// Strategy: manual reimplementation of the algorithm compared to compute_slot.
+/// Confidence: the library function matches the spec formula exactly.
 #[test]
 fn vv_req_smt_002_slot_from_sha256_pubkey() {
     // SMT-002: Slot is computed from sha256(pubkey)
@@ -28,6 +55,12 @@ fn vv_req_smt_002_slot_from_sha256_pubkey() {
     );
 }
 
+/// Verifies that the first 8 bytes of the SHA-256 hash are interpreted as
+/// big-endian u64 (not little-endian). Strategy: compute both BE and LE
+/// interpretations and confirm compute_slot matches the BE one. An
+/// additional sanity check confirms BE != LE for the test hash.
+/// Confidence: endianness bugs are the most common slot-computation error;
+/// this test catches them directly.
 #[test]
 fn vv_req_smt_002_first_8_bytes_big_endian() {
     // SMT-002: First 8 bytes interpreted as big-endian u64
@@ -60,6 +93,10 @@ fn vv_req_smt_002_first_8_bytes_big_endian() {
     }
 }
 
+/// Verifies the slot is reduced modulo 2^TREE_DEPTH.
+/// Strategy: use a pubkey producing a large hash and assert the slot is
+/// strictly less than the tree capacity.
+/// Confidence: out-of-bounds slots would corrupt tree addressing.
 #[test]
 fn vv_req_smt_002_result_mod_tree_capacity() {
     // SMT-002: Result reduced mod 2^TREE_DEPTH
@@ -77,9 +114,12 @@ fn vv_req_smt_002_result_mod_tree_capacity() {
     );
 }
 
+/// Verifies determinism: the same pubkey always maps to the same slot.
+/// Strategy: call compute_slot three times on the same input and compare.
+/// Confidence: any non-determinism (e.g. random salt) would fail here.
 #[test]
 fn vv_req_smt_002_same_pubkey_same_slot() {
-    // SMT-002: Same pubkey → same slot every time
+    // SMT-002: Same pubkey -> same slot every time
     let pubkey = [0x12u8; 48];
 
     let slot1 = compute_slot(&pubkey);
@@ -90,9 +130,14 @@ fn vv_req_smt_002_same_pubkey_same_slot() {
     assert_eq!(slot2, slot3, "SMT-002: Same pubkey must produce same slot");
 }
 
+/// Verifies collision resistance: 100 distinct pubkeys produce 100 distinct
+/// slots. Strategy: insert slots into a HashSet and check uniqueness.
+/// With 100 keys in a 2^32 space, birthday-bound collision probability is
+/// negligible (~1e-6), so this is effectively a deterministic assertion.
+/// Confidence: the hash function provides uniform distribution across slots.
 #[test]
 fn vv_req_smt_002_different_pubkeys_different_slots() {
-    // SMT-002: Different pubkeys → different slots (with high probability)
+    // SMT-002: Different pubkeys -> different slots (with high probability)
     // Test with 100 distinct pubkeys - statistical expectation is no collisions
 
     let mut slots = std::collections::HashSet::new();
@@ -112,6 +157,11 @@ fn vv_req_smt_002_different_pubkeys_different_slots() {
     );
 }
 
+/// Pins the slot computation for pubkey=[0x00;48] to the exact value 0x87b081d5.
+/// Strategy: hardcoded expected value derived from the spec's walk-through of
+/// sha256([0x00;48]). This serves as a cross-implementation anchor: any Rue or
+/// CLVM implementation must also produce this value.
+/// Confidence: bit-exact regression test guards against silent algorithm changes.
 #[test]
 fn vv_req_smt_002_known_test_vector() {
     // SMT-002: Verify against a known test vector

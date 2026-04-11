@@ -3,11 +3,41 @@
 //!
 //! Spec: `docs/requirements/domains/network_coin/specs/NET-005.md`.
 //!
-//! Verifies that the pubkey memo convention is properly documented.
-//! NET-005 is a DRIVER convention, not enforced by the puzzle.
-//! The driver code adds the pubkey as the first memo when building
-//! the spend bundle.
+//! ## Normative Statement
+//!
+//! The network coin driver MUST include the validator's 48-byte BLS pubkey as
+//! the first memo in the `CREATE_COIN` condition for the registration coin.
+//! This is a DRIVER convention, not enforced by the puzzle (the puzzle sets
+//! `memos: nil`). The memo enables the indexer to detect registration coins
+//! and extract the pubkey without decurrying.
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Tests verify: puzzle references NET-005, documents driver responsibility,
+//! puzzle sets memos to nil (leaving memo addition to driver), memo format is
+//! 48 bytes, pubkey is at position 0, indexer can extract 48-byte pubkey from
+//! memo list, spec file exists, spec mentions driver convention, and puzzle
+//! header mentions the memo.
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] Puzzle leaves memos to driver (memos: nil in source)
+//! - [x] Driver responsibility documented in puzzle
+//! - [x] First memo is 48 bytes (BLS pubkey) -- format documented
+//! - [x] Memo at position 0 -- convention documented
+//! - [x] Indexer can extract pubkey from memo (simulated extraction)
+//! - [x] Spec file exists and mentions driver convention
+//! - [ ] CREATE_COIN for registration coin includes memo list (driver test)
+//! - [ ] Memo content matches pubkey in puzzle hash curry (driver test)
+//! - [ ] Coins without memo are still valid but not indexed (edge case)
+//!
+//! ## Gaps
+//!
+//! NET-005 is a driver convention. The puzzle tests verify documentation and
+//! the nil-memo pattern, but actual memo inclusion requires driver-level
+//! testing or the NET-006 simulator test.
 
+// Traceability: verifies the puzzle source references NET-005.
 #[test]
 fn vv_req_net_005_puzzle_documents_net_005() {
     // NET-005: Puzzle should document NET-005 requirement
@@ -21,6 +51,8 @@ fn vv_req_net_005_puzzle_documents_net_005() {
     );
 }
 
+// Verifies the puzzle documents that the driver (not the puzzle) adds the
+// pubkey memo to the CREATE_COIN condition.
 #[test]
 fn vv_req_net_005_puzzle_documents_driver_responsibility() {
     // NET-005: Puzzle documents that driver adds memo
@@ -36,6 +68,8 @@ fn vv_req_net_005_puzzle_documents_driver_responsibility() {
     );
 }
 
+// Verifies the puzzle sets `memos: nil`, meaning it does not enforce memo
+// content. The driver is responsible for adding the pubkey memo.
 #[test]
 fn vv_req_net_005_puzzle_does_not_enforce_memo() {
     // NET-005: Puzzle does not enforce memo (it's a convention, not consensus)
@@ -51,6 +85,8 @@ fn vv_req_net_005_puzzle_does_not_enforce_memo() {
     );
 }
 
+// Documents the expected memo size: 48 bytes for a compressed BLS12-381
+// G1 point.
 #[test]
 fn vv_req_net_005_memo_format_documented() {
     // NET-005: Pubkey memo format is 48 bytes BLS12-381 G1
@@ -65,6 +101,8 @@ fn vv_req_net_005_memo_format_documented() {
     );
 }
 
+// Documents that the pubkey must be at position 0 in the memo list per
+// the spec convention.
 #[test]
 fn vv_req_net_005_memo_is_first_element() {
     // NET-005: Pubkey must be the FIRST memo in the list
@@ -81,6 +119,9 @@ fn vv_req_net_005_memo_is_first_element() {
     );
 }
 
+// Simulates indexer extraction: given a memo list with a 48-byte first
+// element, the indexer can extract the pubkey without decurrying. This
+// proves the memo convention enables efficient indexer detection.
 #[test]
 fn vv_req_net_005_indexer_can_extract_pubkey() {
     // NET-005: Memo enables indexer to extract pubkey without decurrying
@@ -104,6 +145,7 @@ fn vv_req_net_005_indexer_can_extract_pubkey() {
     );
 }
 
+// Traceability: verifies the NET-005 spec file exists on disk.
 #[test]
 fn vv_req_net_005_spec_file_exists() {
     // NET-005: Specification file should exist
@@ -118,6 +160,8 @@ fn vv_req_net_005_spec_file_exists() {
     );
 }
 
+// Verifies the spec explicitly documents this as a driver convention,
+// not a consensus rule enforced by the puzzle.
 #[test]
 fn vv_req_net_005_is_driver_convention() {
     // NET-005: This is a driver convention, not puzzle enforcement
@@ -137,6 +181,8 @@ fn vv_req_net_005_is_driver_convention() {
     );
 }
 
+// Verifies the puzzle header (first 10 lines) mentions NET-005 or memo,
+// ensuring the convention is discoverable by developers reading the source.
 #[test]
 fn vv_req_net_005_puzzle_header_mentions_memo() {
     // NET-005: Puzzle header should mention pubkey memo

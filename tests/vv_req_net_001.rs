@@ -3,11 +3,40 @@
 //!
 //! Spec: `docs/requirements/domains/network_coin/specs/NET-001.md`.
 //!
-//! Verifies that the network coin is implemented as a Chia singleton,
-//! guaranteeing exactly one instance exists with a given launcher ID.
+//! ## Normative Statement
 //!
-//! Note: Full singleton behavior requires on-chain testing. These tests
-//! verify the puzzle structure and compilation.
+//! The network coin MUST be implemented as a Chia singleton to guarantee
+//! exactly one instance exists with a given launcher ID. The singleton wrapper
+//! (`singleton_top_layer_v1_1`) enforces uniqueness, lineage, and odd-amount
+//! recreation. Without this, attackers could deploy fake network coins.
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Tests verify: the Rue puzzle compiles successfully, produces valid CLVM
+//! output, compilation is deterministic, curried parameters (registration_coin_-
+//! mod_hash, collateral_amount, checkpoint_singleton_id) are declared, solution
+//! parameters (new_validator_pubkey, conditions) are present, the puzzle returns
+//! List<Condition>, singleton usage is documented, and the inner-puzzle pattern
+//! is followed (fn main, wrapper documentation).
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] Network coin puzzle compiles (rue build succeeds)
+//! - [x] Puzzle has correct curried parameters (3 parameters verified)
+//! - [x] Puzzle has correct solution parameters (2 parameters verified)
+//! - [x] Puzzle returns List<Condition>
+//! - [x] Singleton wrapper documented in puzzle source
+//! - [x] Inner puzzle pattern followed (fn main, wrapper reference)
+//! - [ ] Singleton wrapper actually works (tested in NET-006 simulator test)
+//! - [ ] Only one network coin can exist at any time (requires simulator)
+//! - [ ] Duplicate network coin creation fails (requires simulator)
+//! - [ ] Singleton lineage verifiable (requires simulator)
+//!
+//! ## Gaps
+//!
+//! These tests verify the puzzle source structure via string inspection and
+//! compilation. They do NOT execute the CLVM or wrap with the singleton layer.
+//! Full singleton behavior is tested in `vv_req_net_006.rs` (simulator test).
 
 use std::process::Command;
 
@@ -35,6 +64,9 @@ fn get_puzzle_clvm(puzzle_path: &str) -> Option<String> {
     }
 }
 
+// Verifies that `rue build puzzles/network_coin_inner.rue` succeeds. If the
+// puzzle has syntax errors or type mismatches, it cannot be deployed. This is
+// the most basic correctness gate.
 #[test]
 fn vv_req_net_001_puzzle_compiles() {
     // NET-001: Network coin inner puzzle must compile
@@ -44,6 +76,9 @@ fn vv_req_net_001_puzzle_compiles() {
     );
 }
 
+// Verifies the compiler produces non-empty CLVM output starting with '('.
+// This confirms the puzzle compiles to a valid s-expression, not an error
+// message or empty output.
 #[test]
 fn vv_req_net_001_puzzle_produces_clvm() {
     // NET-001: Compiled puzzle produces valid CLVM output
@@ -58,6 +93,9 @@ fn vv_req_net_001_puzzle_produces_clvm() {
     );
 }
 
+// Verifies that two compilations of the same source produce identical CLVM.
+// Non-deterministic compilation would make puzzle hash unpredictable,
+// breaking the singleton identity.
 #[test]
 fn vv_req_net_001_puzzle_is_deterministic() {
     // NET-001: Puzzle compilation is deterministic
@@ -72,6 +110,9 @@ fn vv_req_net_001_puzzle_is_deterministic() {
     );
 }
 
+// Verifies the three curried parameters are declared in the puzzle source:
+// registration_coin_mod_hash, collateral_amount, checkpoint_singleton_id.
+// These are fixed at deployment and define the network's registration rules.
 #[test]
 fn vv_req_net_001_puzzle_has_curried_params() {
     // NET-001: Network coin inner puzzle accepts curried parameters:
@@ -98,6 +139,8 @@ fn vv_req_net_001_puzzle_has_curried_params() {
     );
 }
 
+// Verifies the two solution parameters are declared: new_validator_pubkey
+// and conditions. These are provided per-spend and define the registration.
 #[test]
 fn vv_req_net_001_puzzle_has_solution_params() {
     // NET-001: Network coin inner puzzle accepts solution parameters:
@@ -117,6 +160,8 @@ fn vv_req_net_001_puzzle_has_solution_params() {
     );
 }
 
+// Verifies the puzzle declares `-> List<Condition>` return type. This is
+// required by the singleton wrapper to process inner puzzle output.
 #[test]
 fn vv_req_net_001_puzzle_returns_conditions() {
     // NET-001: Network coin inner puzzle returns List<Condition>
@@ -130,6 +175,8 @@ fn vv_req_net_001_puzzle_returns_conditions() {
     );
 }
 
+// Verifies the puzzle source mentions "singleton", documenting that it is
+// designed to be wrapped by singleton_top_layer_v1_1.
 #[test]
 fn vv_req_net_001_singleton_wrapper_documented() {
     // NET-001: Network coin uses singleton_top_layer_v1_1 wrapper
@@ -144,6 +191,9 @@ fn vv_req_net_001_singleton_wrapper_documented() {
     );
 }
 
+// Verifies the inner puzzle pattern: has fn main, and references the
+// singleton wrapper or NET-004 recreation. This confirms the puzzle is
+// designed as an inner puzzle, not a standalone puzzle.
 #[test]
 fn vv_req_net_001_inner_puzzle_pattern() {
     // NET-001: Network coin follows inner puzzle pattern

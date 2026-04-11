@@ -1,13 +1,41 @@
-//! REQUIREMENT: SMT-003 — Leaf values (active/empty)
+//! REQUIREMENT: SMT-003 — Leaf Values (Active / Empty)
 //! (`docs/requirements/domains/smt/NORMATIVE.md#SMT-003`).
 //!
 //! Spec: `docs/requirements/domains/smt/specs/SMT-003.md`.
 //!
-//! Verifies that leaf values are correctly computed for active and empty slots.
+//! **Normative statement:** Active leaves contain sha256(pubkey); empty leaves
+//! contain EMPTY_LEAF = sha256([0u8; 48]). Membership proofs carry the active
+//! leaf; non-membership proofs carry EMPTY_LEAF. Removing a validator restores
+//! the slot to EMPTY_LEAF.
+//!
+//! **How the tests prove this:**
+//! - `active_leaf_is_sha256_pubkey` manually hashes a pubkey and compares.
+//! - `empty_leaf_is_sha256_48_zeros` re-derives the constant from scratch.
+//! - `empty_leaf_is_known_constant` pins EMPTY_LEAF to its exact hex bytes.
+//! - `membership_proof_uses_active_leaf` inserts a validator and checks the
+//!   proof's leaf field is sha256(pubkey), then verifies the proof.
+//! - `nonmembership_proof_uses_empty_leaf` checks a proof for an empty slot
+//!   carries EMPTY_LEAF and verifies against the tree root.
+//! - `remove_validator_sets_leaf_to_empty` inserts then removes a validator and
+//!   confirms both the proof leaf and get_leaf return EMPTY_LEAF.
+//! - `active_leaf_differs_from_empty_leaf` confirms active != empty for 100 keys.
+//! - `tree_stores_active_leaf_correctly` verifies get_leaf returns sha256(pubkey)
+//!   for an inserted validator.
+//!
+//! **Acceptance-criteria coverage (from spec):**
+//! - [x] Active leaf = sha256(pubkey)
+//! - [x] Empty leaf = sha256(48 zero bytes)
+//! - [x] EMPTY_LEAF_HASH is a known constant
+//! - [x] Membership proof uses sha256(pubkey) as leaf
+//! - [x] Non-membership proof uses EMPTY_LEAF_HASH
+//! - [ ] Same EMPTY_LEAF_HASH in Rust and Chialisp (cross-impl; Phase 3)
 
 use chia_l2_consensus::testing::{active_leaf, compute_slot, SparseMerkleTree, EMPTY_LEAF};
 use sha2::{Digest, Sha256};
 
+/// Verifies that active_leaf(pubkey) equals sha256(pubkey).
+/// Strategy: independent Sha256 computation compared to the library function.
+/// Confidence: the leaf derivation matches the canonical spec formula.
 #[test]
 fn vv_req_smt_003_active_leaf_is_sha256_pubkey() {
     // SMT-003: Active leaf = sha256(pubkey)
@@ -26,6 +54,9 @@ fn vv_req_smt_003_active_leaf_is_sha256_pubkey() {
     );
 }
 
+/// Verifies EMPTY_LEAF = sha256([0x00; 48]).
+/// Strategy: hash 48 zero bytes independently and compare to the constant.
+/// Confidence: the sentinel is spec-derived, not an arbitrary magic number.
 #[test]
 fn vv_req_smt_003_empty_leaf_is_sha256_48_zeros() {
     // SMT-003: Empty leaf = sha256(48 zero bytes)
@@ -41,6 +72,9 @@ fn vv_req_smt_003_empty_leaf_is_sha256_48_zeros() {
     );
 }
 
+/// Pins EMPTY_LEAF to its exact hex bytes for cross-implementation anchoring.
+/// Strategy: hardcoded byte array compared to the library constant.
+/// Confidence: bit-exact regression test; any accidental change is caught.
 #[test]
 fn vv_req_smt_003_empty_leaf_is_known_constant() {
     // SMT-003: EMPTY_LEAF_HASH is a known constant
@@ -57,6 +91,11 @@ fn vv_req_smt_003_empty_leaf_is_known_constant() {
     );
 }
 
+/// Verifies that a membership proof carries sha256(pubkey) as its leaf and
+/// verifies against the tree root.
+/// Strategy: insert a validator, inspect the returned proof's leaf field,
+/// then call verify() to confirm end-to-end correctness.
+/// Confidence: the proof object is usable for on-chain membership claims.
 #[test]
 fn vv_req_smt_003_membership_proof_uses_active_leaf() {
     // SMT-003: Membership proof uses sha256(pubkey) as leaf
@@ -80,6 +119,11 @@ fn vv_req_smt_003_membership_proof_uses_active_leaf() {
     );
 }
 
+/// Verifies that a non-membership proof for an unoccupied slot carries
+/// EMPTY_LEAF and verifies against the tree root.
+/// Strategy: generate a proof for a slot that was never filled and inspect
+/// both the leaf field and verification result.
+/// Confidence: non-membership proofs are valid for de-registration claims.
 #[test]
 fn vv_req_smt_003_nonmembership_proof_uses_empty_leaf() {
     // SMT-003: Non-membership proof uses EMPTY_LEAF_HASH
@@ -103,6 +147,10 @@ fn vv_req_smt_003_nonmembership_proof_uses_empty_leaf() {
     );
 }
 
+/// Verifies that removing a validator restores the slot to EMPTY_LEAF.
+/// Strategy: insert then remove, check both the returned proof leaf and
+/// the tree's get_leaf for that slot.
+/// Confidence: slot reuse after de-registration works correctly.
 #[test]
 fn vv_req_smt_003_remove_validator_sets_leaf_to_empty() {
     // SMT-003: Removing validator sets leaf back to EMPTY_LEAF
@@ -128,6 +176,9 @@ fn vv_req_smt_003_remove_validator_sets_leaf_to_empty() {
     );
 }
 
+/// Verifies that active_leaf(pk) != EMPTY_LEAF for 100 non-zero pubkeys.
+/// Strategy: sweep pubkeys with varying first byte and assert inequality.
+/// Confidence: no realistic pubkey will collide with the empty sentinel.
 #[test]
 fn vv_req_smt_003_active_leaf_differs_from_empty_leaf() {
     // SMT-003: Active leaf != EMPTY_LEAF for any realistic pubkey
@@ -145,6 +196,10 @@ fn vv_req_smt_003_active_leaf_differs_from_empty_leaf() {
     }
 }
 
+/// Verifies the tree stores sha256(pubkey) at the computed slot after insertion.
+/// Strategy: insert a validator, then call get_leaf on its slot and compare
+/// to active_leaf.
+/// Confidence: the in-memory tree state is consistent with leaf derivation.
 #[test]
 fn vv_req_smt_003_tree_stores_active_leaf_correctly() {
     // SMT-003: Tree stores sha256(pubkey) for inserted validators

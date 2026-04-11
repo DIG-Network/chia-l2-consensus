@@ -3,10 +3,28 @@
 //!
 //! Spec: `docs/requirements/domains/security/specs/SEC-001.md`.
 //!
-//! Security verification: confirms that the strict majority threshold
-//! (2k > validator_count) is correctly enforced at all layers: the
-//! `is_majority()` helper, the `minimum_signers()` function, and the
-//! Groth16 circuit constraint (CIR-004).
+//! ## Normative statement
+//! A checkpoint is valid only if signed by a strict majority of validators:
+//! `2k > validator_count` (not `>=`). This must hold at all layers: the
+//! `is_majority()` helper, the `minimum_signers()` function, and the Groth16
+//! circuit constraint.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Strict majority (not GTE)**: 50/100 is NOT majority; 51/100 IS.
+//! 2. **Odd counts**: 49/99 not majority; 50/99 is. 1/1 is.
+//! 3. **Small counts**: Boundary values 0-3 tested exhaustively.
+//! 4. **minimum_signers correctness**: For n=0..200, verifies min_k is the
+//!    smallest k where is_majority(k, n) is true.
+//! 5. **Large counts**: 10000/20000 not majority; 10001/20000 is.
+//! 6. **No overflow**: Near u64::MAX values do not panic or overflow.
+//! 7. **Circuit rejects minority**: Groth16 circuit panics (unsatisfied
+//!    constraints) for 2/5 signers.
+//! 8. **Circuit accepts majority**: Groth16 circuit produces valid proof
+//!    for 3/5 signers.
+//! 9. **Circuit rejects exact half**: 3/6 rejected (strict majority).
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: None significant -- all layers tested.
 
 use chia_l2_consensus::testing::{
     deserialize_proving_key, generate_proof, is_majority, minimum_signers, run_test_setup,
@@ -15,6 +33,8 @@ use chia_l2_consensus::testing::{
 
 // ── Strict majority: 2k > n (not >=) ───────────────────────────────
 
+/// Core property: strict majority means 2k > n, NOT 2k >= n. 50/100 fails
+/// (2*50 = 100, 100 > 100 is FALSE), 51/100 passes (2*51 = 102 > 100).
 #[test]
 fn vv_req_sec_001_strict_majority_not_gte() {
     // 2*50 = 100, 100 > 100 is FALSE → strict majority requires >50%
@@ -54,6 +74,9 @@ fn vv_req_sec_001_small_counts() {
 
 // ── minimum_signers computes correct threshold ──────────────────────
 
+/// Exhaustive verification: for every n from 0 to 200, minimum_signers(n)
+/// is the smallest k where is_majority(k, n) is true, and k-1 is NOT.
+/// This proves the function computes the exact threshold.
 #[test]
 fn vv_req_sec_001_minimum_signers_correctness() {
     // For every count from 0 to 200, verify minimum_signers is the
@@ -116,6 +139,9 @@ fn vv_req_sec_001_no_overflow() {
 
 // ── Circuit rejects minority signers ────────────────────────────────
 
+/// Circuit-level enforcement: Groth16 circuit panics (unsatisfied constraints)
+/// when only 2/5 validators sign (minority). The catch_unwind confirms
+/// the circuit enforces the majority constraint, not just the Rust helper.
 #[test]
 fn vv_req_sec_001_circuit_rejects_minority() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
@@ -139,6 +165,9 @@ fn vv_req_sec_001_circuit_rejects_minority() {
 
 // ── Circuit accepts majority signers ────────────────────────────────
 
+/// Circuit-level acceptance: Groth16 circuit produces a valid proof when
+/// 3/5 validators sign (majority). This proves the circuit constraint
+/// is satisfiable for legitimate majority inputs.
 #[test]
 fn vv_req_sec_001_circuit_accepts_majority() {
     let (pk_bytes, _) = run_test_setup().expect("Setup");
