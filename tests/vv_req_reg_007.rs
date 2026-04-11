@@ -174,6 +174,9 @@ fn build_chk_query_env(
         a.new_pair(sr, r).unwrap()
     };
     let t = a.new_pair(state, t).unwrap();
+    // 6. NETWORK_COIN_LAUNCHER_ID (CHK-012)
+    let ncli = a.new_atom(&[0x00u8; 32]).unwrap();
+    let t = a.new_pair(ncli, t).unwrap();
     // 5. EMPTY_LEAF_HASH
     let elh = a.new_atom(&empty_leaf).unwrap();
     let t = a.new_pair(elh, t).unwrap();

@@ -49,24 +49,33 @@ pub const GROTH16_PROOF_SIZE: usize = G1_COMPRESSED_SIZE + G2_COMPRESSED_SIZE + 
 /// The checkpoint message commits to all new state including the new validator set.
 /// This message is the critical link between the ZK proof and BLS signature verification.
 ///
-/// Format: `sha256(new_state_root || new_validator_merkle_root || new_validator_count_be8 || new_epoch_be8)`
+/// Format (CHK-012): `sha256(new_state_root || new_validator_merkle_root || new_validator_count_be8 || new_epoch_be8 || network_coin_launcher_id)`
+///
+/// The `network_coin_launcher_id` field (CHK-012) prevents cross-network proof replay:
+/// a proof generated for network A cannot be used on network B because
+/// the checkpoint messages differ.
+///
+/// Total preimage: 112 bytes (32 + 32 + 8 + 8 + 32). Output: 32 bytes.
 ///
 /// Source: spec-wire-format.md Lines 403-463
+/// See also: CHK-009 (epoch binding), CHK-011 (state hash binding), CHK-012 (network ID binding)
 pub fn compute_checkpoint_message(
     new_state_root: [u8; 32],
     new_validator_merkle_root: [u8; 32],
     new_validator_count: u64,
     new_epoch: u64,
+    network_coin_launcher_id: [u8; 32],
 ) -> [u8; 32] {
     let mut hasher = Sha256::new();
 
     // Field order is critical - must match Rue implementation exactly
-    hasher.update(new_state_root); // 32 bytes
+    hasher.update(new_state_root); // 32 bytes — CHK-011: state hash binding
     hasher.update(new_validator_merkle_root); // 32 bytes
     hasher.update(new_validator_count.to_be_bytes()); // 8 bytes, big-endian
-    hasher.update(new_epoch.to_be_bytes()); // 8 bytes, big-endian
+    hasher.update(new_epoch.to_be_bytes()); // 8 bytes, big-endian — CHK-009: epoch binding
+    hasher.update(network_coin_launcher_id); // 32 bytes — CHK-012: network ID binding
 
-    // Total: 80 bytes input, 32 bytes output
+    // Total: 112 bytes input, 32 bytes output
     hasher.finalize().into()
 }
 

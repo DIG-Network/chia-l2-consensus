@@ -21,8 +21,8 @@ fn vv_req_chk_010_same_state_different_epochs() {
     let mr = [0x22; 32];
     let vc: u64 = 5;
 
-    let msg_e3 = compute_checkpoint_message(sr, mr, vc, 3);
-    let msg_e4 = compute_checkpoint_message(sr, mr, vc, 4);
+    let msg_e3 = compute_checkpoint_message(sr, mr, vc, 3, [0x00; 32]);
+    let msg_e4 = compute_checkpoint_message(sr, mr, vc, 4, [0x00; 32]);
 
     assert_ne!(
         msg_e3, msg_e4,
@@ -43,7 +43,7 @@ fn vv_req_chk_010_signature_epoch_mismatch() {
     let vc: u64 = 5;
 
     // Sign for epoch 3
-    let msg_epoch_3 = compute_checkpoint_message(sr, mr, vc, 3);
+    let msg_epoch_3 = compute_checkpoint_message(sr, mr, vc, 3, [0x00; 32]);
     let sig = sign_checkpoint(&kp.secret_key, &kp.pubkey, &msg_epoch_3, &gc, &coin_id).unwrap();
 
     // Verify at epoch 3 — should succeed
@@ -55,7 +55,7 @@ fn vv_req_chk_010_signature_epoch_mismatch() {
     );
 
     // Verify at epoch 4 — should fail (different checkpoint_message)
-    let msg_epoch_4 = compute_checkpoint_message(sr, mr, vc, 4);
+    let msg_epoch_4 = compute_checkpoint_message(sr, mr, vc, 4, [0x00; 32]);
     let valid_4 =
         verify_checkpoint_signature(&kp.pubkey, &msg_epoch_4, &gc, &coin_id, &sig).unwrap();
     assert!(
@@ -78,7 +78,7 @@ fn vv_req_chk_010_aggregate_signature_epoch_bound() {
     let vc: u64 = 3;
 
     // Both sign for epoch 5
-    let msg_5 = compute_checkpoint_message(sr, mr, vc, 5);
+    let msg_5 = compute_checkpoint_message(sr, mr, vc, 5, [0x00; 32]);
     let sig1 = sign_checkpoint(&kp1.secret_key, &kp1.pubkey, &msg_5, &gc, &coin_id).unwrap();
     let sig2 = sign_checkpoint(&kp2.secret_key, &kp2.pubkey, &msg_5, &gc, &coin_id).unwrap();
 
@@ -90,7 +90,7 @@ fn vv_req_chk_010_aggregate_signature_epoch_bound() {
     );
 
     // Aggregate for epoch 6 would be different
-    let msg_6 = compute_checkpoint_message(sr, mr, vc, 6);
+    let msg_6 = compute_checkpoint_message(sr, mr, vc, 6, [0x00; 32]);
     let sig1_e6 = sign_checkpoint(&kp1.secret_key, &kp1.pubkey, &msg_6, &gc, &coin_id).unwrap();
     let sig2_e6 = sign_checkpoint(&kp2.secret_key, &kp2.pubkey, &msg_6, &gc, &coin_id).unwrap();
 
@@ -111,8 +111,8 @@ fn vv_req_chk_010_signing_message_epoch_chain() {
     let gc = [0xAA; 32];
     let coin_id = [0xBB; 32];
 
-    let msg_5 = compute_checkpoint_message(sr, mr, vc, 5);
-    let msg_6 = compute_checkpoint_message(sr, mr, vc, 6);
+    let msg_5 = compute_checkpoint_message(sr, mr, vc, 5, [0x00; 32]);
+    let msg_6 = compute_checkpoint_message(sr, mr, vc, 6, [0x00; 32]);
 
     let signing_msg_5 = compute_checkpoint_signing_message(&msg_5, &gc, &coin_id);
     let signing_msg_6 = compute_checkpoint_signing_message(&msg_6, &gc, &coin_id);
@@ -182,8 +182,8 @@ fn vv_req_chk_010_proof_replay_prevention() {
     let mr = [0x22; 32];
     let vc: u64 = 3;
 
-    let msg_5 = compute_checkpoint_message(sr, mr, vc, 5);
-    let msg_10 = compute_checkpoint_message(sr, mr, vc, 10);
+    let msg_5 = compute_checkpoint_message(sr, mr, vc, 5, [0x00; 32]);
+    let msg_10 = compute_checkpoint_message(sr, mr, vc, 10, [0x00; 32]);
 
     // If we generated a proof for epoch 5, the proof's checkpoint_message = msg_5
     // If we try to use it at epoch 10, the puzzle computes msg_10

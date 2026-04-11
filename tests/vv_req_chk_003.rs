@@ -183,12 +183,14 @@ fn compute_checkpoint_message(
     new_vmr: &[u8; 32],
     new_vc: u64,
     new_epoch: u64,
+    network_coin_launcher_id: &[u8; 32],
 ) -> [u8; 32] {
     let mut pre = Vec::new();
     pre.extend_from_slice(new_sr);
     pre.extend_from_slice(new_vmr);
     pre.extend_from_slice(&int_to_8_bytes_be(new_vc));
     pre.extend_from_slice(&int_to_8_bytes_be(new_epoch));
+    pre.extend_from_slice(network_coin_launcher_id); // CHK-012: network ID binding
     sha(&pre)
 }
 
@@ -307,7 +309,8 @@ fn vv_req_chk_003_checkpoint_path_executes() {
     let agg_signers = [0xEE; 48];
     let agg_sig = [0xFF; 96];
 
-    let checkpoint_msg = compute_checkpoint_message(&new_sr, &new_vmr, new_vc, new_epoch);
+    let checkpoint_msg =
+        compute_checkpoint_message(&new_sr, &new_vmr, new_vc, new_epoch, &[0x00; 32]);
 
     // Compute correct scalars (these ARE verified by the puzzle via assert)
     let scalars = compute_scalars(&vmr, vc, &new_vmr, new_vc, &agg_signers, &checkpoint_msg);
@@ -386,7 +389,8 @@ fn vv_req_chk_003_wrong_scalar_rejected() {
     let agg_signers = [0xEE; 48];
     let new_sr = [0xCC; 32];
     let new_epoch: u64 = 6;
-    let checkpoint_msg = compute_checkpoint_message(&new_sr, &new_vmr, new_vc, new_epoch);
+    let checkpoint_msg =
+        compute_checkpoint_message(&new_sr, &new_vmr, new_vc, new_epoch, &[0x00; 32]);
 
     // Compute correct scalars, then corrupt scalar1
     let mut scalars = compute_scalars(&vmr, vc, &new_vmr, new_vc, &agg_signers, &checkpoint_msg);

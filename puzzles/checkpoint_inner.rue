@@ -1,173 +1,485 @@
-// checkpoint_inner.rue
-// See spec-checkpoint-singleton.md for specification
-// Curried in: VK (per spec-wire-format VK Format), TREE_DEPTH, EMPTY_LEAF_HASH
+// ============================================================================
+// checkpoint_inner.rue — Inner puzzle for the checkpoint singleton
+// ============================================================================
+//
+// This is the core on-chain puzzle for the L2 consensus system. It lives
+// inside a Chia singleton and has two spend paths:
+//
+//   1. **Checkpoint** (is_checkpoint = true)
+//      Advances the L2 epoch. Requires a valid Groth16 proof that a majority
+//      of validators signed the new state, plus a BLS aggregate signature
+//      over the checkpoint message. On success the singleton recreates itself
+//      with the updated state and emits a checkpoint announcement.
+//
+//   2. **Membership query** (is_checkpoint = false)
+//      Proves whether a given pubkey is (or is not) in the current validator
+//      set via a Merkle inclusion/exclusion proof. Permissionless — anyone
+//      can query without providing a signature. Used by validators to prove
+//      their membership status for collateral recovery.
+//
+// ── Requirement traceability ───────────────────────────────────────────
+//   CHK-001  Singleton identity — this file IS the inner puzzle
+//   CHK-002  State tracking — STATE struct holds epoch, roots, count
+//   CHK-003  Groth16 + BLS verification in the checkpoint path
+//   CHK-004  State update — recreates singleton with new state
+//   CHK-005  Membership query — Merkle proof + announcement
+//   CHK-006  Permissionless query — no AGG_SIG on membership path
+//   CHK-007  VK immutability — VK/IC curried in, cannot change
+//
+// ── Specifications ─────────────────────────────────────────────────────
+//   spec-checkpoint-singleton.md  — authoritative puzzle specification
+//   spec-groth16-circuit.md       — circuit public inputs (6 inputs, 7 IC)
+//   spec-wire-format.md           — checkpoint message & announcement formats
+//   spec-security.md              — honest majority assumption
+//
+// ── How currying works ─────────────────────────────────────────────────
+//   The first 6 parameters (INNER_MOD_HASH through STATE) are "curried":
+//   baked into the puzzle at deployment. They form part of the puzzle hash.
+//   When the singleton wrapper calls (inner_puzzle inner_solution), the
+//   Chia curry pattern prepends these before the solution parameters.
+//
+//   The remaining parameters (is_checkpoint through conditions) are the
+//   "solution": provided fresh by the spender at spend time.
+//
+//   After currying, the CLVM env seen by this code is:
+//     (INNER_MOD_HASH . (VK . (IC . (TD . (ELH . (STATE . solution))))))
+//   where solution = (is_checkpoint . (proof . (... (conditions . nil))))
+//
+//   All structs are nil-terminated proper CLVM lists:
+//     State = (state_root . (epoch . (vmr . (vc . nil))))
+//   NOT improper pairs like (state_root . (epoch . (vmr . vc))).
+// ============================================================================
 
-struct VerificationKey {
-    alpha_g1: PublicKey,
-    beta_g2:  Signature,
-    gamma_g2: Signature,
-    delta_g2: Signature,
-    ic:       List<PublicKey>, // 7 entries per spec-wire-format IC Point Order
+// ── Struct definitions ─────────────────────────────────────────────────
+// Rue structs compile to nil-terminated CLVM proper lists.
+// Each struct field is a cons cell; the last field's cdr is nil.
+
+/// Groth16 verification key — curried in at deployment (CHK-007).
+///
+/// Contains the four curve points from the trusted setup that are needed
+/// for the pairing check. Flattened because Rue cannot index raw lists.
+///
+/// Total size: 48 + 96 + 96 + 96 = 336 bytes.
+struct VK {
+    alpha: PublicKey,     // G1 compressed, 48 bytes — used in e(-alpha, beta)
+    beta: Signature,      // G2 compressed, 96 bytes — used in e(-alpha, beta)
+    gamma: Signature,     // G2 compressed, 96 bytes — used in e(-vk_input, gamma)
+    delta: Signature,     // G2 compressed, 96 bytes — used in e(-C, delta)
 }
 
+/// IC (Interpolation Commitment) points — curried in at deployment (CHK-007).
+///
+/// These 7 G1 points come from the trusted setup. IC[0] is the constant
+/// term; IC[1]..IC[6] correspond to the 6 public inputs. They are used
+/// to compute the VK input for the Groth16 pairing equation:
+///
+///   vk_input = IC[0] + IC[1]*s1 + IC[2]*s2 + ... + IC[6]*s6
+///
+/// where s_i = sha256(public_input_i) interpreted as a scalar.
+///
+/// The number of IC points (7) must match PUBLIC_INPUT_COUNT + 1
+/// in the Rust circuit definition (src/prover/circuit.rs).
+struct IC {
+    ic0: PublicKey,       // G1, constant term
+    ic1: PublicKey,       // G1, multiplied by scalar(validator_merkle_root)
+    ic2: PublicKey,       // G1, multiplied by scalar(validator_count)
+    ic3: PublicKey,       // G1, multiplied by scalar(new_validator_merkle_root)
+    ic4: PublicKey,       // G1, multiplied by scalar(new_validator_count)
+    ic5: PublicKey,       // G1, multiplied by scalar(agg_signers)
+    ic6: PublicKey,       // G1, multiplied by scalar(checkpoint_message)
+}
+
+/// On-chain state tracked by the checkpoint singleton (CHK-002).
+///
+/// This state is curried into the puzzle, so it becomes part of the
+/// puzzle hash. Each checkpoint spend updates it to reflect the new
+/// L2 state. The membership query path reads it but does not change it.
+struct State {
+    state_root: Bytes32,              // L2 application state commitment
+    epoch: Int,                       // Monotonically increasing epoch counter
+    validator_merkle_root: Bytes32,   // Poseidon/SHA-256 Merkle root of validator set
+    validator_count: Int,             // Total number of registered validators
+}
+
+/// Groth16 proof — 3 curve points, 192 bytes total (WIRE-003).
+///
+/// Provided in the checkpoint solution. Verified on-chain via the
+/// bls_pairing_identity CLVM opcode against the verification key.
 struct Proof {
-    a: PublicKey,   // G1, 48 bytes per spec-wire-format
-    b: Signature,   // G2, 96 bytes per spec-wire-format
-    c: PublicKey,   // G1, 48 bytes per spec-wire-format
+    a: PublicKey,    // G1 compressed, 48 bytes
+    b: Signature,    // G2 compressed, 96 bytes
+    c: PublicKey,    // G1 compressed, 48 bytes
 }
 
-// Mirrors verify_path() in spec-sparse-merkle-tree exactly
+/// Pre-computed scalars for the VK input linear combination (WIRE-006).
+///
+/// Each scalar is sha256(public_input_i), a 32-byte hash. The puzzle
+/// verifies each scalar matches its public input, then uses them in
+/// the VK input computation: vk_input = IC[0] + sum(IC[i] * s_i).
+///
+/// Typed as PublicKey (48-byte G1) for Rue's g1_multiply operator,
+/// but the actual atoms are 32 bytes. CLVM's g1_multiply treats the
+/// scalar as a signed big-endian integer and reduces mod the group
+/// order before multiplying.
+///
+/// The prover's bytes_to_scalar() function must use the same signed
+/// interpretation to produce matching Groth16 public inputs.
+struct Scalars {
+    s1: PublicKey,   // sha256(validator_merkle_root)
+    s2: PublicKey,   // sha256(validator_count as 8-byte big-endian)
+    s3: PublicKey,   // sha256(new_validator_merkle_root)
+    s4: PublicKey,   // sha256(new_validator_count as 8-byte big-endian)
+    s5: PublicKey,   // sha256(agg_signers)
+    s6: PublicKey,   // sha256(checkpoint_message)
+}
+
+/// Recursive cons pair for walking Merkle sibling lists.
+///
+/// Merkle proofs are a linked list of 32-byte sibling hashes,
+/// one per tree level. The list has TREE_DEPTH elements.
+struct HashCons {
+    head: Bytes32,   // Sibling hash at this tree level
+    tail: HashCons,  // Remaining siblings (or nil at the leaf level)
+}
+
+// ── Helper functions ───────────────────────────────────────────────────
+
+/// Encode an integer as exactly 8 big-endian bytes (WIRE-001).
+///
+/// Used for serializing epoch and validator_count into the checkpoint
+/// message and membership announcement. Adds a 9-byte sentinel
+/// (0x01 followed by 8 zero bytes) then strips the leading 0x01
+/// to guarantee exactly 8 bytes regardless of the integer's magnitude.
+///
+/// Examples:
+///   int_to_8_bytes_be(0)   → [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+///   int_to_8_bytes_be(1)   → [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
+///   int_to_8_bytes_be(256) → [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00]
+inline fn int_to_8_bytes_be(n: Int) -> Bytes {
+    let sentinel: Int = 0x010000000000000000 as Int;
+    let padded_bytes: Bytes = (n + sentinel) as Bytes;
+    substr(padded_bytes, 1, 9)
+}
+
+/// Recursively verify a Merkle inclusion proof (SMT-004).
+///
+/// Walks from leaf to root, hashing the current node with its sibling
+/// at each level. The index bits determine left/right ordering:
+///   - index % 2 == 0 → current node is LEFT child:  hash(node || sibling)
+///   - index % 2 == 1 → current node is RIGHT child: hash(sibling || node)
+///
+/// After consuming all TREE_DEPTH siblings, returns the computed root.
+/// The caller compares this to STATE.validator_merkle_root.
+///
+/// This must match the off-chain SparseMerkleTree::verify() in
+/// src/merkle/proof.rs for cross-implementation consistency (SMT-005).
 fn verify_merkle_path(
-    node: Bytes32,
-    index: Int,
-    siblings: List<Bytes32>,
-    root: Bytes32,
-    depth: Int,
-    level: Int,
-) -> Bool {
-    if level == depth {
-        node == root
+    node: Bytes32,            // Current hash (starts as leaf hash)
+    index: Int,               // Merkle slot index (determines left/right at each level)
+    remaining: HashCons,      // Remaining sibling hashes
+    depth_remaining: Int,     // Levels left to process (counts down from TREE_DEPTH)
+) -> Bytes32 {
+    if depth_remaining == 0 {
+        node
     } else {
-        let sibling = siblings[level];
-        // Left child first per spec-sparse-merkle-tree — critical invariant
-        let parent = if index % 2 == 0 {
-            sha256(node + sibling)
+        let sibling: Bytes32 = remaining.head;
+        let node_b: Bytes = node as Bytes;
+        let sibling_b: Bytes = sibling as Bytes;
+        let parent: Bytes32 = if index % 2 == 0 {
+            sha256(node_b + sibling_b)       // node is left child
         } else {
-            sha256(sibling + node)
+            sha256(sibling_b + node_b)       // node is right child
         };
-        verify_merkle_path(parent, index / 2, siblings, root, depth, level + 1)
+        verify_merkle_path(parent, index / 2, remaining.tail, depth_remaining - 1)
     }
 }
 
+// ============================================================================
+// Main entry point
+// ============================================================================
+//
+// Parameters are split into two groups:
+//
+//   Curried (fixed at deployment, part of puzzle hash):
+//     INNER_MOD_HASH, VK, IC, TREE_DEPTH, EMPTY_LEAF_HASH, STATE
+//
+//   Solution (provided by spender):
+//     is_checkpoint, proof, new_state_root, new_validator_merkle_root,
+//     new_validator_count, agg_signers, agg_sig, scalars,
+//     query_pubkey, leaf_index, siblings, is_member, conditions
+//
+// The singleton outer puzzle calls: (a inner_puzzle inner_solution)
+// The curry wrapper prepends the curried args before the solution.
+// ============================================================================
+
 fn main(
-    VK: VerificationKey,
-    TREE_DEPTH: Int,
-    EMPTY_LEAF_HASH: Bytes32,
+    // ── Curried parameters (fixed at deployment) ───────────────────
+    INNER_MOD_HASH: Bytes32,    // Tree hash of this module (for self-recreation)
+    VK: VK,                     // CHK-007: Groth16 verification key (immutable)
+    IC: IC,                     // CHK-007: IC points for VK input (immutable)
+    TREE_DEPTH: Int,            // Sparse Merkle tree depth (32)
+    EMPTY_LEAF_HASH: Bytes32,   // sha256([0x00; 48]) — hash of an empty validator slot
+    NETWORK_COIN_LAUNCHER_ID: Bytes32, // CHK-012: network identity for cross-network replay prevention
+    STATE: State,               // CHK-002: current on-chain state
 
-    state_root:            Bytes32,
-    epoch:                 Int,
-    validator_merkle_root: Bytes32,
-    validator_count:       Int,
+    // ── Solution: spend path selector ───────────────────────────────
+    is_checkpoint: Bool,        // true = checkpoint path, false = membership query
 
-    is_checkpoint: Bool,
+    // ── Solution: checkpoint spend fields ────────────────────────────
+    proof: Proof,                     // Groth16 proof (192 bytes)
+    new_state_root: Bytes32,          // New L2 state commitment
+    new_validator_merkle_root: Bytes32,  // New validator set Merkle root
+    new_validator_count: Int,         // New total validator count
+    agg_signers: PublicKey,           // Aggregate of signing validators' pubkeys (G1)
+    agg_sig: Signature,               // Aggregate BLS signature over checkpoint msg (G2)
+    scalars: Scalars,                 // sha256(each public input) for VK input computation
 
-    // Checkpoint spend fields (unused in membership query):
-    proof:                     Proof,
-    new_state_root:            Bytes32,
-    new_validator_merkle_root: Bytes32,
-    new_validator_count:       Int,
-    agg_signers:               PublicKey,
-    agg_sig:                   Signature,
+    // ── Solution: membership query fields ───────────────────────────
+    query_pubkey: PublicKey,           // Pubkey to query membership for
+    leaf_index: Int,                   // Merkle tree slot index
+    siblings: HashCons,                // Merkle proof sibling hashes
+    is_member: Bool,                   // true = prove membership, false = prove non-membership
 
-    // Membership query fields (unused in checkpoint):
-    query_pubkey: PublicKey,
-    leaf_index:   Int,
-    siblings:     List<Bytes32>,
-    is_member:    Bool,
-
-    conditions: List<Condition>,
+    // ── Solution: additional conditions ──────────────────────────────
+    conditions: List<Condition>,       // Extra conditions (spread into output via ...conditions)
 ) -> List<Condition> {
 
     if is_checkpoint {
 
-        let new_epoch = epoch + 1;
+        // ================================================================
+        // CHECKPOINT PATH (CHK-003, CHK-004)
+        //
+        // This path advances the L2 epoch. It requires:
+        //   1. A valid Groth16 proof (proves majority of validators participated)
+        //   2. A valid BLS aggregate signature (proves they signed this message)
+        //
+        // The proof verification has three stages:
+        //   a. Scalar verification — confirms sha256(input) == scalar for each input
+        //   b. VK input computation — linear combination of IC points with scalars
+        //   c. Pairing check — the Groth16 verification equation
+        //
+        // After verification, the singleton recreates itself with updated state
+        // and emits a checkpoint announcement for the indexer.
+        // ================================================================
 
-        // Checkpoint message format per spec-wire-format — Checkpoint Message
-        let checkpoint_message = sha256(
-            new_state_root
-            + new_validator_merkle_root
+        // ── Compute derived values ─────────────────────────────────
+        let new_epoch = STATE.epoch + 1;
+
+        // Checkpoint message = sha256(new_sr || new_vmr || new_vc_be8 || new_epoch_be8 || network_id)
+        // This is the message that validators collectively sign (WIRE-001).
+        // It commits to the complete new state AND the network identity so
+        // the signature can't be reused for a different state or network.
+        // CHK-012: network_coin_launcher_id prevents cross-network replay.
+        let sr_b: Bytes = new_state_root as Bytes;
+        let mr_b: Bytes = new_validator_merkle_root as Bytes;
+        let net_id_b: Bytes = NETWORK_COIN_LAUNCHER_ID as Bytes;
+        let checkpoint_message: Bytes32 = sha256(
+            sr_b + mr_b
             + int_to_8_bytes_be(new_validator_count)
             + int_to_8_bytes_be(new_epoch)
+            + net_id_b
         );
 
-        // VK input computation per spec-wire-format — VK Input Computation
-        // scalar() encoding per spec-wire-format — scalar() Function
-        let vk_input = VK.ic[0]
-            + VK.ic[1] * scalar(validator_merkle_root)
-            + VK.ic[2] * scalar(int_to_8_bytes_be(validator_count))
-            + VK.ic[3] * scalar(new_validator_merkle_root)
-            + VK.ic[4] * scalar(int_to_8_bytes_be(new_validator_count))
-            + VK.ic[5] * scalar(agg_signers)
-            + VK.ic[6] * scalar(checkpoint_message);
+        // ── Stage (a): Scalar verification ─────────────────────────
+        // Each scalar must equal sha256 of its corresponding public input.
+        // This binds the scalars to the actual on-chain values, preventing
+        // the prover from substituting fake scalars.
+        //
+        // The scalar() function is defined in WIRE-006:
+        //   scalar(bytes) = sha256(bytes) interpreted as big-endian integer
+        //
+        // CLVM's g1_multiply treats scalars as signed big-endian integers.
+        // The prover's bytes_to_scalar() must match this convention.
+        let vmr_b: Bytes = STATE.validator_merkle_root as Bytes;
+        assert sha256(vmr_b) == (scalars.s1 as Bytes);                              // s1 = scalar(vmr)
+        assert sha256(int_to_8_bytes_be(STATE.validator_count)) == (scalars.s2 as Bytes); // s2 = scalar(vc)
+        assert sha256(mr_b) == (scalars.s3 as Bytes);                               // s3 = scalar(new_vmr)
+        assert sha256(int_to_8_bytes_be(new_validator_count)) == (scalars.s4 as Bytes);   // s4 = scalar(new_vc)
+        let agg_b: Bytes = agg_signers as Bytes;
+        assert sha256(agg_b) == (scalars.s5 as Bytes);                              // s5 = scalar(agg_signers)
+        let cm_b: Bytes = checkpoint_message as Bytes;
+        assert sha256(cm_b) == (scalars.s6 as Bytes);                               // s6 = scalar(ckpt_msg)
 
-        // Groth16 verification per spec-groth16-circuit — On-Chain Verification
-        // Cost: ~7.8M CLVM units per spec-clvm-costs — Groth16 Verification
+        // ── Stage (b): VK input computation ────────────────────────
+        // Computes the linear combination of IC points with the verified scalars.
+        // This is the "prepared input" for the Groth16 verifier:
+        //
+        //   vk_input = IC[0] + IC[1]*s1 + IC[2]*s2 + ... + IC[6]*s6
+        //
+        // Uses CLVM opcodes: g1_multiply (opcode 50) and point_add (opcode 29).
+        // The result is a G1 point that encodes all 6 public inputs into
+        // a single curve point for the pairing check.
+        let vk_input: PublicKey = IC.ic0
+            + IC.ic1 * scalars.s1
+            + IC.ic2 * scalars.s2
+            + IC.ic3 * scalars.s3
+            + IC.ic4 * scalars.s4
+            + IC.ic5 * scalars.s5
+            + IC.ic6 * scalars.s6;
+
+        // ── Stage (c): Groth16 pairing check ───────────────────────
+        // Verifies the Groth16 proof using the multi-pairing identity:
+        //
+        //   e(A, B) * e(-alpha, beta) * e(-vk_input, gamma) * e(-C, delta) = 1
+        //
+        // This is opcode 58 (bls_pairing_identity). It takes 4 pairs of
+        // (G1, G2) points and checks their product of pairings equals the
+        // identity element in GT. Raises on failure.
+        //
+        // The negations (-alpha, -vk_input, -C) use opcode 51 (g1_negate).
         bls_pairing_identity(
-            proof.a,       VK.beta_g2,
-            -VK.alpha_g1,  proof.b,
-            -vk_input,     VK.gamma_g2,
-            -proof.c,      VK.delta_g2,
+            proof.a,    proof.b,         // e(A, B)
+            -VK.alpha,  VK.beta,         // e(-alpha, beta)
+            -vk_input,  VK.gamma,        // e(-vk_input, gamma)
+            -proof.c,   VK.delta,        // e(-C, delta)
         );
 
-        // BLS aggregate signature verification
-        // Cost: ~4.2M CLVM units per spec-clvm-costs
+        // ── BLS aggregate signature verification ───────────────────
+        // Verifies that the aggregate signature was produced by the aggregate
+        // pubkey over the checkpoint message. Uses opcode 59 (bls_verify)
+        // which implements the BLS augmented scheme (BLS_SIG_BLS12381G2_XMD:
+        // SHA-256_SSWU_RO_AUG_).
+        //
+        // Combined with the Groth16 proof (which proves majority participation),
+        // this ensures that a majority of validators actually signed this
+        // specific checkpoint message.
         bls_verify(agg_sig, agg_signers, checkpoint_message);
 
-        conditions + [
-            CreateCoin(
-                curry_hash(
-                    MY_PUZZLE_HASH,
-                    new_state_root,
-                    new_epoch,
-                    new_validator_merkle_root,
-                    new_validator_count,
-                ),
-                MY_AMOUNT,
+        // ── CHK-004: State update and singleton recreation ─────────
+        // Build the new state and compute the curried puzzle hash for the
+        // recreated singleton. The curry_tree_hash must include ALL curried
+        // parameters in order, with the updated STATE.
+
+        let new_state = State {
+            state_root: new_state_root,
+            epoch: new_epoch,
+            validator_merkle_root: new_validator_merkle_root,
+            validator_count: new_validator_count,
+        };
+
+        // Compute the inner puzzle hash after currying with the new state.
+        // This hash is what the singleton outer puzzle uses for the child coin.
+        // The tree_hash of each curried arg must match exactly — if any arg
+        // differs, the child singleton will have a different puzzle hash and
+        // the spend chain breaks.
+        let new_puzzle_hash: Bytes32 = curry_tree_hash(
+            INNER_MOD_HASH,
+            [
+                tree_hash(INNER_MOD_HASH),       // arg 1: self-reference
+                tree_hash(VK),                   // arg 2: verification key (unchanged)
+                tree_hash(IC),                   // arg 3: IC points (unchanged)
+                tree_hash(TREE_DEPTH),           // arg 4: tree depth (unchanged)
+                tree_hash(EMPTY_LEAF_HASH),      // arg 5: empty leaf hash (unchanged)
+                tree_hash(NETWORK_COIN_LAUNCHER_ID), // arg 6: network ID (unchanged, CHK-012)
+                tree_hash(new_state),            // arg 7: UPDATED state
+            ],
+        );
+
+        // CreateCoin with the new curried puzzle hash. The singleton outer
+        // puzzle transforms this into the full singleton puzzle hash.
+        // Amount = 1 (odd) signals to the singleton that this is the
+        // continuation coin.
+        let recreate = CreateCoin {
+            puzzle_hash: new_puzzle_hash,
+            amount: 1,
+            memos: nil,
+        };
+
+        // Checkpoint announcement for the indexer and other on-chain consumers.
+        // Format: sha256("checkpoint" || epoch_be8 || state_root || vmr || vc_be8)
+        let announce = CreateCoinAnnouncement {
+            message: sha256(
+                "checkpoint"
+                + int_to_8_bytes_be(new_epoch)
+                + sr_b
+                + mr_b
+                + int_to_8_bytes_be(new_validator_count)
             ),
-            // Checkpoint state announcement per spec-wire-format
-            // Parsed by the indexer per spec-indexer — Checkpoint State Updates
-            CreateCoinAnnouncement(
-                sha256(
-                    "checkpoint"
-                    + int_to_8_bytes_be(new_epoch)
-                    + new_state_root
-                    + new_validator_merkle_root
-                    + int_to_8_bytes_be(new_validator_count)
-                )
-            ),
-        ]
+        };
+
+        // Output: CREATE_COIN (recreation) + announcement + any extra conditions
+        [recreate, announce, ...conditions]
 
     } else {
 
-        // Membership query spend path
-        // Merkle path verification per spec-sparse-merkle-tree — On-Chain Verification
-        // Cost: ~4.1M CLVM units per spec-clvm-costs — Spend Path 3
+        // ================================================================
+        // MEMBERSHIP QUERY PATH (CHK-005, CHK-006)
+        //
+        // Proves that a given pubkey IS or IS NOT in the current validator
+        // set by verifying a Merkle inclusion/exclusion proof against the
+        // current validator_merkle_root.
+        //
+        // CHK-006: This path is PERMISSIONLESS — no AGG_SIG_ME or other
+        // signature conditions are emitted. Anyone can query membership
+        // status. This is by design: validators need to prove their
+        // membership for collateral recovery, and the query itself
+        // doesn't change state.
+        //
+        // The query emits a CreateCoinAnnouncement with the membership
+        // status. Other puzzles (e.g., registration coin for collateral
+        // return) can assert this announcement to verify membership.
+        // ================================================================
 
-        let leaf = if is_member {
-            sha256(query_pubkey)   // active_leaf per spec-sparse-merkle-tree
+        // ── Compute leaf hash ──────────────────────────────────────
+        // For a member: leaf = sha256(pubkey)  (matches SMT-003 active leaf)
+        // For a non-member: leaf = EMPTY_LEAF_HASH (matches SMT-003 empty leaf)
+        let pk_b: Bytes = query_pubkey as Bytes;
+        let leaf: Bytes32 = if is_member {
+            sha256(pk_b)
         } else {
-            EMPTY_LEAF_HASH        // empty_leaf per spec-sparse-merkle-tree
+            EMPTY_LEAF_HASH
         };
 
-        let valid = verify_merkle_path(
-            leaf, leaf_index, siblings,
-            validator_merkle_root, TREE_DEPTH, 0,
+        // ── Verify Merkle proof ────────────────────────────────────
+        // Walk from leaf to root using the sibling hashes.
+        // The computed root must match the current state's validator_merkle_root.
+        let computed_root = verify_merkle_path(
+            leaf, leaf_index, siblings, TREE_DEPTH,
         );
 
-        assert valid;
+        assert computed_root == STATE.validator_merkle_root;
 
-        // Membership announcement per spec-wire-format — Membership Announcement Format
-        // Asserted by the registration coin per spec-registration-coin — What the Puzzle Does
-        let announcement = sha256(
+        // ── Build membership announcement (WIRE-004) ───────────────
+        // Format: sha256("membership" || epoch_be8 || pubkey || is_member_byte)
+        // where is_member_byte = 0x01 for member, 0x00 for non-member.
+        //
+        // This deterministic format allows other puzzles to predict and
+        // assert the announcement without running the query themselves.
+        let is_member_byte: Bytes = if is_member { 0x01 as Bytes } else { 0x00 as Bytes };
+        let announcement: Bytes32 = sha256(
             "membership"
-            + int_to_8_bytes_be(epoch)
-            + query_pubkey
-            + if is_member { 1 } else { 0 }
+            + int_to_8_bytes_be(STATE.epoch)
+            + pk_b
+            + is_member_byte
         );
 
-        conditions + [
-            // Recreate singleton UNCHANGED - state does not change
-            CreateCoin(
-                curry_hash(
-                    MY_PUZZLE_HASH,
-                    state_root,
-                    epoch,
-                    validator_merkle_root,
-                    validator_count,
-                ),
-                MY_AMOUNT,
-            ),
-            CreateCoinAnnouncement(announcement),
-        ]
+        // ── Singleton self-recreation (unchanged state) ────────────
+        // The membership query does NOT change state. The singleton
+        // recreates itself with the SAME puzzle hash (same curried args).
+        let same_puzzle_hash: Bytes32 = curry_tree_hash(
+            INNER_MOD_HASH,
+            [
+                tree_hash(INNER_MOD_HASH),
+                tree_hash(VK),
+                tree_hash(IC),
+                tree_hash(TREE_DEPTH),
+                tree_hash(EMPTY_LEAF_HASH),
+                tree_hash(NETWORK_COIN_LAUNCHER_ID), // CHK-012
+                tree_hash(STATE),            // STATE unchanged
+            ],
+        );
+
+        let recreate = CreateCoin {
+            puzzle_hash: same_puzzle_hash,
+            amount: 1,
+            memos: nil,
+        };
+
+        let announce = CreateCoinAnnouncement {
+            message: announcement,
+        };
+
+        // Output: CREATE_COIN (recreation) + announcement + any extra conditions
+        [recreate, announce, ...conditions]
     }
 }
