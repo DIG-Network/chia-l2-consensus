@@ -1,39 +1,87 @@
 //! Network configuration for chia-l2-consensus.
 //!
-//! See [spec-consensus-crate.md Lines 226-315](../docs/resources/spec-consensus-crate.md).
+//! Contains all deployment-time parameters that define a specific L2 network.
+//! Produced by `deploy_both_singletons()` and saved to disk as JSON.
+//! Loaded on every subsequent node startup.
+//!
+//! Changing `collateral_amount`, `tree_depth`, or `verification_key_hex`
+//! requires a full redeployment. Changing `max_signers` requires a new
+//! trusted setup ceremony.
+//!
+//! See [spec-consensus-crate.md Lines 226-315](../docs/resources/spec-consensus-crate.md)
+//! for the full NetworkConfig specification.
 
 use chia_protocol::Bytes32;
 
 /// All parameters that define a specific L2 network deployment.
 ///
 /// Fixed at deployment time and never change for the life of the deployment.
+/// Produced by `ConsensusClient::deploy()` and saved to disk.
+/// Loaded on every subsequent node startup.
+///
+/// See [spec-consensus-crate.md Lines 233-297](../docs/resources/spec-consensus-crate.md).
 #[derive(Debug, Clone)]
 pub struct NetworkConfig {
     /// Launcher ID of the network coin singleton.
+    /// Permanent identifier for this L2 network's registration authority.
+    /// Used to derive the current network coin puzzle hash for on-chain lookups.
+    ///
+    /// See [spec-network-coin.md Lines 50-80](../docs/resources/spec-network-coin.md) — Deployment.
     pub network_coin_launcher_id: Bytes32,
 
     /// Launcher ID of the checkpoint singleton.
+    /// Used to find the current checkpoint coin and derive `checkpoint_singleton_id()`.
+    ///
+    /// See [spec-checkpoint-singleton.md Lines 50-80](../docs/resources/spec-checkpoint-singleton.md) — Deployment.
     pub checkpoint_launcher_id: Bytes32,
 
-    /// Tree hash of the base registration coin puzzle before currying.
+    /// Tree hash of the base registration coin puzzle BEFORE currying.
+    /// Every valid registration coin derives its puzzle hash from this.
+    /// Used by the indexer for lineage verification (IDX-002).
+    ///
+    /// See [spec-registration-coin.md Lines 100-150](../docs/resources/spec-registration-coin.md) —
+    /// Computing the Registration Coin Puzzle Hash.
     pub registration_coin_mod_hash: Bytes32,
 
-    /// Tree hash of the base checkpoint inner puzzle before currying.
+    /// Tree hash of the base checkpoint inner puzzle BEFORE currying.
+    /// Used to rebuild the inner puzzle with current state on each spend.
     pub checkpoint_inner_mod_hash: Bytes32,
 
     /// Required collateral per validator in mojos.
+    /// Enforced exactly by the network coin puzzle on every registration.
+    /// Cannot change without redeploying the network coin.
+    ///
+    /// See [spec-network-coin.md Lines 30-50](../docs/resources/spec-network-coin.md) —
+    /// Curried In Parameters: COLLATERAL_AMOUNT.
     pub collateral_amount: u64,
 
-    /// Depth of the sparse Merkle tree.
+    /// Depth of the sparse Merkle tree (default: 32).
+    /// Must match TREE_DEPTH in circuit, SMT, and checkpoint singleton.
+    ///
+    /// See [spec-sparse-merkle-tree.md Lines 30-60](../docs/resources/spec-sparse-merkle-tree.md) —
+    /// Parameters: TREE_DEPTH.
     pub tree_depth: u32,
 
-    /// Maximum simultaneous signers supported by the Groth16 circuit.
+    /// Maximum simultaneous signers the Groth16 circuit supports.
+    /// Fixed at trusted setup time. Cannot increase without new ceremony.
+    ///
+    /// See [spec-groth16-circuit.md Lines 150-180](../docs/resources/spec-groth16-circuit.md) —
+    /// Circuit Parameters: MAX_SIGNERS.
     pub max_signers: usize,
 
-    /// Groth16 verification key from the trusted setup ceremony (hex-encoded).
+    /// Groth16 verification key from the trusted setup ceremony.
+    /// Stored as hex-encoded bytes (672 bytes → 1344 hex chars).
+    /// This exact value is curried into the checkpoint singleton at deployment.
+    ///
+    /// See [spec-wire-format.md Lines 200-250](../docs/resources/spec-wire-format.md) —
+    /// Verification Key Format.
     pub verification_key_hex: String,
 
-    /// Chia network genesis challenge.
+    /// Chia network genesis challenge (mainnet or testnet constant).
+    /// Used in AGG_SIG_ME message construction for all signed conditions.
+    ///
+    /// See [spec-wire-format.md Lines 466-500](../docs/resources/spec-wire-format.md) —
+    /// Individual Signatures.
     pub genesis_challenge: Bytes32,
 }
 
