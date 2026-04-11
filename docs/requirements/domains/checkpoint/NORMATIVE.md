@@ -78,7 +78,14 @@
 
 ---
 
-## §10 End-to-End Integration Test
+## §10 Permissionless Submission / Forgery Resistance
+
+<a id="CHK-014"></a>**CHK-014** Anyone MUST be able to submit a checkpoint spend (no AGG_SIG_ME required from the submitter). However, the puzzle MUST reject any submission where the Groth16 proof or BLS aggregate signature is invalid, forged, or does not represent a majority of the registered validator set. A submitter who is not a validator and does not possess valid signatures from a majority cannot produce an accepted checkpoint spend.
+> **Spec:** [`CHK-014.md`](specs/CHK-014.md)
+
+---
+
+## §11 End-to-End Integration Test
 
 <a id="CHK-008"></a>**CHK-008** A full end-to-end integration test MUST exercise the complete lifecycle: deploy network coin + checkpoint singleton, register validators, collect signatures, generate a real Groth16 proof, submit a checkpoint spend via chia-wallet-sdk simulator, verify state update, then execute collateral recovery via membership query + registration coin spend in the same bundle.
 > **Spec:** [`CHK-008.md`](../../../design/requirements/checkpoint/CHK-008.md)

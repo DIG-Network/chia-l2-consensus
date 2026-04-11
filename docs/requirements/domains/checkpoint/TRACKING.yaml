@@ -148,3 +148,12 @@ items:
     tests:
       - tests/vv_req_chk_013.rs
     notes: "11 VV tests: message includes all 3 fields, signature verifies, changing any field invalidates, multi-validator aggregation, proof bound to message, puzzle recomputes internally, two-check design present, complete attestation flow."
+
+  - id: CHK-014
+    section: "Permissionless Submission / Forgery Resistance"
+    summary: "Anyone can submit but puzzle rejects forged proofs/signatures"
+    status: verified
+    spec_ref: "docs/requirements/domains/checkpoint/specs/CHK-014.md"
+    tests:
+      - tests/vv_req_chk_014.rs
+    notes: "11 VV tests: no AGG_SIG (permissionless), both opcodes present (forgery resistance), minority rejected, message computed internally, epoch auto-incremented, network ID curried, complete threat model verification."
