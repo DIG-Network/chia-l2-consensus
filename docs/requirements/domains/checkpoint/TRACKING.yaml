@@ -118,7 +118,14 @@ items:
   - id: CHK-012
     section: "Network ID Binding"
     summary: "network_coin_launcher_id in checkpoint_message prevents cross-network replay"
-    status: gap
+    status: verified
     spec_ref: "docs/requirements/domains/checkpoint/specs/CHK-012.md"
-    tests: []
-    notes: "REQUIRES IMPLEMENTATION: network_coin_launcher_id NOT in checkpoint_message yet. Rue puzzle + wire format change needed."
+    tests:
+      - tests/vv_req_chk_012.rs::vv_req_chk_012_different_networks_different_messages
+      - tests/vv_req_chk_012.rs::vv_req_chk_012_network_id_in_preimage
+      - tests/vv_req_chk_012.rs::vv_req_chk_012_proof_bound_to_network
+      - tests/vv_req_chk_012.rs::vv_req_chk_012_scalar_changes_with_network
+      - tests/vv_req_chk_012.rs::vv_req_chk_012_deterministic
+      - tests/vv_req_chk_012.rs::vv_req_chk_012_zero_network_id_valid
+      - tests/vv_req_chk_012.rs::vv_req_chk_012_preimage_112_bytes
+    notes: "IMPLEMENTED: network_coin_launcher_id added as curried param in checkpoint_inner.rue and 5th arg in compute_checkpoint_message(). Preimage grew from 80→112 bytes."

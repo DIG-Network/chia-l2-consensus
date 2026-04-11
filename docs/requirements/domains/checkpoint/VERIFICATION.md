@@ -16,6 +16,6 @@
 | [CHK-010](NORMATIVE.md#CHK-010) | ✅ | Single checkpoint per epoch | Signature epoch mismatch; aggregate epoch-bound; singleton recreation; replay prevented; 7 VV tests |
 
 | [CHK-011](NORMATIVE.md#CHK-011) | ✅ | State hash binding | state_root is first field; different roots → different messages/scalars/proofs; Rue uses same root for msg+recreation; 8 VV tests |
-| [CHK-012](NORMATIVE.md#CHK-012) | ❌ | Network ID binding | Add network_coin_launcher_id to checkpoint_message; curried in puzzle; different networks → different messages |
+| [CHK-012](NORMATIVE.md#CHK-012) | ✅ | Network ID binding | network_coin_launcher_id curried in puzzle; 112-byte preimage; different networks → different messages; 7 VV tests |
 
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap
