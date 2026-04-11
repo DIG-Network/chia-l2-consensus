@@ -20,7 +20,7 @@
 /// # Examples
 ///
 /// ```
-/// use chia_l2_consensus::is_majority;
+/// use chia_l2_consensus::testing::is_majority;
 ///
 /// assert!(is_majority(51, 100));  // 102 > 100
 /// assert!(!is_majority(50, 100)); // 100 > 100 is false
@@ -54,7 +54,7 @@ pub fn is_majority(k: u64, validator_count: u64) -> bool {
 /// # Examples
 ///
 /// ```
-/// use chia_l2_consensus::minimum_signers;
+/// use chia_l2_consensus::testing::minimum_signers;
 ///
 /// assert_eq!(minimum_signers(100), 51);
 /// assert_eq!(minimum_signers(99), 50);
