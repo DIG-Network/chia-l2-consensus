@@ -3,8 +3,29 @@
 //!
 //! Spec: `docs/requirements/domains/wire/specs/WIRE-003.md`.
 //!
-//! Verifies that the Groth16 proof is exactly 192 bytes:
-//! A (G1, 48 bytes) + B (G2, 96 bytes) + C (G1, 48 bytes).
+//! **Normative statement:** A Groth16 proof consists of exactly three curve
+//! points: A (G1, 48 bytes) + B (G2, 96 bytes) + C (G1, 48 bytes) = 192 bytes.
+//! The field order is always A, B, C. In CLVM, the proof is passed as three
+//! separate atoms (not a single concatenated blob).
+//!
+//! **How the tests prove this:**
+//! - `proof_size_is_192_bytes` asserts the GROTH16_PROOF_SIZE constant.
+//! - `proof_a_is_48_bytes`, `proof_b_is_96_bytes`, `proof_c_is_48_bytes`
+//!   serialize random curve points and check individual component sizes.
+//! - `concatenated_abc_is_192` serializes A, B, C and sums their lengths.
+//! - `field_order_is_abc` concatenates the components and verifies byte
+//!   ranges [0..48], [48..144], [144..192] match A, B, C respectively.
+//! - `separate_atoms_for_clvm` checks each component's size independently,
+//!   matching the CLVM representation of three separate atoms.
+//! - `identity_points` verifies that infinity points still produce 192 bytes.
+//!
+//! **Acceptance-criteria coverage (from spec):**
+//! - [x] Proof is exactly 192 bytes total
+//! - [x] `a` is 48-byte G1 compressed
+//! - [x] `b` is 96-byte G2 compressed
+//! - [x] `c` is 48-byte G1 compressed
+//! - [x] Field order is A, B, C
+//! - [x] CLVM receives three separate atoms
 
 use ark_bls12_381::{Fr, G1Affine, G2Affine};
 use ark_ec::AffineRepr;
@@ -13,6 +34,9 @@ use ark_serialize::CanonicalSerialize;
 use chia_l2_consensus::testing::{G1_COMPRESSED_SIZE, G2_COMPRESSED_SIZE, GROTH16_PROOF_SIZE};
 use rand::thread_rng;
 
+/// Verifies the GROTH16_PROOF_SIZE constant equals 192.
+/// Strategy: direct assertion on the public constant.
+/// Confidence: all code referencing proof size uses the same value.
 #[test]
 fn vv_req_wire_003_proof_size_is_192_bytes() {
     // WIRE-003: Total proof size is 48 + 96 + 48 = 192 bytes
@@ -22,6 +46,9 @@ fn vv_req_wire_003_proof_size_is_192_bytes() {
     );
 }
 
+/// Verifies proof.a (G1) serializes to exactly 48 bytes.
+/// Strategy: random G1 point serialized compressed.
+/// Confidence: the A component has the correct wire-format size.
 #[test]
 fn vv_req_wire_003_proof_a_is_48_bytes() {
     // WIRE-003: proof.a is G1 compressed (48 bytes)
@@ -39,6 +66,9 @@ fn vv_req_wire_003_proof_a_is_48_bytes() {
     );
 }
 
+/// Verifies proof.b (G2) serializes to exactly 96 bytes.
+/// Strategy: random G2 point serialized compressed.
+/// Confidence: the B component has the correct wire-format size.
 #[test]
 fn vv_req_wire_003_proof_b_is_96_bytes() {
     // WIRE-003: proof.b is G2 compressed (96 bytes)
@@ -56,6 +86,9 @@ fn vv_req_wire_003_proof_b_is_96_bytes() {
     );
 }
 
+/// Verifies proof.c (G1) serializes to exactly 48 bytes.
+/// Strategy: random G1 point serialized compressed.
+/// Confidence: the C component has the correct wire-format size.
 #[test]
 fn vv_req_wire_003_proof_c_is_48_bytes() {
     // WIRE-003: proof.c is G1 compressed (48 bytes)
@@ -73,6 +106,9 @@ fn vv_req_wire_003_proof_c_is_48_bytes() {
     );
 }
 
+/// Verifies that the concatenation A || B || C totals 192 bytes.
+/// Strategy: serialize three random points and sum their byte lengths.
+/// Confidence: the combined proof fits the expected wire size.
 #[test]
 fn vv_req_wire_003_concatenated_abc_is_192() {
     // WIRE-003: Concatenating A || B || C gives exactly 192 bytes
@@ -102,6 +138,10 @@ fn vv_req_wire_003_concatenated_abc_is_192() {
     );
 }
 
+/// Verifies the field order is A then B then C within the concatenated bytes.
+/// Strategy: concatenate serialized components and assert that byte ranges
+/// [0..48], [48..144], [144..192] correspond to A, B, C respectively.
+/// Confidence: the byte layout matches what bls_pairing_identity expects.
 #[test]
 fn vv_req_wire_003_field_order_is_abc() {
     // WIRE-003: Proof MUST be serialized in order A, B, C
@@ -135,6 +175,9 @@ fn vv_req_wire_003_field_order_is_abc() {
     assert_eq!(&proof_bytes[144..192], &c_bytes[..], "Final 48 bytes are C");
 }
 
+/// Verifies the CLVM representation: three separate atoms with sizes 48, 96, 48.
+/// Strategy: serialize A, B, C independently and check each atom's length.
+/// Confidence: the checkpoint singleton receives correctly sized atoms.
 #[test]
 fn vv_req_wire_003_separate_atoms_for_clvm() {
     // WIRE-003: CLVM receives three separate atoms (not concatenated)
@@ -173,6 +216,9 @@ fn vv_req_wire_003_separate_atoms_for_clvm() {
     );
 }
 
+/// Verifies that identity (infinity) points still produce a 192-byte proof.
+/// Strategy: serialize G1::zero, G2::zero, G1::zero and sum lengths.
+/// Confidence: the degenerate case does not violate the size invariant.
 #[test]
 fn vv_req_wire_003_identity_points() {
     // WIRE-003: Identity/infinity points still produce correct sizes

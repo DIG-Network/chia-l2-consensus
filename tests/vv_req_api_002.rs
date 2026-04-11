@@ -1,7 +1,25 @@
 //! REQUIREMENT: API-002 — NetworkConfig Completeness
 //! (`docs/requirements/domains/crate_api/NORMATIVE.md#API-002`).
 //!
-//! Verifies NetworkConfig has serde, verification_key(), checkpoint_singleton_id().
+//! Spec: `docs/requirements/domains/crate_api/specs/API-002.md`.
+//!
+//! ## Normative statement
+//! `NetworkConfig` MUST support JSON serialization/deserialization, provide a
+//! `verification_key()` method that deserializes the VK from hex, and provide
+//! a `checkpoint_singleton_id()` method that derives the singleton coin ID.
+//! Bytes32 fields MUST serialize as 0x-prefixed hex. Invalid VK hex MUST
+//! return an error.
+//!
+//! ## How the tests prove the requirement
+//! 1. **JSON roundtrip**: All fields survive serialize -> deserialize.
+//! 2. **0x prefix**: JSON output contains "0xaa", "0xbb" for Bytes32.
+//! 3. **verification_key()**: Deserializes to VK with 7 IC points.
+//! 4. **checkpoint_singleton_id()**: Matches derive_launcher_id.
+//! 5. **Empty VK hex fails**: Error returned.
+//! 6. **Invalid VK hex fails**: Error returned.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: None significant.
 
 use chia_l2_consensus::testing::{
     derive_launcher_id, deserialize_proving_key, run_test_setup, vk_to_bytes,

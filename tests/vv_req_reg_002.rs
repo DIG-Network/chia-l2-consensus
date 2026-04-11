@@ -5,13 +5,47 @@
 //!
 //! Implementation: `src/indexer/validator_set.rs`.
 //!
-//! Verifies that registration coins are only accepted when their parent coin
-//! is a valid network coin spend. Coins without valid lineage are rejected.
+//! ## Normative Statement
+//!
+//! A registration coin is only valid if it was created by a legitimate network
+//! coin spend. The indexer maintains a set of valid network coin spend IDs and
+//! performs O(1) lookup to verify lineage. Coins whose parent is not a known
+//! network coin spend are rejected. This off-chain verification prevents
+//! attackers from creating fake registration coins directly.
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Tests exercise the `LineageChecker` API: creation, recording network coin
+//! spends, querying membership, accepting known parents, rejecting unknown
+//! parents, tracking multiple spends, counting, idempotent duplicate recording,
+//! `verify_registration_coin_lineage` for valid and invalid parents, and
+//! confirming the `InvalidLineage` error variant exists.
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] Indexer maintains set of all network coin spend IDs
+//! - [x] Coins created by network coin spend are accepted
+//! - [x] Coins NOT created by network coin are rejected
+//! - [x] Multiple spends tracked correctly
+//! - [x] Duplicate recording is idempotent
+//! - [x] ConsensusError::InvalidLineage exists
+//! - [x] Spec file exists
+//! - [ ] Lineage check includes singleton verification of network coin
+//!       (not tested -- requires full singleton lineage chain)
+//! - [ ] False registration coins produce no security impact (architectural)
+//!
+//! ## Gaps
+//!
+//! Tests exercise the LineageChecker in isolation. Full integration with the
+//! indexer processing pipeline (detecting network coin spends, extracting
+//! pubkey memos, computing expected puzzle hashes) is not tested here.
 
 use chia_protocol::Bytes32;
 
 // ── LineageChecker type and API ─────────────────────────────────────
 
+// Verifies that validator_set.rs contains lineage verification logic
+// (LineageChecker, lineage_checker, or verify_lineage).
 #[test]
 fn vv_req_reg_002_lineage_checker_exists() {
     // REG-002: The crate must expose a LineageChecker type for verifying
@@ -27,6 +61,7 @@ fn vv_req_reg_002_lineage_checker_exists() {
     );
 }
 
+// Verifies the source maintains a set of network coin spend IDs for O(1) lookup.
 #[test]
 fn vv_req_reg_002_tracks_network_coin_spends() {
     // REG-002: The lineage checker must maintain a set of valid network
@@ -40,6 +75,8 @@ fn vv_req_reg_002_tracks_network_coin_spends() {
     );
 }
 
+// Records a network coin spend and verifies it can be queried back.
+// This is the basic write-then-read operation.
 #[test]
 fn vv_req_reg_002_can_record_network_coin_spend() {
     // REG-002: Must be able to record a network coin spend ID.
@@ -55,6 +92,8 @@ fn vv_req_reg_002_can_record_network_coin_spend() {
     );
 }
 
+// Verifies an unknown parent ID is NOT recognized as a network coin spend.
+// This is the core security property: fake parents are rejected.
 #[test]
 fn vv_req_reg_002_unknown_parent_rejected() {
     // REG-002: A coin whose parent is NOT a known network coin spend
@@ -70,6 +109,7 @@ fn vv_req_reg_002_unknown_parent_rejected() {
     );
 }
 
+// Verifies a recorded network coin spend is accepted as a valid parent.
 #[test]
 fn vv_req_reg_002_known_parent_accepted() {
     // REG-002: A coin whose parent IS a known network coin spend
@@ -86,6 +126,8 @@ fn vv_req_reg_002_known_parent_accepted() {
     );
 }
 
+// Verifies the checker correctly tracks 3 distinct network coin spends and
+// rejects an unknown ID. This proves the set grows with each registration.
 #[test]
 fn vv_req_reg_002_multiple_spends_tracked() {
     // REG-002: The checker must track multiple network coin spends
@@ -107,6 +149,7 @@ fn vv_req_reg_002_multiple_spends_tracked() {
     assert!(!checker.is_network_coin_spend(&Bytes32::from([0xFF; 32])));
 }
 
+// Verifies the spend count increments correctly as spends are recorded.
 #[test]
 fn vv_req_reg_002_spend_count() {
     // REG-002: The checker should report how many network coin spends
@@ -123,6 +166,8 @@ fn vv_req_reg_002_spend_count() {
     assert_eq!(checker.network_coin_spend_count(), 2);
 }
 
+// Verifies that recording the same spend ID twice does not create a
+// duplicate entry. The count remains 1.
 #[test]
 fn vv_req_reg_002_duplicate_spend_is_idempotent() {
     // REG-002: Recording the same spend ID twice must not create duplicates.
@@ -141,6 +186,8 @@ fn vv_req_reg_002_duplicate_spend_is_idempotent() {
     );
 }
 
+// Verifies verify_registration_coin_lineage returns true for a recorded
+// network coin spend parent.
 #[test]
 fn vv_req_reg_002_verify_registration_coin_valid() {
     // REG-002: verify_registration_coin_lineage returns true when
@@ -157,6 +204,8 @@ fn vv_req_reg_002_verify_registration_coin_valid() {
     );
 }
 
+// Verifies verify_registration_coin_lineage returns false for a fake parent
+// that is not a recorded network coin spend.
 #[test]
 fn vv_req_reg_002_verify_registration_coin_invalid() {
     // REG-002: verify_registration_coin_lineage returns false when
@@ -174,6 +223,8 @@ fn vv_req_reg_002_verify_registration_coin_invalid() {
     );
 }
 
+// Verifies ConsensusError::InvalidLineage exists in src/error.rs, providing
+// a typed error for lineage verification failures.
 #[test]
 fn vv_req_reg_002_error_type_exists() {
     // REG-002: ConsensusError::InvalidLineage must exist for lineage failures.
@@ -185,6 +236,7 @@ fn vv_req_reg_002_error_type_exists() {
     );
 }
 
+// Traceability: verifies the REG-002 spec file exists on disk.
 #[test]
 fn vv_req_reg_002_spec_file_exists() {
     // REG-002: Dedicated spec file must exist.

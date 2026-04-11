@@ -3,13 +3,34 @@
 //!
 //! Spec: `docs/requirements/domains/registration_coin/specs/REG-007.md`.
 //!
-//! Tests the full registration coin lifecycle:
-//! 1. Deploy network coin + checkpoint singletons
-//! 2. Register validator → registration coin created
-//! 3. Collateral lock: spend without announcement fails
-//! 4. Cross-coin bundle: checkpoint query + registration coin spend succeeds
+//! ## Normative statement
+//! The complete registration coin lifecycle MUST work end-to-end in the Chia
+//! simulator: deploy singletons, register a validator (creating a registration
+//! coin with locked collateral), and recover collateral via a cross-coin
+//! spend bundle that includes both a checkpoint membership query (emitting
+//! a non-membership announcement) and the registration coin spend (asserting
+//! that announcement).
 //!
-//! The registration coin has NO Rue helpers, so standard CurriedProgram works.
+//! ## How the tests prove the requirement
+//! 1. **Registration coin creation**: Deploys checkpoint and network coin
+//!    singletons, registers a validator via AggSigMe signature, and verifies
+//!    a child coin with the collateral amount exists.
+//! 2. **Cross-coin collateral recovery**: Builds a 2-spend bundle:
+//!    (a) checkpoint singleton membership query at depth=0 for a non-member,
+//!    (b) registration coin spend asserting the announcement. The simulator
+//!    accepts the bundle, proving both coins interoperate correctly.
+//!    Post-conditions verify: registration coin spent, collateral coin
+//!    created, checkpoint singleton recreated.
+//!
+//! ## Completeness: HIGH
+//! This is the most comprehensive integration test, exercising real singleton
+//! wrapping, curried puzzles, cross-coin announcements, and simulator
+//! consensus rules.
+//!
+//! ## Gaps
+//! - Uses depth=0 Merkle tree (avoids Rue recursive helper position bug).
+//! - Does not test the failure path (spend without announcement).
+//! - Uses dummy BLS/Groth16 data (checkpoint path not exercised).
 
 mod common;
 
@@ -230,6 +251,11 @@ fn build_reg_solution(
 
 // ── Test: Create registration coin via network coin ─────────────────
 
+/// Verifies the full registration flow: deploy singletons, register a
+/// validator via network coin spend with AggSigMe, and confirm a
+/// registration coin child exists with the correct collateral amount.
+/// Passing proves the network coin puzzle correctly creates registration
+/// coins via the Chia simulator's consensus rules.
 #[test]
 fn vv_req_reg_007_create_registration_coin() -> anyhow::Result<()> {
     let mut sim = Simulator::new();
@@ -304,6 +330,13 @@ fn vv_req_reg_007_create_registration_coin() -> anyhow::Result<()> {
 
 // ── Test: Cross-coin collateral recovery ────────────────────────────
 
+/// Verifies end-to-end collateral recovery via cross-coin spend bundle.
+/// Builds a 2-spend bundle: (1) checkpoint membership query emitting a
+/// non-membership announcement, (2) registration coin asserting that
+/// announcement and returning collateral. The simulator validates the
+/// bundle, proving cross-coin announcement/assertion works. Post-conditions
+/// verify: registration coin spent, collateral returned, checkpoint
+/// singleton recreated unchanged.
 #[test]
 fn vv_req_reg_007_cross_coin_collateral_recovery() -> anyhow::Result<()> {
     let mut sim = Simulator::new();

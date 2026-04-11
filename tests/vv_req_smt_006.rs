@@ -1,9 +1,36 @@
-//! REQUIREMENT: SMT-006 — Empty tree optimization
+//! REQUIREMENT: SMT-006 — Empty Tree Optimization
 //! (`docs/requirements/domains/smt/NORMATIVE.md#SMT-006`).
 //!
 //! Spec: `docs/requirements/domains/smt/specs/SMT-006.md`.
 //!
-//! Verifies that empty subtrees use precomputed hashes for efficient computation.
+//! **Normative statement:** Precomputed empty hashes at each tree level enable
+//! O(n * depth) root computation instead of O(2^depth). Memory usage is
+//! O(n + depth) because only active leaves are stored. The empty tree root is
+//! a known constant (EMPTY_TREE_ROOT). Initial deployment uses this constant.
+//!
+//! **How the tests prove this:**
+//! - `empty_hashes_precomputed_at_init` shows the tree root is non-zero
+//!   immediately after construction (precomputed, not lazily built).
+//! - `empty_tree_root_is_known_constant` verifies EMPTY_TREE_ROOT matches
+//!   both the computed chain and the tree's root().
+//! - `empty_tree_root_computed_correctly` walks the full chain from EMPTY_LEAF
+//!   upward, re-deriving every level.
+//! - `memory_usage_is_sparse` inserts 100 validators and checks tree.len() == 100
+//!   (not 2^32).
+//! - `root_computation_is_efficient` and `many_validators_still_efficient` use
+//!   wall-clock timing to confirm sub-second operation for 50-100 validators.
+//! - `empty_subtrees_use_precomputed_hash` proves a distant empty slot quickly
+//!   and verifies the proof.
+//! - `empty_nodes_count` checks the chain has TREE_DEPTH + 1 entries.
+//! - `empty_tree_root_constant_correct` re-verifies the constant from scratch.
+//!
+//! **Acceptance-criteria coverage (from spec):**
+//! - [x] Empty hashes precomputed at initialization
+//! - [x] Empty subtrees return precomputed hash, not recompute
+//! - [x] Root computation is O(n * depth) not O(2^depth)
+//! - [x] Empty tree root is known constant
+//! - [x] Initial deployment uses empty tree root (via EMPTY_TREE_ROOT constant)
+//! - [x] Memory usage is O(n + depth) not O(2^depth)
 
 use chia_l2_consensus::testing::{
     compute_empty_nodes, SparseMerkleTree, EMPTY_LEAF, EMPTY_TREE_ROOT, TREE_DEPTH,
@@ -11,6 +38,10 @@ use chia_l2_consensus::testing::{
 use sha2::{Digest, Sha256};
 use std::time::Instant;
 
+/// Verifies empty hashes are precomputed at tree construction time.
+/// Strategy: create a new tree and assert the root is non-zero, proving
+/// the precomputed chain was applied immediately.
+/// Confidence: lazy/deferred computation would leave a zero root.
 #[test]
 fn vv_req_smt_006_empty_hashes_precomputed_at_init() {
     // SMT-006: Empty hashes precomputed at initialization
@@ -25,6 +56,10 @@ fn vv_req_smt_006_empty_hashes_precomputed_at_init() {
     );
 }
 
+/// Verifies EMPTY_TREE_ROOT matches both the computed chain and tree.root().
+/// Strategy: compare the constant to compute_empty_nodes[TREE_DEPTH] and to
+/// a fresh tree's root.
+/// Confidence: the constant, the function, and the tree all agree.
 #[test]
 fn vv_req_smt_006_empty_tree_root_is_known_constant() {
     // SMT-006: Empty tree root is known constant
@@ -45,6 +80,10 @@ fn vv_req_smt_006_empty_tree_root_is_known_constant() {
     );
 }
 
+/// Walks the full empty-node chain from EMPTY_LEAF to the root, verifying
+/// each level is sha256(prev || prev).
+/// Strategy: independent re-derivation of every level.
+/// Confidence: the precomputed chain is mathematically correct end-to-end.
 #[test]
 fn vv_req_smt_006_empty_tree_root_computed_correctly() {
     // SMT-006: Verify the empty tree root chain computation
@@ -74,6 +113,10 @@ fn vv_req_smt_006_empty_tree_root_computed_correctly() {
     }
 }
 
+/// Verifies memory is O(n + depth) by checking tree.len() after 100 inserts.
+/// Strategy: insert 100 validators and assert len == 100. If the tree stored
+/// all 2^32 slots, construction itself would be infeasible.
+/// Confidence: only active leaves are stored; sparsity is maintained.
 #[test]
 fn vv_req_smt_006_memory_usage_is_sparse() {
     // SMT-006: Memory usage is O(n + depth) not O(2^depth)
@@ -98,9 +141,13 @@ fn vv_req_smt_006_memory_usage_is_sparse() {
     // The fact that this test runs quickly proves sparse storage
 }
 
+/// Verifies root computation is O(n * depth) via wall-clock timing.
+/// Strategy: insert 100 validators and assert root() completes in < 100ms.
+/// An O(2^32) implementation would take many minutes.
+/// Confidence: practical performance matches the sparse optimization.
 #[test]
 fn vv_req_smt_006_root_computation_is_efficient() {
-    // SMT-006: Root computation is O(n × depth) not O(2^depth)
+    // SMT-006: Root computation is O(n * depth) not O(2^depth)
     let mut tree = SparseMerkleTree::new();
 
     // Insert 100 validators
@@ -123,6 +170,10 @@ fn vv_req_smt_006_root_computation_is_efficient() {
     );
 }
 
+/// Verifies that proving a distant empty slot is fast and correct.
+/// Strategy: insert one validator near slot 0, then prove slot ~4 billion.
+/// The proof must complete in < 100ms (precomputed) and verify.
+/// Confidence: the tree does not traverse empty subtrees naively.
 #[test]
 fn vv_req_smt_006_empty_subtrees_use_precomputed_hash() {
     // SMT-006: Empty subtrees return precomputed hash
@@ -152,6 +203,9 @@ fn vv_req_smt_006_empty_subtrees_use_precomputed_hash() {
     );
 }
 
+/// Scaling test: 50 validators still produce a root in < 1s (debug mode).
+/// Strategy: insert 50 validators and time root().
+/// Confidence: performance does not degrade catastrophically with more entries.
 #[test]
 fn vv_req_smt_006_many_validators_still_efficient() {
     // SMT-006: Scaling test - many validators should still be efficient
@@ -177,6 +231,9 @@ fn vv_req_smt_006_many_validators_still_efficient() {
     );
 }
 
+/// Verifies compute_empty_nodes returns exactly TREE_DEPTH + 1 entries.
+/// Strategy: check the vector length.
+/// Confidence: all levels from leaf (0) to root (TREE_DEPTH) are represented.
 #[test]
 fn vv_req_smt_006_empty_nodes_count() {
     // SMT-006: compute_empty_nodes returns correct count
@@ -190,6 +247,9 @@ fn vv_req_smt_006_empty_nodes_count() {
     );
 }
 
+/// Re-verifies EMPTY_TREE_ROOT by recomputing the chain from scratch.
+/// Strategy: compute_empty_nodes and compare the top to the constant.
+/// Confidence: the constant has not drifted from the derivation.
 #[test]
 fn vv_req_smt_006_empty_tree_root_constant_correct() {
     // SMT-006: Verify EMPTY_TREE_ROOT constant by computing from scratch

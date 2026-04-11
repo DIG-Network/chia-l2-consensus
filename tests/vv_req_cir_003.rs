@@ -3,9 +3,42 @@
 //!
 //! Spec: `docs/requirements/domains/circuit/specs/CIR-003.md`.
 //!
-//! Verifies that the G1 sum of k signing pubkeys equals the public input
-//! `agg_signers`. This binds the ZK proof to the specific aggregate public
-//! key that will be used for BLS signature verification on-chain.
+//! ## Normative Statement
+//!
+//! The circuit verifies that the G1 sum of k signing pubkeys equals the public
+//! input `agg_signers`. This binds the ZK proof to the specific aggregate
+//! public key used for on-chain BLS signature verification. Without this
+//! constraint, an attacker could substitute their own key as `agg_signers`
+//! while presenting Merkle proofs for legitimate validators.
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Tests exercise the off-chain G1 aggregation functions (`aggregate_pubkeys`,
+//! `add_g1`, `negate_g1`, `verify_aggregate`) that implement the constraint
+//! logic. They verify: correct EC addition, identity handling for padding,
+//! commutativity, associativity, single-key degenerate case, wrong-aggregate
+//! rejection, and subtraction attack prevention. These properties together
+//! prove the aggregation is sound.
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] G1 sum of k pubkeys equals agg_signers public input
+//! - [x] Sum uses proper elliptic curve addition (verified against arkworks)
+//! - [x] Identity/zero handling for k < MAX_SIGNERS padding
+//! - [x] Wrong aggregate -> verification fails
+//! - [x] Single pubkey test: k=1, agg_signers = pk
+//! - [x] Subtraction attack: pk + (-pk) cancels, phantom pairs don't help
+//! - [x] Order independence (commutativity)
+//! - [x] Associativity: (a+b)+c = a+(b+c)
+//! - [x] Invalid pubkey bytes rejected
+//! - [x] Many signers (k=100) round-trip
+//!
+//! ## Gaps
+//!
+//! - In-circuit G1 constraint is deferred to Phase 3 (non-native field
+//!   emulation). These tests verify the off-chain aggregation, not the R1CS
+//!   constraint itself.
+//! - MAX_SIGNERS=20,000 is not tested at full scale (k=100 used for speed).
 
 use ark_bls12_381::{Fr, G1Affine, G1Projective};
 use ark_ec::AffineRepr;
@@ -28,6 +61,9 @@ fn random_pubkeys(n: usize) -> Vec<[u8; 48]> {
     (0..n).map(|_| random_pubkey()).collect()
 }
 
+// Verifies the core constraint: aggregate_pubkeys computes a G1 sum that
+// verify_aggregate confirms matches. This is the positive case proving
+// that honest aggregation satisfies the constraint.
 #[test]
 fn vv_req_cir_003_g1_sum_equals_agg_signers() {
     // CIR-003: G1 sum of k pubkeys equals agg_signers
@@ -42,6 +78,10 @@ fn vv_req_cir_003_g1_sum_equals_agg_signers() {
     );
 }
 
+// Verifies that aggregate_pubkeys uses real BLS12-381 G1 EC addition by
+// comparing its output against a direct arkworks G1Projective sum. This
+// rules out incorrect operations (XOR, field addition, etc.) that would
+// break the security binding between pubkeys and agg_signers.
 #[test]
 fn vv_req_cir_003_proper_elliptic_curve_addition() {
     // CIR-003: Sum uses proper elliptic curve addition (not XOR or other)
@@ -69,6 +109,9 @@ fn vv_req_cir_003_proper_elliptic_curve_addition() {
     );
 }
 
+// Verifies that aggregating zero pubkeys returns the G1 identity (point at
+// infinity). This is the additive identity for EC addition and is needed so
+// that padding with identity preserves the sum.
 #[test]
 fn vv_req_cir_003_identity_handling_for_empty() {
     // CIR-003: Empty input returns identity (point at infinity)
@@ -81,6 +124,9 @@ fn vv_req_cir_003_identity_handling_for_empty() {
     );
 }
 
+// Verifies that identity + pk = pk and pk + identity = pk. This property
+// is essential for the padding scheme: when k < MAX_SIGNERS, unused slots
+// use the identity point, which must not alter the aggregate sum.
 #[test]
 fn vv_req_cir_003_identity_handling_for_padding() {
     // CIR-003: Identity + pk = pk (for k < MAX_SIGNERS padding)
@@ -96,6 +142,10 @@ fn vv_req_cir_003_identity_handling_for_padding() {
     assert_eq!(sum2, pk, "CIR-003: identity + pk must equal pk");
 }
 
+// Verifies that verify_aggregate rejects a random point that does not equal
+// the true G1 sum of the pubkeys, while accepting the correct aggregate.
+// This is the soundness test: an attacker cannot substitute a different
+// aggregate key.
 #[test]
 fn vv_req_cir_003_wrong_aggregate_fails() {
     // CIR-003: Wrong agg_signers must fail verification
@@ -121,6 +171,9 @@ fn vv_req_cir_003_wrong_aggregate_fails() {
     );
 }
 
+// Verifies the degenerate k=1 case: a single pubkey aggregates to itself.
+// This ensures the aggregation does not introduce spurious offsets or
+// identity additions that would break the k=1 scenario.
 #[test]
 fn vv_req_cir_003_single_pubkey_equals_itself() {
     // CIR-003: k=1, agg_signers = pk₁
@@ -139,6 +192,10 @@ fn vv_req_cir_003_single_pubkey_equals_itself() {
     );
 }
 
+// Verifies that pk + (-pk) cancels to identity and that adding phantom
+// pairs (pk, -pk) to a target does not change the result. This documents
+// that an attacker cannot inflate the signer count with cancelling pairs
+// (the Merkle membership constraint CIR-002 prevents phantom entries).
 #[test]
 fn vv_req_cir_003_subtraction_attack_prevention() {
     // CIR-003: Can't use pk - pk' to manipulate aggregate
@@ -165,6 +222,9 @@ fn vv_req_cir_003_subtraction_attack_prevention() {
     );
 }
 
+// Verifies that G1 addition is commutative: reversing the pubkey order
+// produces the same aggregate. This ensures the circuit can process
+// pubkeys in any internal order without affecting the result.
 #[test]
 fn vv_req_cir_003_order_independent() {
     // CIR-003: Sum is commutative (order doesn't matter)
@@ -183,6 +243,9 @@ fn vv_req_cir_003_order_independent() {
     );
 }
 
+// Verifies aggregation at a moderate scale (k=100) to catch issues that
+// only appear with many additions (e.g., accumulated rounding, overflow).
+// The result is checked for valid G1 point format and round-trip verification.
 #[test]
 fn vv_req_cir_003_many_signers() {
     // CIR-003: Test with a reasonable number of signers (100)
@@ -204,6 +267,9 @@ fn vv_req_cir_003_many_signers() {
     );
 }
 
+// Verifies that G1 addition is associative: (a+b)+c = a+(b+c) = aggregate.
+// This is a mathematical property of EC groups but is worth testing because
+// the serialization/deserialization round-trip could introduce errors.
 #[test]
 fn vv_req_cir_003_associative_aggregation() {
     // CIR-003: (pk1 + pk2) + pk3 = pk1 + (pk2 + pk3)
@@ -232,6 +298,9 @@ fn vv_req_cir_003_associative_aggregation() {
     );
 }
 
+// Verifies that bytes that are not valid BLS12-381 G1 points are rejected
+// by the aggregation function. This prevents garbage data from silently
+// producing a "valid" aggregate.
 #[test]
 fn vv_req_cir_003_invalid_pubkey_fails() {
     // CIR-003: Invalid pubkey bytes should fail aggregation
@@ -257,6 +326,9 @@ fn vv_req_cir_003_invalid_pubkey_fails() {
     }
 }
 
+// Verifies that padding k=5 real pubkeys with 95 identity points produces
+// the same aggregate as the original 5. This directly tests the padding
+// scheme used when k < MAX_SIGNERS.
 #[test]
 fn vv_req_cir_003_padding_with_identity_preserves_sum() {
     // CIR-003: For k < MAX_SIGNERS, padding with identity preserves sum
@@ -281,6 +353,8 @@ fn vv_req_cir_003_padding_with_identity_preserves_sum() {
     );
 }
 
+// Verifies the involution property: negating a point twice returns the
+// original. This is a group-theory sanity check for the negate_g1 function.
 #[test]
 fn vv_req_cir_003_double_negation_is_identity() {
     // CIR-003: -(-pk) = pk
@@ -294,6 +368,10 @@ fn vv_req_cir_003_double_negation_is_identity() {
     );
 }
 
+// Verifies that n copies of the generator G sum to n*G, cross-checked
+// against direct scalar multiplication. This confirms that repeated
+// addition through aggregate_pubkeys matches the expected EC scalar
+// multiplication result.
 #[test]
 fn vv_req_cir_003_generator_point_works() {
     // CIR-003: Generator point can be aggregated

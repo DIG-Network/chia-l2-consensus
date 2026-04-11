@@ -5,9 +5,26 @@
 //!
 //! Implementation: `src/indexer/reorg.rs`.
 //!
-//! On blockchain reorganization, the indexer rolls back to the last safe
-//! checkpoint before the reorg point and re-indexes forward. If no safe
-//! point exists, full re-index from genesis is required.
+//! ## Normative statement
+//! On blockchain reorganization (peak < last_synced_height), the indexer MUST
+//! roll back to the last safe checkpoint before the reorg point and re-index
+//! forward. If no safe checkpoint exists, full re-index from genesis MUST
+//! be performed. Rollback MUST truncate checkpoint history, clear registration
+//! coins, and reset last_synced_height.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Reorg detected**: peak < synced = reorg; peak >= synced = not.
+//! 2. **Rollback to safe checkpoint**: 3 checkpoints, reorg at 75 -> rolls
+//!    back to epoch 2 (height 60), truncates history, clears registrations.
+//! 3. **Full re-index when no checkpoints**: No safe point -> height=0,
+//!    everything cleared.
+//! 4. **Reorg before all checkpoints**: Reorg at height 20 (before all) ->
+//!    no safe point.
+//! 5. **State consistent after rollback**: New data can be added after rollback.
+//! 6. **Spec exists**: IDX-004.md on disk.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test against real blockchain reorg events.
 
 use chia_protocol::Bytes32;
 

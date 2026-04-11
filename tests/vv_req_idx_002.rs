@@ -5,8 +5,24 @@
 //!
 //! Implementation: `src/indexer/validator_set.rs`.
 //!
-//! Verifies each registration coin's lineage: parent must be a known network
-//! coin spend, pubkey extracted from memo, puzzle hash matches, collateral correct.
+//! ## Normative statement
+//! The indexer MUST verify each registration coin's lineage: parent MUST be a
+//! known network coin spend, puzzle hash MUST match the expected curried hash
+//! for the given pubkey and checkpoint ID, and amount MUST equal the required
+//! collateral. Coins failing any check MUST be silently rejected.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Empty checker rejects**: No spends recorded means all parents fail.
+//! 2. **Records and verifies**: Recorded spend ID passes; unknown fails.
+//! 3. **Puzzle hash deterministic**: Same inputs -> same hash; different pubkey -> different.
+//! 4. **Valid registration accepted**: Correct parent + hash + amount passes.
+//! 5. **Wrong parent rejected**: Invalid parent fails.
+//! 6. **Wrong puzzle hash rejected**: Valid parent but wrong hash fails.
+//! 7. **Wrong collateral rejected**: Valid parent + hash but wrong amount fails.
+//! 8. **Spec exists**: IDX-002.md on disk.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test pubkey extraction from memos (requires on-chain data).
 
 use chia_protocol::{Bytes32, Coin};
 

@@ -3,9 +3,29 @@
 //!
 //! Spec: `docs/requirements/domains/checkpoint/specs/CHK-010.md`.
 //!
-//! Verifies that only one checkpoint can be accepted per epoch: the
-//! singleton pattern consumes the old coin, epoch in the checkpoint_message
-//! prevents cross-epoch replay, and BLS signatures bind to a specific epoch.
+//! ## Normative statement
+//! Only one checkpoint MUST be accepted per epoch. The singleton pattern
+//! ensures the old coin is consumed (preventing double-spend), the epoch in
+//! the checkpoint_message prevents cross-epoch replay, and BLS signatures
+//! bind to a specific epoch's message.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Different messages per epoch**: Same state at different epochs produces
+//!    different checkpoint_messages.
+//! 2. **Signature epoch mismatch**: A signature for epoch 3 verifies at epoch 3
+//!    but fails at epoch 4 (different checkpoint_message).
+//! 3. **Aggregate signature epoch-bound**: Aggregate signatures for different
+//!    epochs differ; the binding is preserved through aggregation.
+//! 4. **Signing message epoch chain**: The signing message's first 32 bytes
+//!    (checkpoint_message) change between epochs while gc+coin_id stay fixed.
+//! 5. **Puzzle creates epoch+1 coin**: Source creates new coin with updated state.
+//! 6. **Epoch increment exactly +1**: Source contains `epoch + 1` (not arbitrary).
+//! 7. **Proof replay prevention**: Scalar s6 differs between epochs, so a proof
+//!    for epoch 5 cannot verify at epoch 10.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: No simulator test proving the singleton prevents double-spend
+//! (inherent to the Chia singleton pattern, tested by chia-sdk itself).
 
 use chia_l2_consensus::testing::{
     aggregate_checkpoint_signatures, compute_checkpoint_message,
@@ -15,6 +35,8 @@ use chia_l2_consensus::testing::{
 
 // ── Same state but different epochs produce different messages ───────
 
+/// Same state at different epochs produces different checkpoint messages,
+/// proving epoch is a distinguishing factor even when nothing else changes.
 #[test]
 fn vv_req_chk_010_same_state_different_epochs() {
     let sr = [0x11; 32];
@@ -32,6 +54,9 @@ fn vv_req_chk_010_same_state_different_epochs() {
 
 // ── Signature for epoch N does not verify at epoch M ────────────────
 
+/// BLS signature for epoch 3 verifies at epoch 3 but NOT at epoch 4.
+/// This is the core epoch-binding property: signatures cannot be reused
+/// across epochs because the checkpoint_message changes.
 #[test]
 fn vv_req_chk_010_signature_epoch_mismatch() {
     let kp = generate_validator_keypair(&[0x42; 32]).unwrap();
@@ -66,6 +91,8 @@ fn vv_req_chk_010_signature_epoch_mismatch() {
 
 // ── Aggregate signature also bound to epoch ─────────────────────────
 
+/// Aggregate BLS signatures for different epochs produce different 96-byte
+/// values, proving epoch binding is preserved through BLS aggregation.
 #[test]
 fn vv_req_chk_010_aggregate_signature_epoch_bound() {
     let kp1 = generate_validator_keypair(&[0x01; 32]).unwrap();
@@ -103,6 +130,9 @@ fn vv_req_chk_010_aggregate_signature_epoch_bound() {
 
 // ── Signing message includes epoch via checkpoint_message ───────────
 
+/// The signing message's first 32 bytes (checkpoint_message) differ between
+/// epochs while the last 64 bytes (genesis_challenge + coin_id) remain fixed.
+/// This proves epoch is the discriminating field in the AGG_SIG_ME message.
 #[test]
 fn vv_req_chk_010_signing_message_epoch_chain() {
     let sr = [0x11; 32];
@@ -134,6 +164,9 @@ fn vv_req_chk_010_signing_message_epoch_chain() {
 // ── Singleton pattern: old coin consumed, new coin has epoch+1 ──────
 // (This is structural — the Rue puzzle creates a new coin with updated state)
 
+/// Structural: the puzzle references new_epoch, emits CreateCoin for
+/// singleton recreation, and uses curry_tree_hash to derive the new puzzle
+/// hash incorporating updated state (including new_epoch).
 #[test]
 fn vv_req_chk_010_puzzle_creates_new_coin_with_epoch_plus_1() {
     let source = include_str!("../puzzles/checkpoint_inner.rue");
@@ -160,6 +193,8 @@ fn vv_req_chk_010_puzzle_creates_new_coin_with_epoch_plus_1() {
 
 // ── Epoch increment is exactly +1, not arbitrary ────────────────────
 
+/// Confirms the puzzle uses `epoch + 1` (exactly +1, not arbitrary), and
+/// does not accept epoch from the solution. This prevents skipping epochs.
 #[test]
 fn vv_req_chk_010_epoch_increment_exactly_1() {
     let source = include_str!("../puzzles/checkpoint_inner.rue");
@@ -175,6 +210,9 @@ fn vv_req_chk_010_epoch_increment_exactly_1() {
 
 // ── Proof replay: proof for epoch 5 cannot verify at epoch 10 ───────
 
+/// Proves proof replay across epochs is impossible: scalar s6 for epoch 5
+/// differs from epoch 10, so the Groth16 proof that verifies at epoch 5
+/// would fail scalar verification at epoch 10.
 #[test]
 fn vv_req_chk_010_proof_replay_prevention() {
     // The checkpoint_message for epoch 5 differs from epoch 10

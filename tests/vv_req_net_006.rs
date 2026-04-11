@@ -3,9 +3,48 @@
 //!
 //! Spec: `docs/requirements/domains/network_coin/specs/NET-006.md`.
 //!
-//! Singleton integration: the inner puzzle is stored UNCURRIED. All params
-//! (curried + solution) are passed as a flat list in inner_solution. The
-//! singleton wrapper calls `(a MODULE inner_solution)`.
+//! ## Normative Statement
+//!
+//! All prior NET requirements (NET-001 through NET-005) must be verified
+//! end-to-end using the chia-sdk-test Simulator. The inner puzzle is stored
+//! UNCURRIED; all params (curried + solution) are passed as a flat list in
+//! inner_solution. The singleton wrapper calls `(a MODULE inner_solution)`.
+//! This is the definitive integration test that proves the inner puzzle works
+//! correctly inside a real singleton on a real (simulated) blockchain.
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Three tests at increasing levels:
+//! 1. `inner_puzzle_flat_env` -- Executes compiled CLVM with a flat env,
+//!    verifying AGG_SIG_ME + 2 CREATE_COINs (registration + recreation).
+//! 2. `deploy_singleton` -- Deploys the network coin via Launcher, verifying
+//!    the singleton exists with 1 mojo and only 1 child from the launcher.
+//! 3. `register_validator` -- Full registration flow: singleton spend with
+//!    eve proof, BLS signature, collateral funding. Verifies recreation (1 mojo
+//!    child), registration coin (COLLATERAL_AMOUNT child), and old singleton
+//!    spent.
+//! 4. `sequential_registrations` -- Three consecutive registrations with
+//!    lineage proofs, verifying continuous singleton recreation.
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] Network coin deployed as singleton via chia-wallet-sdk
+//! - [x] Validator registration spend accepted with real BLS signature
+//! - [x] Registration coin created with correct collateral amount
+//! - [x] Network coin recreated as new singleton coin (1 mojo)
+//! - [x] Sequential registrations succeed with continuous lineage
+//! - [x] Old singleton spent after registration
+//! - [x] Inner puzzle flat-env test: AGG_SIG_ME + 2 CREATE_COINs
+//! - [ ] Pubkey memo visible in coin record (memo not checked)
+//! - [ ] Wrong signature rejected (not tested)
+//! - [ ] Insufficient collateral rejected (not tested)
+//!
+//! ## Gaps
+//!
+//! - Negative cases (wrong signature, insufficient collateral) are not tested.
+//! - Pubkey memo in the coin record is not explicitly checked.
+//! - The puzzle hash of the recreated singleton is not explicitly compared
+//!   to the original (only amount=1 is verified).
 
 mod common;
 
@@ -80,6 +119,11 @@ fn build_flat_env(
 
 // ── Step 2: Verify puzzle with flat env (no singleton) ──────────────
 
+// Executes the compiled inner puzzle CLVM with a flat environment containing
+// all parameters. Verifies the output includes AGG_SIG_ME (opcode 50) and
+// exactly 2 CREATE_COINs (opcode 51): one with COLLATERAL_AMOUNT (registration)
+// and one with amount=1 (singleton recreation). This proves the inner puzzle
+// produces the correct conditions before wrapping.
 #[test]
 fn vv_req_net_006_inner_puzzle_flat_env() {
     let mut a = clvmr::Allocator::new();
@@ -149,6 +193,10 @@ fn vv_req_net_006_inner_puzzle_flat_env() {
 
 // ── Step 3: Deploy singleton ────────────────────────────────────────
 
+// Deploys the network coin as a singleton via the chia-wallet-sdk Launcher.
+// Verifies: the singleton coin exists with 1 mojo, the launcher coin was
+// spent and produced exactly 1 child. This proves NET-001 (singleton identity)
+// at the simulator level.
 #[test]
 fn vv_req_net_006_deploy_singleton() -> anyhow::Result<()> {
     let mut sim = Simulator::new();
@@ -175,6 +223,13 @@ fn vv_req_net_006_deploy_singleton() -> anyhow::Result<()> {
 
 // ── Step 4: Register validator via singleton ────────────────────────
 
+// Full registration flow: deploy singleton, then spend it with a validator's
+// BLS key to register. Uses the eve proof for lineage, builds the singleton
+// outer puzzle via CurriedProgram, constructs the flat inner solution, signs
+// with the validator's secret key, and funds collateral. Verifies: singleton
+// recreated (1 mojo child), registration coin created (COLLATERAL_AMOUNT
+// child), and original singleton spent. This is the definitive end-to-end
+// proof of NET-001 through NET-004.
 #[test]
 fn vv_req_net_006_register_validator() -> anyhow::Result<()> {
     let mut sim = Simulator::new();
@@ -271,6 +326,11 @@ fn vv_req_net_006_register_validator() -> anyhow::Result<()> {
 
 // ── Sequential registrations ────────────────────────────────────────
 
+// Registers 3 validators sequentially, each using the recreated singleton
+// from the previous spend. Builds correct lineage proofs (eve for first,
+// LineageProof for subsequent). Verifies each registration succeeds and the
+// singleton is recreated each time. This proves NET-004 (continuous self-
+// recreation) and the singleton's indefinite availability.
 #[test]
 fn vv_req_net_006_sequential_registrations() -> anyhow::Result<()> {
     let mut sim = Simulator::new();

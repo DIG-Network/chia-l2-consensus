@@ -3,11 +3,27 @@
 //!
 //! Spec: `docs/requirements/domains/security/specs/SEC-009.md`.
 //!
-//! The collateral_destination in the registration coin solution is unsigned.
-//! This is mitigated by the ASSERT_COIN_ANNOUNCEMENT requirement: a farmer
-//! attacking via RBF must reconstruct the non-membership announcement from
-//! the checkpoint singleton in the same spend bundle, which requires knowing
-//! the specific checkpoint coin ID (changes every epoch).
+//! ## Normative statement
+//! The collateral_destination in the registration coin solution is unsigned
+//! (acknowledged design trade-off). This is MITIGATED by the mandatory
+//! ASSERT_COIN_ANNOUNCEMENT that binds to a specific checkpoint coin ID
+//! (curried, changes every epoch). A farmer attempting RBF must include the
+//! checkpoint singleton query in the same bundle, requiring knowledge of
+//! the current checkpoint coin ID. SEC-008 removes conditions passthrough,
+//! preventing extra CREATE_COIN injection.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Announcement mandatory**: AssertCoinAnnouncement present in source.
+//! 2. **Unconditional**: Exactly one occurrence (no bypass).
+//! 3. **Bound to checkpoint coin ID**: CHECKPOINT_SINGLETON_ID curried.
+//! 4. **Checkpoint ID in hash**: Source shows `checkpoint_bytes + expected_announcement`.
+//! 5. **Destination from solution**: collateral_destination is a solution field.
+//! 6. **No extra CREATE_COIN**: No ...conditions spread (SEC-008).
+//! 7. **Risk documented**: Spec mentions RBF and mitigation.
+//! 8. **Compiled assertion**: Hex contains opcode 61 (0x3d).
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not dynamically test the RBF attack in a simulator.
 
 const REG_SRC: &str = include_str!("../puzzles/registration_coin.rue");
 const REG_HEX: &str = include_str!("../puzzles/compiled/registration_coin.hex");

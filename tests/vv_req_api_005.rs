@@ -1,6 +1,22 @@
 //! REQUIREMENT: API-005 — ConsensusClient Message Computation
-//! Verifies checkpoint_message(), validator_signing_message(),
-//! is_active(), membership_announcement() — all return NotDeployed before sync.
+//! (`docs/requirements/domains/crate_api/NORMATIVE.md#API-005`).
+//!
+//! Spec: `docs/requirements/domains/crate_api/specs/API-005.md`.
+//!
+//! ## Normative statement
+//! `ConsensusClient` MUST provide facade methods: `checkpoint_message()`,
+//! `validator_signing_message()`, `is_active()`, `membership_announcement()`.
+//! Before sync, all MUST return `ConsensusError::NotDeployed`.
+//!
+//! ## How the tests prove the requirement
+//! 1. **checkpoint_message NotDeployed**: Returns error before sync.
+//! 2. **signing_message NotDeployed**: Returns error before sync.
+//! 3. **is_active NotDeployed**: Returns error before sync.
+//! 4. **membership_announcement NotDeployed**: Returns error before sync.
+//! 5. **Methods exist**: All 4 methods callable (compile-time + runtime).
+//!
+//! ## Completeness: MODERATE
+//! ## Gaps: Does not test methods after sync (requires simulator integration).
 
 use chia_l2_consensus::testing::IndexerCache;
 use chia_l2_consensus::{ConsensusClient, ConsensusError, NetworkConfig};

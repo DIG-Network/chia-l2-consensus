@@ -5,9 +5,27 @@
 //!
 //! Implementation: `src/validator/exit.rs`.
 //!
-//! Verifies that a validator can exit voluntarily: generate non-membership
-//! proof after exclusion, compute the exit announcement, and prepare the
-//! collateral recovery parameters.
+//! ## Normative statement
+//! A validator MUST be able to exit voluntarily: after exclusion from the
+//! validator set, the validator generates a non-membership Merkle proof
+//! (EMPTY_LEAF at their slot), computes the exit announcement matching
+//! WIRE-004, and prepares collateral recovery parameters.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Active not excluded**: Active validator's slot is NOT empty.
+//! 2. **Removed is excluded**: Removed validator's slot IS empty.
+//! 3. **Non-membership proof valid**: EMPTY_LEAF proof verifies against root.
+//! 4. **Membership proof invalid after exclusion**: Proof leaf != active_leaf.
+//! 5. **Exit announcement format**: sha256(coin_id + inner) matches WIRE-004.
+//! 6. **Announcement is 32 bytes**: Standard hash size.
+//! 7. **Different epochs differ**: Epoch contributes to announcement.
+//! 8. **Recovery params correct**: All fields match inputs; proof is EMPTY_LEAF;
+//!    proof verifies against tree root.
+//! 9. **Active validator cannot recover**: Prepare fails for active.
+//! 10. **Never-registered works**: Empty slot allows prepare (on-chain check separate).
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: No simulator end-to-end test (covered by REG-007).
 
 use chia_l2_consensus::testing::{active_leaf, SparseMerkleTree, EMPTY_LEAF};
 use chia_l2_consensus::testing::{

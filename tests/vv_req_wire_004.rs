@@ -3,8 +3,33 @@
 //!
 //! Spec: `docs/requirements/domains/wire/specs/WIRE-004.md`.
 //!
-//! Verifies that membership announcements are formatted as:
-//! sha256("membership" || epoch_be8 || pubkey || is_member_byte)
+//! **Normative statement:** The membership announcement message is:
+//! `sha256("membership" || epoch_be8 || pubkey || is_member_byte)`
+//! where "membership" is 10-byte UTF-8 (no null terminator), epoch is 8-byte
+//! big-endian u64, pubkey is 48-byte G1 compressed, and is_member is 0x01
+//! (true) or 0x00 (false). Total input: 67 bytes. Output: 32 bytes.
+//! The epoch field prevents replay attacks across epochs.
+//!
+//! **How the tests prove this:**
+//! - `prefix_is_10_bytes` and `input_size_is_67_bytes` verify the format constants.
+//! - `message_is_32_bytes` checks the sha256 output length.
+//! - `format_is_correct` manually constructs the 67-byte preimage and compares.
+//! - `is_member_true` and `is_member_false` verify the 0x01/0x00 encoding.
+//! - `different_membership_values_differ` confirms true vs false produce
+//!   different messages (preventing substitution attacks).
+//! - `epoch_is_big_endian` uses epoch=256 with explicit BE bytes.
+//! - `different_epochs_differ` and `different_pubkeys_differ` verify
+//!   all fields contribute to the hash (replay/substitution protection).
+//! - `deterministic` calls three times and compares.
+//! - `known_test_vector` pins a specific input combination for cross-impl use.
+//!
+//! **Acceptance-criteria coverage (from spec):**
+//! - [x] Announcement message is sha256 of exactly 67 bytes
+//! - [x] "membership" is 10-byte UTF-8 with no null terminator
+//! - [x] Epoch is 8-byte big-endian u64
+//! - [x] Pubkey is 48-byte G1 compressed
+//! - [x] is_member is 0x01 (member) or 0x00 (non-member)
+//! - [ ] Full announcement uses coin ID, not launcher ID (on-chain test; Phase 3)
 
 use chia_l2_consensus::testing::compute_membership_announcement_message;
 use sha2::{Digest, Sha256};
@@ -17,6 +42,9 @@ const MEMBERSHIP_PREFIX_LEN: usize = 10;
 /// "membership" (10) + epoch (8) + pubkey (48) + is_member (1)
 const MEMBERSHIP_INPUT_SIZE: usize = MEMBERSHIP_PREFIX_LEN + 8 + 48 + 1;
 
+/// Verifies the "membership" prefix is exactly 10 bytes.
+/// Strategy: check b"membership".len().
+/// Confidence: the string literal has the spec-mandated length.
 #[test]
 fn vv_req_wire_004_prefix_is_10_bytes() {
     // WIRE-004: "membership" prefix is exactly 10 bytes UTF-8
@@ -32,6 +60,9 @@ fn vv_req_wire_004_prefix_is_10_bytes() {
     );
 }
 
+/// Verifies the total input size constant is 67 (10+8+48+1).
+/// Strategy: direct assertion on the derived constant.
+/// Confidence: the preimage length matches the spec.
 #[test]
 fn vv_req_wire_004_input_size_is_67_bytes() {
     // WIRE-004: Total input to sha256 is 67 bytes
@@ -41,6 +72,9 @@ fn vv_req_wire_004_input_size_is_67_bytes() {
     );
 }
 
+/// Verifies the output message is exactly 32 bytes (sha256 digest).
+/// Strategy: call the function and check result length.
+/// Confidence: the output is a standard SHA-256 hash.
 #[test]
 fn vv_req_wire_004_message_is_32_bytes() {
     // WIRE-004: Message is sha256 output (32 bytes)
@@ -57,6 +91,10 @@ fn vv_req_wire_004_message_is_32_bytes() {
     );
 }
 
+/// Verifies the full format: sha256("membership" || epoch_be8 || pubkey || is_member).
+/// Strategy: manually build the 67-byte preimage and compare the sha256 to the
+/// library function output.
+/// Confidence: the concatenation order and encoding are correct.
 #[test]
 fn vv_req_wire_004_format_is_correct() {
     // WIRE-004: Format is sha256("membership" || epoch_be8 || pubkey || is_member)
@@ -85,6 +123,9 @@ fn vv_req_wire_004_format_is_correct() {
     );
 }
 
+/// Verifies is_member=true is encoded as 0x01 in the preimage.
+/// Strategy: manual preimage with explicit 0x01 byte, compared to function.
+/// Confidence: the boolean-to-byte mapping is correct for membership.
 #[test]
 fn vv_req_wire_004_is_member_true() {
     // WIRE-004: is_member = true encoded as 0x01
@@ -107,6 +148,9 @@ fn vv_req_wire_004_is_member_true() {
     assert_eq!(message, expected, "WIRE-004: is_member=true must use 0x01");
 }
 
+/// Verifies is_member=false is encoded as 0x00 in the preimage.
+/// Strategy: manual preimage with explicit 0x00 byte, compared to function.
+/// Confidence: the boolean-to-byte mapping is correct for non-membership.
 #[test]
 fn vv_req_wire_004_is_member_false() {
     // WIRE-004: is_member = false encoded as 0x00
@@ -129,6 +173,10 @@ fn vv_req_wire_004_is_member_false() {
     assert_eq!(message, expected, "WIRE-004: is_member=false must use 0x00");
 }
 
+/// Verifies that member and non-member announcements for the same (epoch, pubkey)
+/// produce different messages.
+/// Strategy: call with is_member true vs false and assert inequality.
+/// Confidence: an attacker cannot substitute membership status.
 #[test]
 fn vv_req_wire_004_different_membership_values_differ() {
     // WIRE-004: is_member=true and is_member=false produce different messages
@@ -144,6 +192,9 @@ fn vv_req_wire_004_different_membership_values_differ() {
     );
 }
 
+/// Verifies epoch is encoded as 8-byte big-endian.
+/// Strategy: use epoch=256 and write the explicit BE byte array [0,0,0,0,0,0,1,0].
+/// Confidence: endianness bugs in the epoch field are caught.
 #[test]
 fn vv_req_wire_004_epoch_is_big_endian() {
     // WIRE-004: Epoch is 8-byte big-endian
@@ -167,6 +218,9 @@ fn vv_req_wire_004_epoch_is_big_endian() {
     assert_eq!(message, expected, "WIRE-004: Epoch must be big-endian");
 }
 
+/// Verifies different epochs produce different messages (replay protection).
+/// Strategy: compare messages for epoch 1 vs epoch 2 with same pubkey.
+/// Confidence: epoch-based replay attacks are prevented.
 #[test]
 fn vv_req_wire_004_different_epochs_differ() {
     // WIRE-004: Different epochs produce different messages (replay protection)
@@ -181,6 +235,9 @@ fn vv_req_wire_004_different_epochs_differ() {
     );
 }
 
+/// Verifies different pubkeys produce different messages (identity binding).
+/// Strategy: compare messages for two distinct pubkeys at the same epoch.
+/// Confidence: announcements are bound to the specific validator.
 #[test]
 fn vv_req_wire_004_different_pubkeys_differ() {
     // WIRE-004: Different pubkeys produce different messages
@@ -197,6 +254,9 @@ fn vv_req_wire_004_different_pubkeys_differ() {
     );
 }
 
+/// Verifies determinism: same inputs always produce the same output.
+/// Strategy: call three times with identical arguments and compare.
+/// Confidence: no hidden randomness or state dependency.
 #[test]
 fn vv_req_wire_004_deterministic() {
     // WIRE-004: Same inputs always produce same output
@@ -211,6 +271,10 @@ fn vv_req_wire_004_deterministic() {
     assert_eq!(msg2, msg3, "WIRE-004: Must be deterministic");
 }
 
+/// Known test vector: pubkey=[0x01;48], epoch=10, is_member=true.
+/// Strategy: manual preimage construction and hash comparison.
+/// Confidence: pinned cross-implementation anchor; any Rue/CLVM implementation
+/// must produce the same bytes.
 #[test]
 fn vv_req_wire_004_known_test_vector() {
     // WIRE-004: Known test vector for cross-implementation verification

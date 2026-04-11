@@ -5,9 +5,33 @@
 //!
 //! Implementation: `src/prover/serialize.rs` (announcement), `puzzles/registration_coin.rue`.
 //!
-//! Security verification: confirms that the epoch in membership announcements
-//! prevents replay attacks where old non-membership proofs are reused after
-//! a validator re-registers.
+//! ## Normative statement
+//! The epoch in membership announcements MUST prevent replay of old
+//! non-membership proofs after a validator re-registers. The announcement
+//! includes both the epoch (inner hash) and the checkpoint coin ID (outer
+//! hash), providing dual protection against replay.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Inner hash epoch uniqueness**: Different epochs produce different inner
+//!    announcement hashes.
+//! 2. **Full hash epoch uniqueness**: Different epochs produce different full
+//!    exit announcements.
+//! 3. **Replay attack scenario**: Old announcement (epoch 5) != new (epoch 7)
+//!    with different coin IDs -- fails on both epoch and coin ID.
+//! 4. **Determinism**: Same inputs produce same announcement.
+//! 5. **Coin ID protection**: Different coin IDs at same epoch differ.
+//! 6. **8-byte BE encoding**: Manual sha256 of 67-byte preimage matches
+//!    computed announcement, confirming epoch encoding.
+//! 7. **Adjacent epoch sweep**: Boundary epochs (0, 128, 255, 256, etc.) differ.
+//! 8. **Member vs non-member**: Different is_member bytes at same epoch differ.
+//! 9. **Puzzle hardcodes non-membership**: Registration coin hex contains the
+//!    "membership" prefix (cannot construct membership assertions).
+//! 10. **Epoch zero valid**: Non-trivial announcement at epoch 0.
+//! 11. **Full replay scenario**: 5-step lifecycle (active -> exit -> recover ->
+//!     re-register -> replay attempt fails for 3 independent reasons).
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: None significant.
 
 use chia_l2_consensus::testing::{
     compute_exit_announcement, compute_membership_announcement_message, generate_validator_keypair,

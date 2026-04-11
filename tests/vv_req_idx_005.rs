@@ -5,8 +5,23 @@
 //!
 //! Implementation: `src/indexer/cache.rs`.
 //!
-//! The indexer maintains a persistent JSON cache using atomic writes
-//! to enable fast restarts without full re-indexing.
+//! ## Normative statement
+//! The indexer MUST maintain a persistent JSON cache using atomic writes
+//! (write to tmp file, then rename) for crash-safe restarts. The cache MUST
+//! support save/load roundtrip, handle missing files (return None), detect
+//! corrupted files (return Err), and work in memory-only mode.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Save and load roundtrip**: Height and checkpoint records survive.
+//! 2. **Missing file returns None**: No panic, no error.
+//! 3. **JSON format**: Human-readable, valid JSON with field names.
+//! 4. **Atomic write**: No .tmp file remains after save; overwrite works.
+//! 5. **Corrupted file returns error**: Invalid JSON detected.
+//! 6. **In-memory mode**: Works without disk access.
+//! 7. **Spec exists**: IDX-005.md on disk.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test crash mid-write recovery (OS-level atomic rename).
 
 use std::path::Path;
 

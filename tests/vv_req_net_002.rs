@@ -3,9 +3,44 @@
 //!
 //! Spec: `docs/requirements/domains/network_coin/specs/NET-002.md`.
 //!
-//! Verifies that the network coin puzzle correctly implements AggSigMe
-//! verification for validator registration, using the message format
-//! sha256("register" + pubkey).
+//! ## Normative Statement
+//!
+//! When a validator registers, the network coin MUST verify key ownership via
+//! `AGG_SIG_ME` with message `sha256("register" + pubkey)`. The "register"
+//! prefix is 8 UTF-8 bytes (no null terminator), the pubkey is 48 bytes
+//! (compressed BLS12-381 G1), and the sha256 output is 32 bytes. AGG_SIG_ME
+//! additionally binds the signature to the genesis challenge and coin ID,
+//! providing replay protection.
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Tests verify the message format (prefix length, total input size, output
+//! size), determinism, collision resistance (different pubkeys -> different
+//! messages), and puzzle source inspection (AggSigMe condition present, sha256
+//! used, "register" hex prefix correct, pubkey combined with prefix, correct
+//! fields bound to AggSigMe). The hex encoding 0x7265676973746572 is verified
+//! to equal "register".
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] Registration message format: sha256("register" + pubkey) exactly
+//! - [x] "register" prefix is 8 bytes, no null terminator
+//! - [x] Message is deterministic (same pubkey -> same message)
+//! - [x] Different pubkeys -> different messages
+//! - [x] AGG_SIG_ME condition emitted (source inspection)
+//! - [x] sha256 used for message computation (source inspection)
+//! - [x] Hex prefix 0x7265676973746572 == "register" (cross-check)
+//! - [x] Message does not depend on conditions (source inspection)
+//! - [ ] Spend with valid signature succeeds (tested in NET-006)
+//! - [ ] Spend with wrong key rejected (not tested here)
+//! - [ ] Spend with no signature rejected (not tested here)
+//!
+//! ## Gaps
+//!
+//! Tests verify the message format in Rust and inspect the puzzle source for
+//! the AggSigMe condition. Actual signature verification (valid/invalid/missing)
+//! requires the simulator (covered in NET-006). The message independence from
+//! solution fields is checked via source inspection, not CLVM execution.
 
 use sha2::{Digest, Sha256};
 
@@ -22,6 +57,9 @@ fn sample_pubkey() -> [u8; 48] {
     pk
 }
 
+// Verifies the "register" prefix is exactly 8 bytes and matches the
+// literal string. A wrong prefix length or content would produce different
+// sha256 digests, causing signature verification to fail.
 #[test]
 fn vv_req_net_002_register_prefix_is_8_bytes() {
     // NET-002: "register" prefix must be exactly 8 UTF-8 bytes
@@ -36,6 +74,9 @@ fn vv_req_net_002_register_prefix_is_8_bytes() {
     );
 }
 
+// Verifies the complete message construction: 8-byte prefix + 48-byte pubkey
+// = 56-byte sha256 input, producing a 32-byte hash. This is the exact format
+// the puzzle must use for AGG_SIG_ME.
 #[test]
 fn vv_req_net_002_message_format_sha256_register_plus_pubkey() {
     // NET-002: registration_message = sha256("register" + pubkey)
@@ -61,6 +102,8 @@ fn vv_req_net_002_message_format_sha256_register_plus_pubkey() {
     );
 }
 
+// Verifies that the same pubkey always produces the same message hash.
+// Non-deterministic messages would make signing impossible.
 #[test]
 fn vv_req_net_002_message_is_deterministic() {
     // NET-002: Same pubkey produces same message
@@ -83,6 +126,8 @@ fn vv_req_net_002_message_is_deterministic() {
     );
 }
 
+// Verifies that two different pubkeys produce different message hashes.
+// If messages collided, one validator's signature could be used for another.
 #[test]
 fn vv_req_net_002_different_pubkeys_produce_different_messages() {
     // NET-002: Different pubkeys produce different messages (no collisions)
@@ -107,6 +152,8 @@ fn vv_req_net_002_different_pubkeys_produce_different_messages() {
     );
 }
 
+// Source inspection: verifies the puzzle contains "AggSigMe", confirming
+// it emits the AGG_SIG_ME condition for signature verification.
 #[test]
 fn vv_req_net_002_puzzle_has_aggsigme_condition() {
     // NET-002: Puzzle must emit AggSigMe condition
@@ -121,6 +168,7 @@ fn vv_req_net_002_puzzle_has_aggsigme_condition() {
     );
 }
 
+// Source inspection: verifies the puzzle uses sha256 for message computation.
 #[test]
 fn vv_req_net_002_puzzle_uses_sha256_for_message() {
     // NET-002: Puzzle must use sha256 to compute registration message
@@ -134,6 +182,8 @@ fn vv_req_net_002_puzzle_uses_sha256_for_message() {
     );
 }
 
+// Source inspection: verifies the puzzle contains the hex encoding of
+// "register" (0x7265676973746572). This is how the prefix appears in CLVM.
 #[test]
 fn vv_req_net_002_puzzle_uses_register_prefix() {
     // NET-002: Puzzle must use "register" prefix (hex: 7265676973746572)
@@ -148,6 +198,9 @@ fn vv_req_net_002_puzzle_uses_register_prefix() {
     );
 }
 
+// Source inspection: verifies the puzzle includes the pubkey in the message
+// computation by referencing pubkey_bytes/new_validator_pubkey and hashing
+// prefix + pubkey together.
 #[test]
 fn vv_req_net_002_puzzle_combines_prefix_and_pubkey() {
     // NET-002: Puzzle must hash prefix + pubkey together
@@ -168,6 +221,9 @@ fn vv_req_net_002_puzzle_combines_prefix_and_pubkey() {
     );
 }
 
+// Source inspection: verifies AggSigMe binds to new_validator_pubkey and
+// registration_message. A mismatch would make the signature check verify
+// the wrong key or message.
 #[test]
 fn vv_req_net_002_aggsigme_uses_pubkey_and_message() {
     // NET-002: AggSigMe condition must use the correct pubkey and message
@@ -190,6 +246,7 @@ fn vv_req_net_002_aggsigme_uses_pubkey_and_message() {
     );
 }
 
+// Traceability: verifies the puzzle source references NET-002.
 #[test]
 fn vv_req_net_002_puzzle_documents_net_002() {
     // NET-002: Puzzle should document NET-002 requirement
@@ -203,6 +260,8 @@ fn vv_req_net_002_puzzle_documents_net_002() {
     );
 }
 
+// Cross-check: verifies hex 7265676973746572 decodes to "register". This
+// guards against a hex typo in the puzzle source.
 #[test]
 fn vv_req_net_002_hex_prefix_equals_register_string() {
     // NET-002: Verify the hex encoding is correct
@@ -213,6 +272,9 @@ fn vv_req_net_002_hex_prefix_equals_register_string() {
     );
 }
 
+// Source inspection: verifies the sha256 call for registration_message
+// only includes prefix and pubkey, not the conditions list. This ensures
+// the message is deterministic from pubkey alone.
 #[test]
 fn vv_req_net_002_message_does_not_depend_on_conditions() {
     // NET-002: Registration message is deterministic from pubkey only

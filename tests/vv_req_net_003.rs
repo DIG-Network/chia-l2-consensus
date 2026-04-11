@@ -3,12 +3,44 @@
 //!
 //! Spec: `docs/requirements/domains/network_coin/specs/NET-003.md`.
 //!
-//! Verifies that the network coin creates a registration coin with the
-//! correct puzzle hash (curried from MOD_HASH, pubkey, CHECKPOINT_ID)
-//! and the correct collateral amount.
+//! ## Normative Statement
+//!
+//! When a validator registers, the network coin creates a registration coin via
+//! `CreateCoin` with puzzle hash = `curry_hash(REGISTRATION_COIN_MOD_HASH,
+//! new_validator_pubkey, CHECKPOINT_SINGLETON_ID)` and amount = COLLATERAL_AMOUNT.
+//! The puzzle hash is deterministically derived so the indexer can verify lineage.
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! Tests inspect the puzzle source to verify: CreateCoin condition present,
+//! registration_coin_puzzle_hash computed via curry_tree_hash, the curry includes
+//! registration_coin_mod_hash + new_validator_pubkey + checkpoint_singleton_id,
+//! CreateCoin uses the computed hash, CreateCoin uses collateral_amount, and all
+//! relevant parameters are curried. A conceptual curry_hash test shows different
+//! pubkeys produce different puzzle hashes.
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] CreateCoin condition emitted (source inspection)
+//! - [x] Puzzle hash computed via curry_tree_hash (source inspection)
+//! - [x] Puzzle hash includes MOD_HASH, pubkey, CHECKPOINT_ID (source inspection)
+//! - [x] CreateCoin uses computed puzzle hash (source inspection)
+//! - [x] CreateCoin uses collateral_amount (source inspection)
+//! - [x] All curried parameters declared correctly
+//! - [x] Different pubkeys -> different puzzle hashes (conceptual test)
+//! - [ ] Actual coin creation with correct amount (tested in NET-006)
+//! - [ ] Parent coin ID is the spent network coin (tested in NET-006)
+//!
+//! ## Gaps
+//!
+//! Tests are source-inspection only. Actual CLVM execution and on-chain coin
+//! creation are tested in NET-006 (simulator test). The curry_hash conceptual
+//! test uses a simplified hash, not the real Chialisp curry_tree_hash.
 
 use sha2::{Digest, Sha256};
 
+// Source inspection: verifies the puzzle contains "CreateCoin", confirming
+// it emits the condition to create the registration coin.
 #[test]
 fn vv_req_net_003_puzzle_has_create_coin_condition() {
     // NET-003: Puzzle must emit CreateCoin condition
@@ -22,6 +54,7 @@ fn vv_req_net_003_puzzle_has_create_coin_condition() {
     );
 }
 
+// Source inspection: verifies the puzzle computes registration_coin_puzzle_hash.
 #[test]
 fn vv_req_net_003_puzzle_computes_puzzle_hash() {
     // NET-003: Puzzle must compute registration_coin_puzzle_hash
@@ -35,6 +68,7 @@ fn vv_req_net_003_puzzle_computes_puzzle_hash() {
     );
 }
 
+// Source inspection: verifies curry_tree_hash is used for puzzle hash derivation.
 #[test]
 fn vv_req_net_003_puzzle_uses_curry_hash() {
     // NET-003: Puzzle hash computed using curry_tree_hash
@@ -48,6 +82,8 @@ fn vv_req_net_003_puzzle_uses_curry_hash() {
     );
 }
 
+// Source inspection: verifies curry_tree_hash includes registration_coin_mod_hash
+// as first argument.
 #[test]
 fn vv_req_net_003_puzzle_hash_includes_mod_hash() {
     // NET-003: Puzzle hash includes registration_coin_mod_hash
@@ -62,6 +98,7 @@ fn vv_req_net_003_puzzle_hash_includes_mod_hash() {
     );
 }
 
+// Source inspection: verifies the curry includes tree_hash(new_validator_pubkey).
 #[test]
 fn vv_req_net_003_puzzle_hash_includes_pubkey() {
     // NET-003: Puzzle hash includes new_validator_pubkey
@@ -75,6 +112,7 @@ fn vv_req_net_003_puzzle_hash_includes_pubkey() {
     );
 }
 
+// Source inspection: verifies the curry includes tree_hash(checkpoint_singleton_id).
 #[test]
 fn vv_req_net_003_puzzle_hash_includes_checkpoint_id() {
     // NET-003: Puzzle hash includes checkpoint_singleton_id
@@ -88,6 +126,7 @@ fn vv_req_net_003_puzzle_hash_includes_checkpoint_id() {
     );
 }
 
+// Source inspection: verifies CreateCoin uses `puzzle_hash: registration_coin_puzzle_hash`.
 #[test]
 fn vv_req_net_003_create_coin_uses_computed_hash() {
     // NET-003: CreateCoin uses the computed puzzle hash
@@ -101,6 +140,7 @@ fn vv_req_net_003_create_coin_uses_computed_hash() {
     );
 }
 
+// Source inspection: verifies CreateCoin uses `amount: collateral_amount`.
 #[test]
 fn vv_req_net_003_create_coin_uses_collateral_amount() {
     // NET-003: CreateCoin amount equals collateral_amount
@@ -114,6 +154,7 @@ fn vv_req_net_003_create_coin_uses_collateral_amount() {
     );
 }
 
+// Verifies collateral_amount is a curried parameter (Int type), fixed at deployment.
 #[test]
 fn vv_req_net_003_collateral_amount_is_curried() {
     // NET-003: collateral_amount is a curried parameter
@@ -127,6 +168,7 @@ fn vv_req_net_003_collateral_amount_is_curried() {
     );
 }
 
+// Verifies registration_coin_mod_hash is a curried Bytes32 parameter.
 #[test]
 fn vv_req_net_003_mod_hash_is_curried() {
     // NET-003: registration_coin_mod_hash is a curried parameter
@@ -140,6 +182,7 @@ fn vv_req_net_003_mod_hash_is_curried() {
     );
 }
 
+// Verifies checkpoint_singleton_id is a curried Bytes32 parameter.
 #[test]
 fn vv_req_net_003_checkpoint_id_is_curried() {
     // NET-003: checkpoint_singleton_id is a curried parameter
@@ -153,6 +196,7 @@ fn vv_req_net_003_checkpoint_id_is_curried() {
     );
 }
 
+// Traceability: verifies the puzzle source references NET-003.
 #[test]
 fn vv_req_net_003_puzzle_documents_net_003() {
     // NET-003: Puzzle should document NET-003 requirement
@@ -166,6 +210,9 @@ fn vv_req_net_003_puzzle_documents_net_003() {
     );
 }
 
+// Conceptual test: verifies that different pubkeys produce different puzzle
+// hashes using a simplified hash simulation. The actual curry_tree_hash is
+// more complex, but the uniqueness property must hold.
 #[test]
 fn vv_req_net_003_curry_hash_concept() {
     // NET-003: Verify curry_hash conceptual correctness

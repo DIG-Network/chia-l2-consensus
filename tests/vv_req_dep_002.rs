@@ -5,9 +5,36 @@
 //!
 //! Implementation: `src/puzzles/deploy.rs`.
 //!
-//! Verifies that both singletons (network coin + checkpoint) can be deployed
-//! atomically from funding coins, that launcher IDs are predictable before
-//! spending, and that the resulting NetworkConfig is self-consistent.
+//! **Normative statement:** Deployment uses funding coins from which both
+//! singleton launcher IDs are derived. Both singletons (network coin +
+//! checkpoint) MUST be created atomically in a single spend bundle. Launcher
+//! IDs are predictable before deployment. The resulting NetworkConfig contains
+//! all required fields (launcher IDs, module hashes, collateral, tree depth,
+//! genesis challenge, VK hex).
+//!
+//! **How the tests prove this:**
+//! - `launcher_id_deterministic` calls derive_launcher_id twice with the same
+//!   parent and asserts equality.
+//! - `different_parents_different_ids` checks distinct parents produce distinct IDs.
+//! - `launcher_id_matches_sdk` compares derive_launcher_id to the chia-wallet-sdk
+//!   Launcher API, ensuring compatibility.
+//! - `deploy_both_singletons` runs the full deployment on a simulator and
+//!   verifies both singletons exist and config launcher IDs match derivation.
+//! - `both_created_in_same_block` checks pre-deploy non-existence, deploys, and
+//!   verifies both singletons appear and funding coins are spent (atomicity).
+//! - `config_fields_populated` inspects every NetworkConfig field for
+//!   non-default values and correct parameter pass-through.
+//! - `ids_predictable_before_deploy` predicts IDs before deploy and confirms
+//!   they match the config after deploy.
+//! - `singletons_have_amount_1` verifies both singletons have amount 1
+//!   (Chia singleton convention).
+//!
+//! **Acceptance-criteria coverage (from spec):**
+//! - [x] Genesis coin has sufficient value (>= 1 mojo per singleton)
+//! - [x] Both launcher IDs derived from genesis
+//! - [x] Network coin knows checkpoint launcher ID (via NetworkConfig)
+//! - [x] Checkpoint singleton knows its launcher ID (via NetworkConfig)
+//! - [x] Deployment is atomic (both singletons created together)
 
 use chia_l2_consensus::testing::{deploy_both_singletons, derive_launcher_id};
 use chia_sdk_driver::SpendContext;
@@ -15,6 +42,9 @@ use chia_sdk_test::Simulator;
 
 // ── Launcher ID derivation is deterministic ────────────────────────
 
+/// Verifies derive_launcher_id is deterministic: same parent -> same ID.
+/// Strategy: call twice with identical arguments and compare.
+/// Confidence: launcher IDs can be reliably predicted before deployment.
 #[test]
 fn vv_req_dep_002_launcher_id_deterministic() {
     use chia_protocol::Bytes32;
@@ -28,6 +58,9 @@ fn vv_req_dep_002_launcher_id_deterministic() {
 
 // ── Different parents produce different launcher IDs ────────────────
 
+/// Verifies different parent coin IDs produce different launcher IDs.
+/// Strategy: derive IDs from two distinct parents and assert inequality.
+/// Confidence: launcher IDs are uniquely tied to their funding source.
 #[test]
 fn vv_req_dep_002_different_parents_different_ids() {
     use chia_protocol::Bytes32;
@@ -46,6 +79,9 @@ fn vv_req_dep_002_different_parents_different_ids() {
 
 // ── Launcher ID matches chia-wallet-sdk Launcher API ────────────────
 
+/// Verifies derive_launcher_id matches the chia-wallet-sdk Launcher::coin().coin_id().
+/// Strategy: create a p2 coin in the simulator, derive the ID both ways, compare.
+/// Confidence: our derivation is compatible with the standard Chia SDK.
 #[test]
 fn vv_req_dep_002_launcher_id_matches_sdk() {
     use chia_sdk_driver::Launcher;
@@ -68,6 +104,11 @@ fn vv_req_dep_002_launcher_id_matches_sdk() {
 
 // ── Deploy both singletons atomically ───────────────────────────────
 
+/// End-to-end deployment test: creates both singletons on a simulator and
+/// verifies they exist with correct launcher IDs in the config.
+/// Strategy: fund two coins, run deploy_both_singletons, submit to simulator,
+/// check both singletons are live and config IDs match derivation.
+/// Confidence: the full deployment flow produces valid on-chain state.
 #[test]
 fn vv_req_dep_002_deploy_both_singletons() -> anyhow::Result<()> {
     use chia_l2_consensus::testing::{
@@ -129,6 +170,10 @@ fn vv_req_dep_002_deploy_both_singletons() -> anyhow::Result<()> {
 
 // ── Both singletons created in same spend bundle (atomicity) ────────
 
+/// Verifies atomicity: both singletons are created in a single spend bundle.
+/// Strategy: check that launchers do not exist before deploy, submit a single
+/// spend bundle, then verify both exist and funding coins are spent.
+/// Confidence: partial deployment (one created, one missing) cannot occur.
 #[test]
 fn vv_req_dep_002_both_created_in_same_block() -> anyhow::Result<()> {
     use chia_l2_consensus::testing::{
@@ -201,6 +246,12 @@ fn vv_req_dep_002_both_created_in_same_block() -> anyhow::Result<()> {
 
 // ── NetworkConfig has all required fields populated ─────────────────
 
+/// Verifies every field of NetworkConfig is non-default and consistent with
+/// deployment parameters.
+/// Strategy: deploy and inspect each config field individually: launcher IDs
+/// are non-zero and distinct, module hashes are non-zero, collateral/tree_depth/
+/// genesis_challenge match the deployment parameters, and VK hex is non-empty.
+/// Confidence: the config struct is fully populated for downstream consumers.
 #[test]
 fn vv_req_dep_002_config_fields_populated() -> anyhow::Result<()> {
     use chia_l2_consensus::testing::{
@@ -280,6 +331,11 @@ fn vv_req_dep_002_config_fields_populated() -> anyhow::Result<()> {
 
 // ── Launcher IDs are predictable before deployment ──────────────────
 
+/// Verifies launcher IDs can be predicted before the deploy transaction is sent.
+/// Strategy: derive IDs from funding coin IDs BEFORE calling deploy, then
+/// compare to the config after deploy.
+/// Confidence: external systems can reference the launcher IDs before the
+/// singletons exist on-chain.
 #[test]
 fn vv_req_dep_002_ids_predictable_before_deploy() -> anyhow::Result<()> {
     use chia_l2_consensus::testing::{
@@ -329,6 +385,9 @@ fn vv_req_dep_002_ids_predictable_before_deploy() -> anyhow::Result<()> {
 
 // ── Both singletons have amount 1 (singleton convention) ────────────
 
+/// Verifies both deployed singletons have amount = 1 (Chia singleton convention).
+/// Strategy: deploy and check the amount field of both returned coins.
+/// Confidence: the singletons follow Chia's singleton odd-coin rule.
 #[test]
 fn vv_req_dep_002_singletons_have_amount_1() -> anyhow::Result<()> {
     use chia_l2_consensus::testing::{

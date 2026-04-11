@@ -5,9 +5,27 @@
 //!
 //! Implementation: `src/validator/signing.rs`.
 //!
-//! Verifies that validators can sign checkpoint messages with the correct
-//! 96-byte AGG_SIG_ME format, that signatures verify, that aggregation
-//! works for multiple validators, and that the aggregate verifies.
+//! ## Normative statement
+//! Validators MUST sign checkpoint messages using the AGG_SIG_ME format:
+//! `checkpoint_message + genesis_challenge + coin_id` (96 bytes). Signatures
+//! MUST aggregate correctly, and the aggregate MUST be 96 bytes (compressed G2).
+//!
+//! ## How the tests prove the requirement
+//! 1. **Signing message is 96 bytes**: Correct format.
+//! 2. **Message format**: Byte ranges match spec.
+//! 3. **Checkpoint message matches WIRE-001**: Manual sha256 cross-check.
+//! 4. **Sign/verify roundtrip**: 96-byte signature verifies.
+//! 5. **Wrong key fails**: Different key fails.
+//! 6. **Wrong message fails**: Different checkpoint_message fails.
+//! 7. **Aggregate signatures**: 3 validators' sigs aggregate to 96 bytes.
+//! 8. **Single sig aggregate**: Aggregating one sig equals the original.
+//! 9. **Empty aggregation fails**: Zero sigs is an error.
+//! 10. **Deterministic**: Same inputs -> same signature.
+//! 11. **Different coin IDs**: Different sigs for different coin IDs.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test aggregate verification against aggregate pubkey
+//! (tested at the circuit/checkpoint level).
 
 use chia_l2_consensus::testing::{
     aggregate_checkpoint_signatures, compute_checkpoint_message,

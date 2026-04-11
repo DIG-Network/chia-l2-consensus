@@ -3,8 +3,33 @@
 //!
 //! Spec: `docs/requirements/domains/wire/specs/WIRE-002.md`.
 //!
-//! Verifies that G1 points are 48 bytes and G2 points are 96 bytes
-//! using ZCash compressed BLS12-381 format.
+//! **Normative statement:** G1 points (public keys) are 48-byte ZCash
+//! compressed BLS12-381; G2 points (signatures) are 96-byte ZCash compressed
+//! BLS12-381. The compression flag (bit 7) and infinity flag (bit 6) follow
+//! the ZCash convention. Arkworks `serialize_compressed` produces exactly
+//! these formats.
+//!
+//! **How the tests prove this:**
+//! - `g1_is_48_bytes` and `g2_is_96_bytes` serialize random curve points and
+//!   check the byte length.
+//! - `g1_generator_is_48_bytes` and `g2_generator_is_96_bytes` check the
+//!   well-known generator points.
+//! - `g1_infinity_is_48_bytes` and `g2_infinity_is_96_bytes` verify the
+//!   identity point encoding and check the infinity flag bit.
+//! - `g1_round_trip` and `g2_round_trip` serialize then deserialize a random
+//!   point and confirm equality.
+//! - `compression_flag_set` verifies bit 7 of the first byte is 1 for both
+//!   G1 and G2 compressed representations.
+//! - `multiple_random_points` repeats the size check for 10 random points.
+//! - `projective_to_affine_preserves_size` ensures coordinate conversion does
+//!   not change serialized length.
+//!
+//! **Acceptance-criteria coverage (from spec):**
+//! - [x] G1 points are exactly 48 bytes
+//! - [x] G2 points are exactly 96 bytes
+//! - [x] Arkworks serialization matches Chia node expectations (ZCash format)
+//! - [x] Point infinity is correctly encoded
+//! - [x] Sign bit correctly distinguishes y-coordinate variants (via round-trip)
 
 use ark_bls12_381::{Fr, G1Affine, G1Projective, G2Affine, G2Projective};
 use ark_ec::AffineRepr;
@@ -13,6 +38,9 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use chia_l2_consensus::testing::{G1_COMPRESSED_SIZE, G2_COMPRESSED_SIZE};
 use rand::thread_rng;
 
+/// Verifies a random G1 point serializes to exactly 48 bytes.
+/// Strategy: generate a random scalar, compute scalar * G1, serialize compressed.
+/// Confidence: the serialization format produces fixed-width G1 output.
 #[test]
 fn vv_req_wire_002_g1_is_48_bytes() {
     // WIRE-002: G1 points (pubkeys) MUST be 48 bytes
@@ -31,6 +59,9 @@ fn vv_req_wire_002_g1_is_48_bytes() {
     );
 }
 
+/// Verifies a random G2 point serializes to exactly 96 bytes.
+/// Strategy: generate a random scalar, compute scalar * G2, serialize compressed.
+/// Confidence: the serialization format produces fixed-width G2 output.
 #[test]
 fn vv_req_wire_002_g2_is_96_bytes() {
     // WIRE-002: G2 points (signatures) MUST be 96 bytes
@@ -49,6 +80,9 @@ fn vv_req_wire_002_g2_is_96_bytes() {
     );
 }
 
+/// Verifies the G1 generator point serializes to exactly 48 bytes.
+/// Strategy: serialize the well-known generator.
+/// Confidence: the canonical generator is not a special-case exception.
 #[test]
 fn vv_req_wire_002_g1_generator_is_48_bytes() {
     // WIRE-002: The G1 generator must also be 48 bytes
@@ -64,6 +98,9 @@ fn vv_req_wire_002_g1_generator_is_48_bytes() {
     );
 }
 
+/// Verifies the G2 generator point serializes to exactly 96 bytes.
+/// Strategy: serialize the well-known G2 generator.
+/// Confidence: the canonical G2 generator is not a special-case exception.
 #[test]
 fn vv_req_wire_002_g2_generator_is_96_bytes() {
     // WIRE-002: The G2 generator must also be 96 bytes
@@ -79,6 +116,10 @@ fn vv_req_wire_002_g2_generator_is_96_bytes() {
     );
 }
 
+/// Verifies the G1 identity (point at infinity) is still 48 bytes and has the
+/// infinity flag (bit 6) set in the first byte.
+/// Strategy: serialize G1Affine::zero() and inspect the output.
+/// Confidence: identity points are correctly encoded in the wire format.
 #[test]
 fn vv_req_wire_002_g1_infinity_is_48_bytes() {
     // WIRE-002: Point at infinity is still 48 bytes for G1
@@ -100,6 +141,10 @@ fn vv_req_wire_002_g1_infinity_is_48_bytes() {
     assert_eq!(infinity_flag, 1, "WIRE-002: G1 infinity flag must be set");
 }
 
+/// Verifies the G2 identity (point at infinity) is still 96 bytes and has the
+/// infinity flag (bit 6) set in the first byte.
+/// Strategy: serialize G2Affine::zero() and inspect the output.
+/// Confidence: G2 identity points are correctly encoded in the wire format.
 #[test]
 fn vv_req_wire_002_g2_infinity_is_96_bytes() {
     // WIRE-002: Point at infinity is still 96 bytes for G2
@@ -120,6 +165,10 @@ fn vv_req_wire_002_g2_infinity_is_96_bytes() {
     assert_eq!(infinity_flag, 1, "WIRE-002: G2 infinity flag must be set");
 }
 
+/// Verifies G1 round-trip: serialize_compressed then deserialize_compressed
+/// recovers the original point.
+/// Strategy: random G1 point -> bytes -> recovered point, assert equality.
+/// Confidence: the sign bit and x-coordinate encoding are lossless.
 #[test]
 fn vv_req_wire_002_g1_round_trip() {
     // WIRE-002: G1 serialize then deserialize must produce same point
@@ -138,6 +187,10 @@ fn vv_req_wire_002_g1_round_trip() {
     );
 }
 
+/// Verifies G2 round-trip: serialize_compressed then deserialize_compressed
+/// recovers the original point.
+/// Strategy: random G2 point -> bytes -> recovered point, assert equality.
+/// Confidence: the two-component x-coordinate encoding is lossless.
 #[test]
 fn vv_req_wire_002_g2_round_trip() {
     // WIRE-002: G2 serialize then deserialize must produce same point
@@ -156,6 +209,10 @@ fn vv_req_wire_002_g2_round_trip() {
     );
 }
 
+/// Verifies the compression flag (bit 7 of first byte) is set for both G1
+/// and G2 compressed serializations.
+/// Strategy: serialize the generators and inspect byte[0] >> 7.
+/// Confidence: the Chia node expects this flag; missing it causes rejection.
 #[test]
 fn vv_req_wire_002_compression_flag_set() {
     // WIRE-002: Compression flag (bit 7) must be set for compressed format
@@ -181,6 +238,9 @@ fn vv_req_wire_002_compression_flag_set() {
     );
 }
 
+/// Verifies 10 random G1 and G2 points all have the correct sizes.
+/// Strategy: generate 10 random scalars, serialize both groups, check lengths.
+/// Confidence: size correctness is not dependent on the specific point.
 #[test]
 fn vv_req_wire_002_multiple_random_points() {
     // WIRE-002: Multiple random points must all have correct sizes
@@ -201,6 +261,9 @@ fn vv_req_wire_002_multiple_random_points() {
     }
 }
 
+/// Verifies that projective-to-affine conversion does not change serialized size.
+/// Strategy: work in projective coordinates, convert to affine, serialize.
+/// Confidence: internal coordinate representation does not leak into wire format.
 #[test]
 fn vv_req_wire_002_projective_to_affine_preserves_size() {
     // WIRE-002: Converting from projective to affine preserves serialization size

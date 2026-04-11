@@ -5,9 +5,27 @@
 //!
 //! Implementation: `puzzles/registration_coin.rue` (compiled to CLVM).
 //!
-//! Security verification: confirms that collateral is locked in the
-//! registration coin until a non-membership announcement is asserted,
-//! and that the puzzle has no bypass path.
+//! ## Normative statement
+//! Collateral MUST remain locked in the registration coin until a valid
+//! non-membership announcement is asserted. The puzzle MUST have no bypass
+//! path, no signature requirements (permissionless with proof), and exactly
+//! one unconditional ASSERT_COIN_ANNOUNCEMENT.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Opcode presence**: Compiled hex contains ASSERT_COIN_ANNOUNCEMENT (0x3d),
+//!    hardcoded "membership" prefix, and 0x00 non-membership byte.
+//! 2. **CREATE_COIN present**: Collateral return mechanism exists.
+//! 3. **Only two conditions**: No AGG_SIG_ME or AGG_SIG_UNSAFE (permissionless).
+//! 4. **Announcement format**: Non-membership and membership announcements differ.
+//! 5. **Active validator locked**: Active validator cannot prepare recovery.
+//! 6. **Excluded validator unlocked**: Removed validator can prepare recovery
+//!    with EMPTY_LEAF proof.
+//! 7. **Proof verifies against root**: Non-membership proof verifies against
+//!    current root but not a random root.
+//! 8. **No bypass in source**: Exactly one AssertCoinAnnouncement (unconditional).
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test the collateral lock in the simulator (covered by REG-007).
 
 use chia_l2_consensus::testing::{
     compute_membership_announcement_message, generate_validator_keypair, is_validator_excluded,

@@ -5,9 +5,25 @@
 //!
 //! Implementation: `src/prover/setup.rs`.
 //!
-//! Security verification: confirms that the trusted setup code warns
-//! against single-party use in production, that the VK is bound to
-//! the specific circuit, and that setup validation catches issues.
+//! ## Normative statement
+//! The trusted setup MUST warn against single-party use in production, MUST
+//! reference MPC/multi-party as the production alternative, and MUST produce
+//! a structurally valid VK with 7 IC points (672 bytes). The setup MUST be
+//! deterministic for the same seed.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Source warnings**: Setup code contains "WARNING"/"insecure"/"NOT secure"
+//!    and references MPC/multi-party.
+//! 2. **Valid VK produced**: Test setup produces VK that passes validate_vk.
+//! 3. **VK size**: Exactly 672 bytes (48+96+96+96+7*48).
+//! 4. **IC count**: 7 points (6 public inputs + 1 constant).
+//! 5. **Non-trivial hash**: VK hash is not all zeros.
+//! 6. **Deterministic**: Same seed produces same VK and PK.
+//! 7. **Invalid VK rejected**: Too short, too long, and empty bytes all fail.
+//! 8. **Spec and CHIP documentation**: Reference MPC ceremony and toxic waste.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test actual MPC ceremony (requires multi-party infrastructure).
 
 use chia_l2_consensus::testing::{
     compute_vk_hash, deserialize_proving_key, run_test_setup, validate_vk, validate_vk_bytes,

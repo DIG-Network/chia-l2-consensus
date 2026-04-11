@@ -5,9 +5,27 @@
 //!
 //! Implementation: `src/indexer/validator_set.rs`.
 //!
-//! Security verification: confirms that registration coin lineage is
-//! enforced by the indexer, that coins without valid lineage are excluded,
-//! and that puzzle hash alone is insufficient for inclusion.
+//! ## Normative statement
+//! The indexer MUST enforce registration coin lineage: a coin is only accepted
+//! if its parent is a recorded network coin spend AND its puzzle hash matches
+//! the expected curried hash AND its amount equals the required collateral.
+//! Puzzle hash alone MUST NOT be sufficient for inclusion.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Valid parent accepted**: Coin with recorded network coin parent,
+//!    correct puzzle hash, and correct amount passes.
+//! 2. **Invalid parent rejected**: Wrong parent fails even with correct puzzle hash.
+//! 3. **Puzzle hash alone insufficient**: Empty checker rejects all.
+//! 4. **Wrong puzzle hash rejected**: Valid parent but wrong hash rejected.
+//! 5. **Wrong collateral rejected**: Valid parent + hash but wrong amount rejected.
+//! 6. **Empty checker rejects all**: No spends recorded means no coins accepted.
+//! 7. **Multiple spends tracked**: Independent spend IDs tracked correctly.
+//! 8. **Duplicate idempotent**: Same ID recorded twice counts as one.
+//! 9. **O(1) lookup**: Source uses HashSet<Bytes32>.
+//! 10. **Deterministic puzzle hash**: Same inputs produce same hash.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test against live blockchain data.
 
 use chia_l2_consensus::testing::{
     registration_coin_puzzle_hash, try_parse_registration_coin, LineageChecker,

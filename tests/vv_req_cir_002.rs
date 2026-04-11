@@ -5,9 +5,39 @@
 //!
 //! Implementation: `src/prover/circuit.rs`, `src/merkle/poseidon.rs`.
 //!
-//! The circuit verifies Poseidon Merkle inclusion proofs for each signing
-//! validator against a witness root. Uses ZK-friendly Poseidon hash
-//! (~300 constraints per hash vs ~25,000 for SHA-256).
+//! ## Normative Statement
+//!
+//! For each of the k signing pubkeys, the circuit verifies a Poseidon Merkle
+//! inclusion proof demonstrating the pubkey exists in the validator set. This
+//! constraint ensures only registered validators can be counted toward the
+//! signing majority. Uses ZK-friendly Poseidon hash (~300 constraints per hash
+//! vs ~25,000 for SHA-256).
+//!
+//! ## How These Tests Prove the Requirement
+//!
+//! The tests operate at two levels: (1) off-chain Poseidon tree correctness
+//! (insert, prove, verify) and (2) in-circuit proof generation via Groth16.
+//! Valid Merkle proofs produce a satisfiable circuit; corrupted siblings or
+//! wrong roots cause the circuit to be unsatisfiable. This directly verifies
+//! the constraint `verify_merkle_path(leaf, proof, index, TREE_DEPTH) = root`.
+//!
+//! ## Acceptance Criteria Coverage
+//!
+//! - [x] Each signer's pubkey has Merkle proof verified (valid proofs accepted)
+//! - [x] Leaf computed via Poseidon hash of pubkey (poseidon_leaf)
+//! - [x] All k proofs must verify against same root (k=2 test)
+//! - [x] Invalid proof -> proof generation fails (corrupted sibling)
+//! - [x] Root mismatch -> proof generation fails (wrong root)
+//! - [ ] Path verification uses correct sibling ordering (implicitly tested
+//!       via off-chain verify, but not explicitly checked bit-by-bit)
+//!
+//! ## Gaps
+//!
+//! - Sibling ordering convention (left-first vs right-first) is implicitly
+//!   tested but not isolated. A cross-implementation ordering test would
+//!   strengthen this.
+//! - Tests use TEST_DEPTH=4 (16 slots) for speed; TREE_DEPTH=32 is not
+//!   exercised here due to proof generation cost.
 
 use ark_bls12_381::{Bls12_381, Fr};
 use ark_groth16::Groth16;
@@ -91,6 +121,11 @@ fn try_prove(circuit: ConsensusCircuit, params: &ark_groth16::ProvingKey<Bls12_3
 
 // ── CIR-002: Off-chain Poseidon tree basics ───────────────────────────
 
+// Verifies the off-chain Poseidon Merkle tree: insert a pubkey, compute its
+// leaf hash, generate a proof, and verify it against the tree root. This is
+// the foundational correctness check -- if the off-chain tree is wrong, all
+// in-circuit proofs will fail. A passing result means the Poseidon hash,
+// tree structure, and proof format are self-consistent.
 #[test]
 fn vv_req_cir_002_poseidon_tree_insert_and_verify() {
     let config = poseidon_config();
@@ -106,6 +141,10 @@ fn vv_req_cir_002_poseidon_tree_insert_and_verify() {
     );
 }
 
+// Verifies that a proof generated for pubkey A does NOT verify when checked
+// against a different pubkey B's leaf hash. This proves the Merkle tree
+// binds proofs to specific leaf values, preventing a validator from using
+// another validator's proof.
 #[test]
 fn vv_req_cir_002_poseidon_tree_wrong_leaf_fails() {
     let config = poseidon_config();
@@ -123,6 +162,11 @@ fn vv_req_cir_002_poseidon_tree_wrong_leaf_fails() {
 
 // ── CIR-002: Circuit with valid Merkle proofs ─────────────────────────
 
+// Verifies that a circuit with k=2 valid Poseidon Merkle proofs is
+// satisfiable: Groth16 proof generation succeeds. This is the positive
+// end-to-end test -- the circuit's R1CS constraints accept valid proofs.
+// A passing result means the in-circuit Merkle verification matches the
+// off-chain tree, which is the core of CIR-002.
 #[test]
 fn vv_req_cir_002_valid_merkle_proofs_accepted() {
     let pk1 = [0xAAu8; 48];
@@ -166,6 +210,10 @@ fn vv_req_cir_002_valid_merkle_proofs_accepted() {
 
 // ── CIR-002: Invalid Merkle proof rejected ────────────────────────────
 
+// Verifies that corrupting the first sibling in a Merkle proof makes the
+// circuit unsatisfiable (proof generation fails). This is the negative
+// soundness test: an attacker cannot forge a Merkle proof by tampering
+// with sibling hashes.
 #[test]
 fn vv_req_cir_002_invalid_merkle_proof_rejected() {
     let pk1 = [0xAAu8; 48];
@@ -202,6 +250,10 @@ fn vv_req_cir_002_invalid_merkle_proof_rejected() {
 
 // ── CIR-002: Wrong root rejected ──────────────────────────────────────
 
+// Verifies that a valid Merkle proof checked against the wrong root makes
+// the circuit unsatisfiable. This prevents an attacker from presenting
+// proofs generated against a different (e.g., outdated or fabricated)
+// validator set.
 #[test]
 fn vv_req_cir_002_wrong_root_rejected() {
     let pk1 = [0xAAu8; 48];
@@ -234,6 +286,8 @@ fn vv_req_cir_002_wrong_root_rejected() {
 
 // ── Spec ───────────────────────────────────────────────────────────
 
+// Confirms the CIR-002 specification file exists on disk. This is a
+// traceability check ensuring the requirement document is present.
 #[test]
 fn vv_req_cir_002_spec_exists() {
     assert!(std::path::Path::new("docs/requirements/domains/circuit/specs/CIR-002.md").exists());

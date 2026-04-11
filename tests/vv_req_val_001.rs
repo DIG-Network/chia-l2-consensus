@@ -5,9 +5,28 @@
 //!
 //! Implementation: `src/validator/keygen.rs`.
 //!
-//! Verifies that validators can generate BLS12-381 keypairs with 48-byte
-//! compressed G1 public keys, sign and verify messages, and that different
-//! entropy produces different keys.
+//! ## Normative statement
+//! Validators MUST generate BLS12-381 keypairs with 48-byte compressed G1
+//! public keys and 32-byte secret keys. Key generation MUST be deterministic
+//! for the same entropy, produce different keys for different entropy, and
+//! require at least 32 bytes of entropy.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Generation succeeds**: No error on valid entropy.
+//! 2. **Pubkey 48 bytes**: Compressed G1 point size verified.
+//! 3. **Secret key 32 bytes**: Scalar field element size verified.
+//! 4. **Non-zero pubkey**: Not the identity point.
+//! 5. **Compression flag**: First byte has bit 7 set (BLS12-381 convention).
+//! 6. **Different entropy -> different keys**: Both pubkey and secret key differ.
+//! 7. **Deterministic**: Same entropy -> same keys.
+//! 8. **Derivable**: pubkey_from_secret matches keypair's pubkey.
+//! 9. **Sign/verify roundtrip**: 96-byte G2 signature verifies correctly.
+//! 10. **Wrong key fails**: Signature fails with different key.
+//! 11. **Wrong message fails**: Signature fails with different message.
+//! 12. **Short entropy rejected**: 16 bytes fails.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not test key serialization format compatibility with Chia mainnet.
 
 use chia_l2_consensus::testing::{
     generate_validator_keypair, pubkey_from_secret, sign_message, verify_signature,

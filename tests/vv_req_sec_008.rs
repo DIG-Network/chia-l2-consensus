@@ -3,9 +3,25 @@
 //!
 //! Spec: `docs/requirements/domains/security/specs/SEC-008.md`.
 //!
-//! Verifies that passthrough conditions are removed from registration_coin.rue
-//! and checkpoint_inner.rue, preventing CREATE_COIN/RESERVE_FEE/AGG_SIG_UNSAFE
-//! injection attacks.
+//! ## Normative statement
+//! Registration coin and checkpoint inner puzzles MUST NOT have passthrough
+//! conditions (`...conditions` spread or `conditions: List<Condition>` param).
+//! Each puzzle MUST emit a fixed set of conditions (exactly 2 for registration,
+//! exactly 2 per path for checkpoint). Network coin keeps conditions because
+//! AggSigMe signs the entire spend.
+//!
+//! ## How the tests prove the requirement
+//! 1. **Registration: no conditions param/spread**: Source lacks both.
+//! 2. **Registration: exactly 2 conditions**: Output list is `[assert_announcement, create_collateral]`.
+//! 3. **Checkpoint: no conditions param/spread**: Source lacks both.
+//! 4. **Checkpoint: exactly 2 per path**: Two `[recreate, announce]` lists in source.
+//! 5. **Network coin keeps conditions**: Protected by AggSigMe.
+//! 6. **No AGG_SIG_UNSAFE**: Neither registration nor checkpoint source contains it.
+//! 7. **SEC-008 documented**: Both puzzle sources reference SEC-008.
+//!
+//! ## Completeness: HIGH
+//! ## Gaps: Does not dynamically test that injected conditions are impossible
+//! (structural analysis is sufficient since conditions param is absent).
 
 const REG_SRC: &str = include_str!("../puzzles/registration_coin.rue");
 const CHK_SRC: &str = include_str!("../puzzles/checkpoint_inner.rue");
