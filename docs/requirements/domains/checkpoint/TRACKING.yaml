@@ -58,3 +58,11 @@ items:
     spec_ref: "docs/design/requirements/checkpoint/CHK-007.md"
     tests: []
     notes: ""
+
+  - id: CHK-008
+    section: "End-to-End Integration Test"
+    summary: "Full lifecycle: deploy, register, checkpoint, exit, collateral recovery"
+    status: gap
+    spec_ref: "docs/design/requirements/checkpoint/CHK-008.md"
+    tests: []
+    notes: "Requires: Groth16 prover, trusted setup, chia-wallet-sdk simulator, singleton wrapping"

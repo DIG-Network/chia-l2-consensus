@@ -6,47 +6,104 @@ items:
   - id: SEC-001
     section: "Majority Assumption"
     summary: "Honest majority required for safety"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/security/SEC-001.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_sec_001.rs::vv_req_sec_001_strict_majority_not_gte
+      - tests/vv_req_sec_001.rs::vv_req_sec_001_odd_count_boundary
+      - tests/vv_req_sec_001.rs::vv_req_sec_001_small_counts
+      - tests/vv_req_sec_001.rs::vv_req_sec_001_minimum_signers_correctness
+      - tests/vv_req_sec_001.rs::vv_req_sec_001_large_counts
+      - tests/vv_req_sec_001.rs::vv_req_sec_001_no_overflow
+      - tests/vv_req_sec_001.rs::vv_req_sec_001_circuit_rejects_minority
+      - tests/vv_req_sec_001.rs::vv_req_sec_001_circuit_accepts_majority
+      - tests/vv_req_sec_001.rs::vv_req_sec_001_circuit_rejects_exact_half
+    notes: "Strict majority (2k > n, NOT >=) verified at all layers: is_majority(), minimum_signers() exhaustive 0-200, circuit CIR-004 with catch_unwind."
 
   - id: SEC-002
     section: "Two-Check Completeness"
     summary: "ZK proof + BLS signature both required"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/security/SEC-002.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_sec_002.rs::vv_req_sec_002_puzzle_has_bls_pairing_identity
+      - tests/vv_req_sec_002.rs::vv_req_sec_002_puzzle_has_bls_verify
+      - tests/vv_req_sec_002.rs::vv_req_sec_002_both_checks_present
+      - tests/vv_req_sec_002.rs::vv_req_sec_002_puzzle_has_g1_negate
+      - tests/vv_req_sec_002.rs::vv_req_sec_002_puzzle_has_g1_multiply
+      - tests/vv_req_sec_002.rs::vv_req_sec_002_puzzle_has_point_add
+      - tests/vv_req_sec_002.rs::vv_req_sec_002_source_documents_both_checks
+      - tests/vv_req_sec_002.rs::vv_req_sec_002_shared_agg_signers
+      - tests/vv_req_sec_002.rs::vv_req_sec_002_completeness_argument
+    notes: "Compiled CLVM contains bls_pairing_identity (58) + bls_verify (59) + g1_negate (51) + g1_multiply (50) + point_add (29). Both checks share agg_signers. Pairing executes before verify."
 
   - id: SEC-003
     section: "Collateral Security"
     summary: "Collateral locked until non-membership proven"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/security/SEC-003.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_sec_003.rs::vv_req_sec_003_puzzle_requires_announcement
+      - tests/vv_req_sec_003.rs::vv_req_sec_003_hardcoded_non_membership
+      - tests/vv_req_sec_003.rs::vv_req_sec_003_puzzle_creates_coin
+      - tests/vv_req_sec_003.rs::vv_req_sec_003_only_two_conditions
+      - tests/vv_req_sec_003.rs::vv_req_sec_003_announcement_format
+      - tests/vv_req_sec_003.rs::vv_req_sec_003_active_validator_locked
+      - tests/vv_req_sec_003.rs::vv_req_sec_003_excluded_validator_unlocked
+      - tests/vv_req_sec_003.rs::vv_req_sec_003_non_membership_proof_required
+      - tests/vv_req_sec_003.rs::vv_req_sec_003_no_bypass_in_source
+    notes: "CLVM puzzle hardcodes ASSERT_COIN_ANNOUNCEMENT (61) + 'membership' prefix + 0x00 (non-member). No AGG_SIG, no bypass. Active validator locked, excluded unlocked."
 
   - id: SEC-004
     section: "Trusted Setup"
     summary: "MPC ceremony required, no single-party"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/security/SEC-004.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_sec_004.rs::vv_req_sec_004_single_party_warning_in_source
+      - tests/vv_req_sec_004.rs::vv_req_sec_004_test_setup_produces_valid_vk
+      - tests/vv_req_sec_004.rs::vv_req_sec_004_vk_correct_size
+      - tests/vv_req_sec_004.rs::vv_req_sec_004_vk_ic_count
+      - tests/vv_req_sec_004.rs::vv_req_sec_004_vk_hash_nontrivial
+      - tests/vv_req_sec_004.rs::vv_req_sec_004_setup_deterministic
+      - tests/vv_req_sec_004.rs::vv_req_sec_004_invalid_vk_rejected
+      - tests/vv_req_sec_004.rs::vv_req_sec_004_spec_references_mpc
+      - tests/vv_req_sec_004.rs::vv_req_sec_004_chip_states_assumption
+    notes: "Source warns single-party insecure; MPC documented in spec + CHIP; VK validated (7 IC, 672 bytes); invalid VK rejected."
 
   - id: SEC-005
     section: "Lineage Enforcement"
     summary: "Indexer verifies network coin parentage"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/security/SEC-005.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_sec_005.rs::vv_req_sec_005_valid_parent_accepted
+      - tests/vv_req_sec_005.rs::vv_req_sec_005_invalid_parent_rejected
+      - tests/vv_req_sec_005.rs::vv_req_sec_005_puzzle_hash_alone_insufficient
+      - tests/vv_req_sec_005.rs::vv_req_sec_005_wrong_puzzle_hash_rejected
+      - tests/vv_req_sec_005.rs::vv_req_sec_005_wrong_collateral_rejected
+      - tests/vv_req_sec_005.rs::vv_req_sec_005_empty_checker_rejects_all
+      - tests/vv_req_sec_005.rs::vv_req_sec_005_multiple_spends_tracked
+      - tests/vv_req_sec_005.rs::vv_req_sec_005_duplicate_idempotent
+      - tests/vv_req_sec_005.rs::vv_req_sec_005_lineage_check_is_hashset
+      - tests/vv_req_sec_005.rs::vv_req_sec_005_puzzle_hash_deterministic
+    notes: "LineageChecker with HashSet<Bytes32> for O(1) lookup. Invalid parent, wrong puzzle hash, wrong collateral all rejected. Puzzle hash alone insufficient."
 
   - id: SEC-006
     section: "Epoch Replay"
     summary: "Epoch prevents announcement replay"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/security/SEC-006.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_sec_006.rs::vv_req_sec_006_different_epochs_different_inner
+      - tests/vv_req_sec_006.rs::vv_req_sec_006_different_epochs_different_full
+      - tests/vv_req_sec_006.rs::vv_req_sec_006_replay_attack_different_announcement
+      - tests/vv_req_sec_006.rs::vv_req_sec_006_same_epoch_deterministic
+      - tests/vv_req_sec_006.rs::vv_req_sec_006_coin_id_change_protects
+      - tests/vv_req_sec_006.rs::vv_req_sec_006_epoch_is_8_byte_be
+      - tests/vv_req_sec_006.rs::vv_req_sec_006_adjacent_epochs
+      - tests/vv_req_sec_006.rs::vv_req_sec_006_member_vs_nonmember_differ
+      - tests/vv_req_sec_006.rs::vv_req_sec_006_puzzle_hardcodes_nonmembership
+      - tests/vv_req_sec_006.rs::vv_req_sec_006_epoch_zero_valid
+      - tests/vv_req_sec_006.rs::vv_req_sec_006_full_replay_scenario
+    notes: "Epoch (8-byte BE) in inner hash + coin ID in outer hash = double replay protection. Adjacent epochs, boundary epochs, full replay scenario all verified."

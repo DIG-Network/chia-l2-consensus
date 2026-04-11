@@ -31,8 +31,7 @@ fn vv_req_net_002_register_prefix_is_8_bytes() {
         "NET-002: register prefix must be exactly 8 bytes"
     );
     assert_eq!(
-        REGISTER_PREFIX,
-        b"register",
+        REGISTER_PREFIX, b"register",
         "NET-002: prefix must be the literal 'register'"
     );
 }
@@ -209,8 +208,7 @@ fn vv_req_net_002_hex_prefix_equals_register_string() {
     // NET-002: Verify the hex encoding is correct
     let hex_prefix = hex::decode("7265676973746572").expect("Valid hex");
     assert_eq!(
-        &hex_prefix,
-        b"register",
+        &hex_prefix, b"register",
         "NET-002: Hex 7265676973746572 must equal 'register'"
     );
 }

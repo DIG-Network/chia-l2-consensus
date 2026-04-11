@@ -42,3 +42,10 @@
 
 <a id="CHK-007"></a>**CHK-007** The Groth16 verification key (672 bytes) MUST be curried into the checkpoint singleton at deployment and MUST NOT change, permanently binding the singleton to a specific circuit and trusted setup.
 > **Spec:** [`CHK-007.md`](../../../design/requirements/checkpoint/CHK-007.md)
+
+---
+
+## §6 End-to-End Integration Test
+
+<a id="CHK-008"></a>**CHK-008** A full end-to-end integration test MUST exercise the complete lifecycle: deploy network coin + checkpoint singleton, register validators, collect signatures, generate a real Groth16 proof, submit a checkpoint spend via chia-wallet-sdk simulator, verify state update, then execute collateral recovery via membership query + registration coin spend in the same bundle.
+> **Spec:** [`CHK-008.md`](../../../design/requirements/checkpoint/CHK-008.md)

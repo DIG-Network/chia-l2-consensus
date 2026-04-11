@@ -6,47 +6,119 @@ items:
   - id: REG-001
     section: "Puzzle Structure"
     summary: "Curried with VALIDATOR_PUBKEY and CHECKPOINT_SINGLETON_ID"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/registration_coin/REG-001.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_puzzle_compiles
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_puzzle_produces_clvm
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_puzzle_is_deterministic
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_has_validator_pubkey_curried
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_has_checkpoint_singleton_id_curried
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_exactly_two_curried_params
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_has_epoch_solution_param
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_has_collateral_destination_solution_param
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_has_collateral_amount_solution_param
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_has_conditions_solution_param
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_returns_list_condition
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_documents_coin_id_not_launcher_id
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_is_standalone_puzzle
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_puzzle_documents_reg_001
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_compiled_hex_exists
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_compiled_hash_exists
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_compiled_hex_matches_live_build
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_compiled_hash_matches_live_build
+    notes: "Puzzle compiles with rue; int_to_8_bytes_be helper uses sentinel+substr; .hex/.hash in puzzles/compiled/"
 
   - id: REG-002
     section: "Lineage Verification"
     summary: "Parent must be network coin spend"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/registration_coin/REG-002.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_lineage_checker_exists
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_tracks_network_coin_spends
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_can_record_network_coin_spend
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_unknown_parent_rejected
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_known_parent_accepted
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_multiple_spends_tracked
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_spend_count
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_duplicate_spend_is_idempotent
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_verify_registration_coin_valid
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_verify_registration_coin_invalid
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_error_type_exists
+      - tests/vv_req_reg_002.rs::vv_req_reg_002_spec_file_exists
+    notes: "LineageChecker in src/indexer/validator_set.rs with HashSet<Bytes32> for O(1) lookup"
 
   - id: REG-003
     section: "Collateral Lock"
     summary: "Locked until non-membership announcement"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/registration_coin/REG-003.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_always_emits_assert_announcement
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_exactly_one_assert_announcement
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_announcement_is_non_membership
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_announcement_binds_to_pubkey
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_announcement_binds_to_checkpoint_id
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_announcement_binds_to_epoch
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_always_emits_create_coin
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_collateral_amount_passthrough
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_cross_impl_hash_epoch_0
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_cross_impl_hash_large_epoch
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_cross_impl_hash_max_epoch
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_exactly_two_conditions_with_empty_passthrough
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_puzzle_documents_collateral_lock
+      - tests/vv_req_reg_003.rs::vv_req_reg_003_spec_file_exists
+    notes: "CLVM execution tests: puzzle always emits ASSERT_COIN_ANNOUNCEMENT with non-membership hash. Cross-impl verified at epoch 0, 1M, max. Simulator cross-coin test pending CHK-005."
 
   - id: REG-004
     section: "Spend Conditions"
     summary: "Assert checkpoint announcement for non-membership"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/registration_coin/REG-004.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_inner_preimage_is_67_bytes
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_prefix_is_membership_10_bytes
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_epoch_is_8_bytes_big_endian
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_epoch_zero_is_8_zero_bytes
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_pubkey_is_48_bytes_at_offset_18
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_is_member_byte_is_0x00
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_full_hash_includes_checkpoint_id
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_clvm_matches_spec_format
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_test_vector_all_zeros
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_test_vector_all_ff
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_test_vector_epoch_1
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_test_vector_realistic
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_changing_one_pubkey_byte_changes_hash
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_changing_one_ckpt_byte_changes_hash
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_adjacent_epochs_different_hash
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_hash_independent_of_destination
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_puzzle_documents_announcement_format
+      - tests/vv_req_reg_004.rs::vv_req_reg_004_spec_file_exists
+    notes: "CLVM execution: 67-byte inner preimage format verified byte-by-byte. 4 test vectors. Hash independent of dest/amt."
 
   - id: REG-005
     section: "Spend Conditions"
     summary: "Return collateral to specified destination"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/registration_coin/REG-005.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_reg_005.rs
+    notes: "CLVM execution: CREATE_COIN dest+amt from solution; 1 mojo to 10 XCH; independent of curried params"
 
   - id: REG-006
     section: "Epoch Replay Protection"
     summary: "Verify epoch matches current checkpoint"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/registration_coin/REG-006.md"
+    tests:
+      - tests/vv_req_reg_006.rs
+    notes: "CLVM execution: cross-impl at 9 boundary epochs (0,128,255,256,65535,65536,max-1); CLVM signed int encoding fixed"
+
+  - id: REG-007
+    section: "End-to-End Simulator Test"
+    summary: "Full lifecycle: create via network coin, lock collateral, recover via cross-coin bundle"
+    status: gap
+    spec_ref: "docs/requirements/domains/registration_coin/specs/REG-007.md"
     tests: []
-    notes: ""
+    notes: "Requires: chia-wallet-sdk singleton wrapping, checkpoint membership query, cross-coin announcement matching"

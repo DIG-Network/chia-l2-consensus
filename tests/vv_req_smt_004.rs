@@ -5,7 +5,7 @@
 //!
 //! Verifies that Merkle proofs have correct format and verification works properly.
 
-use chia_l2_consensus::merkle::{active_leaf, compute_slot, SparseMerkleTree, TREE_DEPTH};
+use chia_l2_consensus::testing::{active_leaf, compute_slot, SparseMerkleTree, TREE_DEPTH};
 use sha2::{Digest, Sha256};
 
 #[test]

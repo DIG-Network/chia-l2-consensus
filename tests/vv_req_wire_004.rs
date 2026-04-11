@@ -6,7 +6,7 @@
 //! Verifies that membership announcements are formatted as:
 //! sha256("membership" || epoch_be8 || pubkey || is_member_byte)
 
-use chia_l2_consensus::compute_membership_announcement_message;
+use chia_l2_consensus::testing::compute_membership_announcement_message;
 use sha2::{Digest, Sha256};
 
 /// WIRE-004: "membership" prefix is exactly 10 bytes

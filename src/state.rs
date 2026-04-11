@@ -4,6 +4,8 @@
 
 use chia_protocol::{Bytes32, Coin};
 
+use crate::merkle::EMPTY_TREE_ROOT;
+
 /// Current on-chain state of the network coin singleton.
 #[derive(Debug, Clone)]
 pub struct NetworkCoinState {
@@ -29,6 +31,29 @@ pub struct CheckpointSingletonState {
 
     /// Current L2 state root.
     pub state_root: Bytes32,
+}
+
+/// Create the initial checkpoint singleton state for deployment.
+///
+/// The initial state has:
+/// - `epoch`: 0
+/// - `validator_count`: 0
+/// - `validator_merkle_root`: EMPTY_TREE_ROOT (all-empty sparse Merkle tree)
+/// - `state_root`: application-defined genesis root
+/// - `coin`: placeholder (no on-chain coin yet)
+///
+/// This state is curried into the checkpoint singleton inner puzzle at
+/// deployment time.
+///
+/// See spec-deployment-runbook.md — Step 3 and DEP-003.
+pub fn initial_checkpoint_state(genesis_state_root: [u8; 32]) -> CheckpointSingletonState {
+    CheckpointSingletonState {
+        coin: Coin::new(Bytes32::default(), Bytes32::default(), 0),
+        epoch: 0,
+        validator_count: 0,
+        validator_merkle_root: EMPTY_TREE_ROOT.into(),
+        state_root: genesis_state_root.into(),
+    }
 }
 
 /// A validator in the active set.

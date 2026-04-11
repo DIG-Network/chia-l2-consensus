@@ -4,12 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# Chia
+# Chia — versions aligned with chia-wallet-sdk 0.18's internal chain (v0.15/v0.9)
+# to avoid type incompatibilities between main crate and SDK test infrastructure
 chia-wallet-sdk = "0.18"
-chia-protocol   = "0.18"
-chia-puzzles    = "0.18"
-clvm-traits     = "0.18"
-clvmr           = "0.6"
+chia-protocol   = "0.15"
+chia-puzzles    = "0.15"
+chia-bls        = "0.15"
+clvm-traits     = "0.15"
+clvm-utils      = "0.15"    # curry_tree_hash, tree_hash (used by indexer lineage check)
+clvmr           = "0.9"
 
 # ZK proving (→ see spec-groth16-circuit — Dependencies)
 ark-groth16           = "0.4"
@@ -20,7 +23,7 @@ ark-ff                = "0.4"
 ark-ec                = "0.4"
 ark-std               = "0.4"
 ark-serialize         = "0.4"
-ark-crypto-primitives = { version = "0.4", features = ["crh"] }
+ark-crypto-primitives = { version = "0.4", features = ["crh", "r1cs"] }
 
 # BLS aggregation off-chain (→ see spec-wire-format — Aggregate Signature)
 blst = "0.3"
@@ -41,9 +44,15 @@ anyhow    = "1"
 
 sha2 = "0.10"
 
+# Chia SDK — wallet operations, spend bundles, singleton handling
+chia-sdk-driver = "0.18"   # SpendContext, StandardLayer, Launcher
+
 [dev-dependencies]
-tokio = { version = "1", features = ["full"] }
-rand  = "0.8"
+tokio          = { version = "1", features = ["full"] }
+rand           = "0.8"
+chia-sdk-test  = "0.18"    # Simulator, test_secret_key, sign_transaction
+chia-sdk-types = "0.18"    # Conditions
+clvm-utils     = "0.15"    # CurriedProgram, tree_hash (aligned with SDK)
 
 [profile.release]
 opt-level = 3

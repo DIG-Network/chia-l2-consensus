@@ -15,6 +15,7 @@ Quick navigation to all domain requirement documents.
 | Security | SEC | [NORMATIVE](security/NORMATIVE.md) | [VERIFICATION](security/VERIFICATION.md) | [TRACKING](security/TRACKING.yaml) | [specs/](security/specs/) |
 | Deployment | DEP | [NORMATIVE](deployment/NORMATIVE.md) | [VERIFICATION](deployment/VERIFICATION.md) | [TRACKING](deployment/TRACKING.yaml) | [specs/](deployment/specs/) |
 | Validator Operations | VAL | [NORMATIVE](validator/NORMATIVE.md) | [VERIFICATION](validator/VERIFICATION.md) | [TRACKING](validator/TRACKING.yaml) | [specs/](validator/specs/) |
+| Crate API | API | [NORMATIVE](crate_api/NORMATIVE.md) | [VERIFICATION](crate_api/VERIFICATION.md) | [TRACKING](crate_api/TRACKING.yaml) | [specs/](crate_api/specs/) |
 
 ## Domain Structure
 

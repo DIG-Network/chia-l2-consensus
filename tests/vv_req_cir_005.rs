@@ -7,7 +7,7 @@
 //! fixed order. The order must match the VK IC point assignment.
 
 use ark_ff::Zero;
-use chia_l2_consensus::{
+use chia_l2_consensus::testing::{
     bytes_to_scalar, public_input_index, ConsensusCircuit, PUBLIC_INPUT_COUNT,
 };
 
@@ -89,6 +89,7 @@ fn vv_req_cir_005_public_inputs_bytes_order() {
         new_count,
         agg_signers,
         checkpoint_msg,
+        count as usize,
     );
 
     let inputs = circuit.public_inputs_bytes();
@@ -150,7 +151,7 @@ fn vv_req_cir_005_public_input_sizes() {
     // | 6 | 32 bytes |
 
     let circuit =
-        ConsensusCircuit::with_public_inputs([0u8; 32], 0, [0u8; 32], 0, [0u8; 48], [0u8; 32]);
+        ConsensusCircuit::with_public_inputs([0u8; 32], 0, [0u8; 32], 0, [0u8; 48], [0u8; 32], 1);
 
     let inputs = circuit.public_inputs_bytes();
 
@@ -195,6 +196,7 @@ fn vv_req_cir_005_accessors_match_public_inputs() {
         new_count,
         agg_signers,
         checkpoint_msg,
+        count as usize,
     );
 
     // Verify accessors
@@ -249,6 +251,7 @@ fn vv_req_cir_005_scalar_applied_to_inputs() {
         new_count,
         agg_signers,
         checkpoint_msg,
+        count as usize,
     );
 
     let inputs = circuit.public_inputs_bytes();
@@ -320,7 +323,13 @@ fn vv_req_cir_005_count_as_big_endian_u64() {
     let new_count = 0x0908070605040302u64;
 
     let circuit = ConsensusCircuit::with_public_inputs(
-        [0u8; 32], count, [0u8; 32], new_count, [0u8; 48], [0u8; 32],
+        [0u8; 32],
+        count,
+        [0u8; 32],
+        new_count,
+        [0u8; 48],
+        [0u8; 32],
+        count as usize,
     );
 
     let inputs = circuit.public_inputs_bytes();

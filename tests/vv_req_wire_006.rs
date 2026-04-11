@@ -7,7 +7,7 @@
 //! interpreted as big-endian u256, reduced modulo the BLS12-381 scalar field order r.
 
 use ark_ff::{BigInteger, PrimeField};
-use chia_l2_consensus::bytes_to_scalar;
+use chia_l2_consensus::testing::bytes_to_scalar;
 use num_bigint::BigUint;
 use sha2::{Digest, Sha256};
 

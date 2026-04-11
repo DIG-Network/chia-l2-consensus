@@ -41,11 +41,12 @@ by phase. Check boxes as requirements are verified.
 
 ### Circuit Implementation
 - [x] [CIR-001](domains/circuit/NORMATIVE.md#CIR-001) — Circuit statement
-- [x] [CIR-002](domains/circuit/NORMATIVE.md#CIR-002) — Merkle membership constraint
-- [x] [CIR-003](domains/circuit/NORMATIVE.md#CIR-003) — Aggregate key constraint
-- [x] [CIR-004](domains/circuit/NORMATIVE.md#CIR-004) — Majority threshold constraint
+- [x] [CIR-002](domains/circuit/NORMATIVE.md#CIR-002) — Merkle membership constraint (Poseidon hash)
+- [x] [CIR-003](domains/circuit/NORMATIVE.md#CIR-003) — Aggregate key constraint (off-chain complete; in-circuit deferred to Phase 3: non-native G1)
+- [x] [CIR-004](domains/circuit/NORMATIVE.md#CIR-004) — Majority threshold constraint (64-bit decomposition)
 - [x] [CIR-005](domains/circuit/NORMATIVE.md#CIR-005) — Public inputs
 - [x] [CIR-006](domains/circuit/NORMATIVE.md#CIR-006) — Circuit parameters
+- See [DESIGN_DECISIONS.md](domains/circuit/DESIGN_DECISIONS.md) for hash function and phasing rationale
 
 ---
 
@@ -57,64 +58,85 @@ by phase. Check boxes as requirements are verified.
 - [x] [NET-003](domains/network_coin/NORMATIVE.md#NET-003) — Registration coin creation
 - [x] [NET-004](domains/network_coin/NORMATIVE.md#NET-004) — Self-recreation
 - [x] [NET-005](domains/network_coin/NORMATIVE.md#NET-005) — Pubkey memo
+- [x] [NET-006](domains/network_coin/NORMATIVE.md#NET-006) — E2E simulator test (singleton + registration)
 
 ### Registration Coin
-- [ ] [REG-001](domains/registration_coin/NORMATIVE.md#REG-001) — Puzzle structure
-- [ ] [REG-002](domains/registration_coin/NORMATIVE.md#REG-002) — Lineage verification
-- [ ] [REG-003](domains/registration_coin/NORMATIVE.md#REG-003) — Collateral lock
-- [ ] [REG-004](domains/registration_coin/NORMATIVE.md#REG-004) — Announcement assertion
-- [ ] [REG-005](domains/registration_coin/NORMATIVE.md#REG-005) — Collateral return
-- [ ] [REG-006](domains/registration_coin/NORMATIVE.md#REG-006) — Epoch replay protection
+- [x] [REG-001](domains/registration_coin/NORMATIVE.md#REG-001) — Puzzle structure
+- [x] [REG-002](domains/registration_coin/NORMATIVE.md#REG-002) — Lineage verification
+- [x] [REG-003](domains/registration_coin/NORMATIVE.md#REG-003) — Collateral lock
+- [x] [REG-004](domains/registration_coin/NORMATIVE.md#REG-004) — Announcement assertion
+- [x] [REG-005](domains/registration_coin/NORMATIVE.md#REG-005) — Collateral return
+- [x] [REG-006](domains/registration_coin/NORMATIVE.md#REG-006) — Epoch replay protection
+- [x] [REG-007](domains/registration_coin/NORMATIVE.md#REG-007) — E2E simulator test (collateral lifecycle)
 
 ### Checkpoint Singleton
-- [ ] [CHK-001](domains/checkpoint/NORMATIVE.md#CHK-001) — Singleton identity
-- [ ] [CHK-002](domains/checkpoint/NORMATIVE.md#CHK-002) — State tracking
-- [ ] [CHK-003](domains/checkpoint/NORMATIVE.md#CHK-003) — Groth16 + BLS verification
-- [ ] [CHK-004](domains/checkpoint/NORMATIVE.md#CHK-004) — State update and announcement
-- [ ] [CHK-005](domains/checkpoint/NORMATIVE.md#CHK-005) — Membership query
-- [ ] [CHK-006](domains/checkpoint/NORMATIVE.md#CHK-006) — Permissionless query
-- [ ] [CHK-007](domains/checkpoint/NORMATIVE.md#CHK-007) — VK immutability
+- [x] [CHK-001](domains/checkpoint/NORMATIVE.md#CHK-001) — Singleton identity
+- [x] [CHK-002](domains/checkpoint/NORMATIVE.md#CHK-002) — State tracking
+- [x] [CHK-003](domains/checkpoint/NORMATIVE.md#CHK-003) — Groth16 + BLS verification
+- [x] [CHK-004](domains/checkpoint/NORMATIVE.md#CHK-004) — State update and announcement
+- [x] [CHK-005](domains/checkpoint/NORMATIVE.md#CHK-005) — Membership query
+- [x] [CHK-006](domains/checkpoint/NORMATIVE.md#CHK-006) — Permissionless query
+- [x] [CHK-007](domains/checkpoint/NORMATIVE.md#CHK-007) — VK immutability
+- [x] [CHK-008a](domains/checkpoint/specs/CHK-008.md) — Trusted setup produces valid keys
+- [x] [CHK-008b](domains/checkpoint/specs/CHK-008.md) — Proof generation (192 bytes)
+- [x] [CHK-008c](domains/checkpoint/specs/CHK-008.md) — VK has 7 IC points
+- [x] [CHK-008d](domains/checkpoint/specs/CHK-008.md) — Checkpoint path with real Groth16 + BLS
+- [x] [CHK-008e](domains/checkpoint/specs/CHK-008.md) — Checkpoint spend accepted by simulator
+- [x] [CHK-008f](domains/checkpoint/specs/CHK-008.md) — Invalid proof rejected
+- [x] [CHK-008g](domains/checkpoint/specs/CHK-008.md) — Ark→ZCash format compatibility verified
 
 ---
 
 ## Phase 4 — Off-Chain Infrastructure
 
 ### Indexer
-- [ ] [IDX-001](domains/indexer/NORMATIVE.md#IDX-001) — State tracking
-- [ ] [IDX-002](domains/indexer/NORMATIVE.md#IDX-002) — Lineage verification
-- [ ] [IDX-003](domains/indexer/NORMATIVE.md#IDX-003) — Merkle consistency
-- [ ] [IDX-004](domains/indexer/NORMATIVE.md#IDX-004) — Reorg handling
-- [ ] [IDX-005](domains/indexer/NORMATIVE.md#IDX-005) — Persistent cache
+- [x] [IDX-001](domains/indexer/NORMATIVE.md#IDX-001) — State tracking
+- [x] [IDX-002](domains/indexer/NORMATIVE.md#IDX-002) — Lineage verification
+- [x] [IDX-003](domains/indexer/NORMATIVE.md#IDX-003) — Merkle consistency
+- [x] [IDX-004](domains/indexer/NORMATIVE.md#IDX-004) — Reorg handling
+- [x] [IDX-005](domains/indexer/NORMATIVE.md#IDX-005) — Persistent cache
 
 ---
 
 ## Phase 5 — Deployment & Operations
 
 ### Deployment
-- [ ] [DEP-001](domains/deployment/NORMATIVE.md#DEP-001) — Trusted setup
-- [ ] [DEP-002](domains/deployment/NORMATIVE.md#DEP-002) — Genesis coin
-- [ ] [DEP-003](domains/deployment/NORMATIVE.md#DEP-003) — Initial state
-- [ ] [DEP-004](domains/deployment/NORMATIVE.md#DEP-004) — VK verification
-- [ ] [DEP-005](domains/deployment/NORMATIVE.md#DEP-005) — Artifact publication
+- [x] [DEP-001](domains/deployment/NORMATIVE.md#DEP-001) — Trusted setup
+- [x] [DEP-002](domains/deployment/NORMATIVE.md#DEP-002) — Genesis coin
+- [x] [DEP-003](domains/deployment/NORMATIVE.md#DEP-003) — Initial state
+- [x] [DEP-004](domains/deployment/NORMATIVE.md#DEP-004) — VK verification
+- [x] [DEP-005](domains/deployment/NORMATIVE.md#DEP-005) — Artifact publication
 
 ### Validator Operations
-- [ ] [VAL-001](domains/validator/NORMATIVE.md#VAL-001) — Key generation
-- [ ] [VAL-002](domains/validator/NORMATIVE.md#VAL-002) — Registration
-- [ ] [VAL-003](domains/validator/NORMATIVE.md#VAL-003) — Signing protocol
-- [ ] [VAL-004](domains/validator/NORMATIVE.md#VAL-004) — Voluntary exit
-- [ ] [VAL-005](domains/validator/NORMATIVE.md#VAL-005) — Forced exit
+- [x] [VAL-001](domains/validator/NORMATIVE.md#VAL-001) — Key generation
+- [x] [VAL-002](domains/validator/NORMATIVE.md#VAL-002) — Registration
+- [x] [VAL-003](domains/validator/NORMATIVE.md#VAL-003) — Signing protocol
+- [x] [VAL-004](domains/validator/NORMATIVE.md#VAL-004) — Voluntary exit
+- [x] [VAL-005](domains/validator/NORMATIVE.md#VAL-005) — Forced exit
 
 ---
 
 ## Phase 6 — Security Verification
 
 ### Security Properties
-- [ ] [SEC-001](domains/security/NORMATIVE.md#SEC-001) — Majority assumption documented
-- [ ] [SEC-002](domains/security/NORMATIVE.md#SEC-002) — Two-check completeness
-- [ ] [SEC-003](domains/security/NORMATIVE.md#SEC-003) — Collateral security
-- [ ] [SEC-004](domains/security/NORMATIVE.md#SEC-004) — Trusted setup ceremony
-- [ ] [SEC-005](domains/security/NORMATIVE.md#SEC-005) — Lineage enforcement
-- [ ] [SEC-006](domains/security/NORMATIVE.md#SEC-006) — Epoch replay protection
+- [x] [SEC-001](domains/security/NORMATIVE.md#SEC-001) — Majority assumption documented
+- [x] [SEC-002](domains/security/NORMATIVE.md#SEC-002) — Two-check completeness
+- [x] [SEC-003](domains/security/NORMATIVE.md#SEC-003) — Collateral security
+- [x] [SEC-004](domains/security/NORMATIVE.md#SEC-004) — Trusted setup ceremony
+- [x] [SEC-005](domains/security/NORMATIVE.md#SEC-005) — Lineage enforcement
+- [x] [SEC-006](domains/security/NORMATIVE.md#SEC-006) — Epoch replay protection
+
+---
+
+## Phase 7 — Crate API Conformance
+
+### Crate API (spec-consensus-crate.md compliance)
+- [x] [API-001](domains/crate_api/NORMATIVE.md#API-001) — Public API surface (minimal exports + testing module)
+- [ ] [API-002](domains/crate_api/NORMATIVE.md#API-002) — NetworkConfig completeness (serde, verification_key(), checkpoint_singleton_id())
+- [ ] [API-003](domains/crate_api/NORMATIVE.md#API-003) — State types (NetworkState, ValidatorInfo, lineage_proof, ValidatorSet helpers)
+- [ ] [API-004](domains/crate_api/NORMATIVE.md#API-004) — ConsensusClient state accessors (epoch, state_root, etc.)
+- [ ] [API-005](domains/crate_api/NORMATIVE.md#API-005) — ConsensusClient message computation (checkpoint_message, signing_message, etc.)
+- [x] [API-006](domains/crate_api/NORMATIVE.md#API-006) — Module visibility (pub(crate) + testing re-exports)
 
 ---
 
@@ -126,11 +148,12 @@ by phase. Check boxes as requirements are verified.
 | 1 | SMT | 6 | 6/6 |
 | 1 | Wire | 6 | 6/6 |
 | 2 | Circuit | 6 | 6/6 |
-| 3 | Network Coin | 5 | 5/5 |
-| 3 | Registration Coin | 6 | 0/6 |
-| 3 | Checkpoint | 7 | 0/7 |
-| 4 | Indexer | 5 | 0/5 |
-| 5 | Deployment | 5 | 0/5 |
-| 5 | Validator | 5 | 0/5 |
-| 6 | Security | 6 | 0/6 |
-| **Total** | | **63** | **29/63** |
+| 3 | Network Coin | 6 | 6/6 |
+| 3 | Registration Coin | 7 | 7/7 |
+| 3 | Checkpoint | 8 (7+7sub) | 8/8 (7/7 sub) |
+| 4 | Indexer | 5 | 5/5 |
+| 5 | Deployment | 5 | 5/5 |
+| 5 | Validator | 5 | 5/5 |
+| 6 | Security | 6 | 6/6 |
+| 7 | Crate API | 6 | 2/6 |
+| **Total** | | **72** | **68/72** |

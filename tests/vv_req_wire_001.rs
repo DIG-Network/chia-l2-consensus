@@ -6,7 +6,7 @@
 //! Verifies that the checkpoint message is computed correctly as:
 //! sha256(new_state_root || new_validator_merkle_root || new_validator_count_be8 || new_epoch_be8)
 
-use chia_l2_consensus::compute_checkpoint_message;
+use chia_l2_consensus::testing::compute_checkpoint_message;
 use sha2::{Digest, Sha256};
 
 #[test]

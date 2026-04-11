@@ -6,7 +6,7 @@
 //! Verifies that the circuit enforces 2k > validator_count where k is the
 //! number of signing validators. This prevents minority attacks.
 
-use chia_l2_consensus::{is_at_least_half, is_majority, minimum_signers};
+use chia_l2_consensus::testing::{is_at_least_half, is_majority, minimum_signers};
 
 #[test]
 fn vv_req_cir_004_majority_threshold_enforced() {

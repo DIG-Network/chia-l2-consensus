@@ -94,3 +94,11 @@ items:
       - tests/vv_req_net_005.rs::vv_req_net_005_is_driver_convention
       - tests/vv_req_net_005.rs::vv_req_net_005_puzzle_header_mentions_memo
     notes: "Driver convention - puzzle delegates memo to driver code"
+
+  - id: NET-006
+    section: "End-to-End Simulator Test"
+    summary: "Full lifecycle: deploy singleton, register validator, verify coins via simulator"
+    status: gap
+    spec_ref: "docs/requirements/domains/network_coin/specs/NET-006.md"
+    tests: []
+    notes: "Requires: chia-wallet-sdk singleton wrapping, BLS signing, simulator spend validation"

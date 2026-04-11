@@ -6,7 +6,7 @@
 //! Verifies that the registration message for AGG_SIG_ME is:
 //! sha256("register" || pubkey) where "register" is 8-byte UTF-8.
 
-use chia_l2_consensus::compute_registration_message;
+use chia_l2_consensus::testing::compute_registration_message;
 use sha2::{Digest, Sha256};
 
 /// WIRE-005: "register" prefix is exactly 8 bytes

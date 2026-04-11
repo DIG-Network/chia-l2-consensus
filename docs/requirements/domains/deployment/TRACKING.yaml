@@ -6,39 +6,86 @@ items:
   - id: DEP-001
     section: "Trusted Setup"
     summary: "MPC ceremony for PK and VK generation"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/deployment/DEP-001.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_setup_produces_valid_keys
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_vk_has_seven_ic_points
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_vk_component_sizes
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_vk_total_672_bytes
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_vk_hash_deterministic
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_validate_vk_succeeds
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_pk_roundtrip
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_vk_roundtrip
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_proof_verifies_with_setup_vk
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_vk_bytes_match_components
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_vk_hash_matches_manual
+      - tests/vv_req_dep_001.rs::vv_req_dep_001_circuit_parameters_in_vk
+    notes: "run_test_setup(), validate_vk(), compute_vk_hash(), vk_to_bytes() in src/prover/setup.rs. VK=672 bytes, 7 IC points, round-trip serialization verified."
 
   - id: DEP-002
     section: "Genesis Coin"
     summary: "Derive launcher IDs from shared genesis"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/deployment/DEP-002.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_dep_002.rs::vv_req_dep_002_launcher_id_deterministic
+      - tests/vv_req_dep_002.rs::vv_req_dep_002_different_parents_different_ids
+      - tests/vv_req_dep_002.rs::vv_req_dep_002_launcher_id_matches_sdk
+      - tests/vv_req_dep_002.rs::vv_req_dep_002_deploy_both_singletons
+      - tests/vv_req_dep_002.rs::vv_req_dep_002_both_created_in_same_block
+      - tests/vv_req_dep_002.rs::vv_req_dep_002_config_fields_populated
+      - tests/vv_req_dep_002.rs::vv_req_dep_002_ids_predictable_before_deploy
+      - tests/vv_req_dep_002.rs::vv_req_dep_002_singletons_have_amount_1
+    notes: "derive_launcher_id() and deploy_both_singletons() in src/puzzles/deploy.rs. Both singletons created atomically via chia-wallet-sdk Launcher. NetworkConfig populated with all fields."
 
   - id: DEP-003
     section: "Initial State"
     summary: "epoch=0, count=0, empty merkle root"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/deployment/DEP-003.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_dep_003.rs::vv_req_dep_003_epoch_is_zero
+      - tests/vv_req_dep_003.rs::vv_req_dep_003_validator_count_is_zero
+      - tests/vv_req_dep_003.rs::vv_req_dep_003_merkle_root_is_empty_tree
+      - tests/vv_req_dep_003.rs::vv_req_dep_003_state_root_is_genesis
+      - tests/vv_req_dep_003.rs::vv_req_dep_003_different_genesis_roots
+      - tests/vv_req_dep_003.rs::vv_req_dep_003_empty_tree_root_matches_computation
+      - tests/vv_req_dep_003.rs::vv_req_dep_003_no_coin_before_deploy
+      - tests/vv_req_dep_003.rs::vv_req_dep_003_zero_genesis_root_valid
+      - tests/vv_req_dep_003.rs::vv_req_dep_003_consistent_with_deployment
+    notes: "initial_checkpoint_state() in src/state.rs. Uses EMPTY_TREE_ROOT from merkle module."
 
   - id: DEP-004
     section: "VK Verification"
     summary: "Decurry and compare VK after deployment"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/deployment/DEP-004.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_dep_004.rs::vv_req_dep_004_hash_matches
+      - tests/vv_req_dep_004.rs::vv_req_dep_004_hash_mismatch_detected
+      - tests/vv_req_dep_004.rs::vv_req_dep_004_hash_fails_for_corrupted_vk
+      - tests/vv_req_dep_004.rs::vv_req_dep_004_validate_bytes_succeeds
+      - tests/vv_req_dep_004.rs::vv_req_dep_004_validate_bytes_wrong_length
+      - tests/vv_req_dep_004.rs::vv_req_dep_004_validate_bytes_empty
+      - tests/vv_req_dep_004.rs::vv_req_dep_004_vk_byte_size_is_672
+      - tests/vv_req_dep_004.rs::vv_req_dep_004_components_from_bytes_match
+      - tests/vv_req_dep_004.rs::vv_req_dep_004_full_verification_workflow
+      - tests/vv_req_dep_004.rs::vv_req_dep_004_different_setup_detected
+    notes: "verify_vk_hash(), validate_vk_bytes(), extract_vk_components_from_bytes() in src/prover/setup.rs. Byte-level verification without arkworks deserialization."
 
   - id: DEP-005
     section: "Artifact Publication"
     summary: "Publish config, VK, transcript, source"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/deployment/DEP-005.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_dep_005.rs::vv_req_dep_005_serializes_to_json
+      - tests/vv_req_dep_005.rs::vv_req_dep_005_all_fields_present
+      - tests/vv_req_dep_005.rs::vv_req_dep_005_hex_fields_have_prefix
+      - tests/vv_req_dep_005.rs::vv_req_dep_005_bytes32_fields_correct_length
+      - tests/vv_req_dep_005.rs::vv_req_dep_005_vk_json_structure
+      - tests/vv_req_dep_005.rs::vv_req_dep_005_vk_hash_matches_vk_content
+      - tests/vv_req_dep_005.rs::vv_req_dep_005_json_roundtrip
+      - tests/vv_req_dep_005.rs::vv_req_dep_005_numeric_fields
+    notes: "DeploymentArtifacts and VkJson structs in src/config.rs. JSON serde with 0x-prefixed hex. VkJson.to_bytes() for hash verification."

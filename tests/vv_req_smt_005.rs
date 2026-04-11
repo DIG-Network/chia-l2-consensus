@@ -8,7 +8,7 @@
 //!
 //! Test vectors defined here MUST be verified against Rue implementation in Phase 3.
 
-use chia_l2_consensus::merkle::{
+use chia_l2_consensus::testing::{
     active_leaf, compute_empty_nodes, compute_slot, SparseMerkleTree, EMPTY_LEAF, TREE_DEPTH,
 };
 use sha2::{Digest, Sha256};

@@ -6,39 +6,91 @@ items:
   - id: VAL-001
     section: "Key Generation"
     summary: "Generate and backup BLS keypair"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/validator/VAL-001.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_val_001.rs::vv_req_val_001_keygen_succeeds
+      - tests/vv_req_val_001.rs::vv_req_val_001_pubkey_is_48_bytes
+      - tests/vv_req_val_001.rs::vv_req_val_001_secret_key_is_32_bytes
+      - tests/vv_req_val_001.rs::vv_req_val_001_pubkey_nonzero
+      - tests/vv_req_val_001.rs::vv_req_val_001_pubkey_compression_flag
+      - tests/vv_req_val_001.rs::vv_req_val_001_different_entropy_different_keys
+      - tests/vv_req_val_001.rs::vv_req_val_001_deterministic
+      - tests/vv_req_val_001.rs::vv_req_val_001_pubkey_from_secret
+      - tests/vv_req_val_001.rs::vv_req_val_001_sign_verify_roundtrip
+      - tests/vv_req_val_001.rs::vv_req_val_001_wrong_key_fails
+      - tests/vv_req_val_001.rs::vv_req_val_001_wrong_message_fails
+      - tests/vv_req_val_001.rs::vv_req_val_001_entropy_too_short_fails
+    notes: "generate_validator_keypair(), sign_message(), verify_signature() in src/validator/keygen.rs. Uses blst BLS12-381 augmented scheme."
 
   - id: VAL-002
     section: "Registration"
     summary: "Spend network coin with collateral"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/validator/VAL-002.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_val_002.rs::vv_req_val_002_signing_message_is_96_bytes
+      - tests/vv_req_val_002.rs::vv_req_val_002_signing_message_format
+      - tests/vv_req_val_002.rs::vv_req_val_002_signature_is_96_bytes
+      - tests/vv_req_val_002.rs::vv_req_val_002_signature_verifies
+      - tests/vv_req_val_002.rs::vv_req_val_002_wrong_key_fails
+      - tests/vv_req_val_002.rs::vv_req_val_002_wrong_genesis_challenge_fails
+      - tests/vv_req_val_002.rs::vv_req_val_002_wrong_coin_id_fails
+      - tests/vv_req_val_002.rs::vv_req_val_002_different_pubkeys_different_messages
+      - tests/vv_req_val_002.rs::vv_req_val_002_registration_message_matches_wire_spec
+      - tests/vv_req_val_002.rs::vv_req_val_002_signing_deterministic
+      - tests/vv_req_val_002.rs::vv_req_val_002_collateral_from_config
+    notes: "compute_registration_signing_message(), sign_registration(), verify_registration_signature() in src/validator/registration.rs. AGG_SIG_ME message = sha256('register'+pk) + genesis_challenge + coin_id."
 
   - id: VAL-003
     section: "Signing Protocol"
     summary: "Sign checkpoint messages correctly"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/validator/VAL-003.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_val_003.rs::vv_req_val_003_signing_message_is_96_bytes
+      - tests/vv_req_val_003.rs::vv_req_val_003_signing_message_format
+      - tests/vv_req_val_003.rs::vv_req_val_003_checkpoint_message_from_wire
+      - tests/vv_req_val_003.rs::vv_req_val_003_sign_verify_roundtrip
+      - tests/vv_req_val_003.rs::vv_req_val_003_wrong_key_fails
+      - tests/vv_req_val_003.rs::vv_req_val_003_wrong_checkpoint_msg_fails
+      - tests/vv_req_val_003.rs::vv_req_val_003_aggregate_signatures
+      - tests/vv_req_val_003.rs::vv_req_val_003_single_sig_aggregate
+      - tests/vv_req_val_003.rs::vv_req_val_003_empty_aggregation_fails
+      - tests/vv_req_val_003.rs::vv_req_val_003_signing_deterministic
+      - tests/vv_req_val_003.rs::vv_req_val_003_different_coin_ids
+    notes: "sign_checkpoint(), verify_checkpoint_signature(), aggregate_checkpoint_signatures() in src/validator/signing.rs. BLS augmented scheme, 96-byte G2 signatures, blst aggregation."
 
   - id: VAL-004
     section: "Voluntary Exit"
     summary: "Signal, wait for exclusion, recover collateral"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/validator/VAL-004.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_val_004.rs::vv_req_val_004_active_validator_not_excluded
+      - tests/vv_req_val_004.rs::vv_req_val_004_removed_validator_is_excluded
+      - tests/vv_req_val_004.rs::vv_req_val_004_non_membership_proof_valid
+      - tests/vv_req_val_004.rs::vv_req_val_004_membership_proof_invalid_after_exclusion
+      - tests/vv_req_val_004.rs::vv_req_val_004_exit_announcement_matches_wire
+      - tests/vv_req_val_004.rs::vv_req_val_004_exit_announcement_is_32_bytes
+      - tests/vv_req_val_004.rs::vv_req_val_004_different_epochs
+      - tests/vv_req_val_004.rs::vv_req_val_004_prepare_recovery
+      - tests/vv_req_val_004.rs::vv_req_val_004_recovery_fails_for_active
+      - tests/vv_req_val_004.rs::vv_req_val_004_recovery_works_for_never_registered
+    notes: "is_validator_excluded(), compute_exit_announcement(), prepare_collateral_recovery() in src/validator/exit.rs. Non-membership proof + WIRE-004 announcement + CollateralRecoveryParams."
 
   - id: VAL-005
     section: "Forced Exit"
     summary: "Majority vote exclusion and slashing"
-    status: gap
+    status: verified
     spec_ref: "docs/design/requirements/validator/VAL-005.md"
-    tests: []
-    notes: ""
+    tests:
+      - tests/vv_req_val_005.rs::vv_req_val_005_same_mechanism_as_voluntary
+      - tests/vv_req_val_005.rs::vv_req_val_005_slash_to_governance_address
+      - tests/vv_req_val_005.rs::vv_req_val_005_multiple_forced_exits
+      - tests/vv_req_val_005.rs::vv_req_val_005_active_cannot_be_forced
+      - tests/vv_req_val_005.rs::vv_req_val_005_reason_recorded
+      - tests/vv_req_val_005.rs::vv_req_val_005_all_reasons
+      - tests/vv_req_val_005.rs::vv_req_val_005_announcement_independent_of_reason
+      - tests/vv_req_val_005.rs::vv_req_val_005_empty_leaf_after_exclusion
+    notes: "prepare_forced_exit(), ForcedExitReason enum in src/validator/exit.rs. Same L1 mechanism as VAL-004; governance-level distinction with slash destination."

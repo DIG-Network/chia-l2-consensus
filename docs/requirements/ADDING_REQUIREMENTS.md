@@ -131,3 +131,31 @@ Add domain to `docs/requirements/domains/README.md`
 - [ ] IMPLEMENTATION_ORDER.md checkbox added
 - [ ] Cross-references to related requirements included
 - [ ] CHIP section reference included where applicable
+
+### Additional checklist for on-chain puzzle requirements (NET, REG, CHK)
+
+**Compilation & artifacts:**
+- [ ] Rue source in `puzzles/{name}.rue` compiles without errors
+- [ ] `rue build -x` output saved to `puzzles/compiled/{name}.hex`
+- [ ] `rue build --hash` output saved to `puzzles/compiled/{name}.hash`
+- [ ] Rust driver in `src/puzzles/{name}.rs` loads `.hex` via `include_str!`
+- [ ] Rust driver in `src/puzzles/{name}.rs` loads `.hash` via `include_str!`
+- [ ] `cargo check` passes with embedded artifacts
+
+**CLVM execution tests (HARD REQUIREMENT):**
+- [ ] VV tests deserialize `.hex` and curry with test parameters
+- [ ] VV tests run curried CLVM with test solutions via `run_program()`
+- [ ] VV tests parse output conditions and assert exact opcodes, hashes, amounts
+- [ ] VV tests cover all curried parameter permutations (different pubkeys, IDs)
+- [ ] VV tests cover all solution field permutations (valid and invalid values)
+- [ ] Cross-impl tests verify Rust hash == CLVM hash for same inputs
+
+**Simulator spend tests (HARD REQUIREMENT):**
+- [ ] VV tests use `chia-sdk-test::Simulator` for full spend bundle lifecycle
+- [ ] Tests create coins, build spends, submit to simulator, verify coin states
+- [ ] Tests verify child coins created with correct puzzle hash and amount
+- [ ] Tests verify failure cases: wrong signatures, missing announcements, etc.
+- [ ] Multi-path puzzles have separate simulator tests per spend path
+
+**Source inspection tests (supplemental only):**
+- [ ] Source inspection may supplement but NEVER replaces CLVM/simulator tests
