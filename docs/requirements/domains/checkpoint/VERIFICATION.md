@@ -12,4 +12,10 @@
 
 | [CHK-008](NORMATIVE.md#CHK-008) | ❌ | E2E integration test | Full lifecycle: deploy, register, checkpoint with real Groth16 proof, collateral recovery — all via simulator |
 
+| [CHK-009](NORMATIVE.md#CHK-009) | ✅ | Epoch binding | Epoch in checkpoint_message; puzzle computes new_epoch=old+1; scalar s6 changes; proof differs; 9 VV tests |
+| [CHK-010](NORMATIVE.md#CHK-010) | ✅ | Single checkpoint per epoch | Signature epoch mismatch; aggregate epoch-bound; singleton recreation; replay prevented; 7 VV tests |
+
+| [CHK-011](NORMATIVE.md#CHK-011) | ❌ | State hash binding | Verify state_root in checkpoint_message; different states → different messages; puzzle uses same state_root for recreation |
+| [CHK-012](NORMATIVE.md#CHK-012) | ❌ | Network ID binding | Add network_coin_launcher_id to checkpoint_message; curried in puzzle; different networks → different messages |
+
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap
