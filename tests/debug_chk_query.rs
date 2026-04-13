@@ -42,9 +42,9 @@ fn flat(a: &mut Allocator, items: &[NodePtr]) -> NodePtr {
 
 #[test]
 fn debug_chk_both_paths() {
-    let el: [u8; 32] = Sha256::digest(&[0u8; 48]).into();
+    let el: [u8; 32] = Sha256::digest([0u8; 48]).into();
     let pk = [0xAA; 48];
-    let active: [u8; 32] = Sha256::digest(&pk).into();
+    let active: [u8; 32] = Sha256::digest(pk).into();
     let mut rp = Vec::new();
     rp.extend(&active);
     rp.extend(&el);
@@ -73,12 +73,12 @@ fn debug_chk_both_paths() {
         let vmr = [0xBB; 32];
         let vc: u64 = 3;
         let agg_s = [0xEE; 48];
-        let s1: [u8; 32] = Sha256::digest(&vmr).into();
-        let s2: [u8; 32] = Sha256::digest(&vc.to_be_bytes()).into();
-        let s3: [u8; 32] = Sha256::digest(&new_vmr).into();
-        let s4: [u8; 32] = Sha256::digest(&new_vc.to_be_bytes()).into();
-        let s5: [u8; 32] = Sha256::digest(&agg_s).into();
-        let s6: [u8; 32] = Sha256::digest(&cm).into();
+        let s1: [u8; 32] = Sha256::digest(vmr).into();
+        let s2: [u8; 32] = Sha256::digest(vc.to_be_bytes()).into();
+        let s3: [u8; 32] = Sha256::digest(new_vmr).into();
+        let s4: [u8; 32] = Sha256::digest(new_vc.to_be_bytes()).into();
+        let s5: [u8; 32] = Sha256::digest(agg_s).into();
+        let s6: [u8; 32] = Sha256::digest(cm).into();
 
         // Build VK, IC, State, Proof, Scalars as structs
         let vk_a = a.new_atom(&[0x01; 48]).unwrap();

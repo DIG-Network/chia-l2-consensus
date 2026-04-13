@@ -79,11 +79,11 @@ fn vv_req_wire_001_field_order_correct() {
     let message = compute_checkpoint_message(state_root, merkle_root, count, epoch, NET_ID);
 
     let mut hasher = Sha256::new();
-    hasher.update(&state_root);
-    hasher.update(&merkle_root);
-    hasher.update(&count.to_be_bytes());
-    hasher.update(&epoch.to_be_bytes());
-    hasher.update(&NET_ID); // CHK-012
+    hasher.update(state_root);
+    hasher.update(merkle_root);
+    hasher.update(count.to_be_bytes());
+    hasher.update(epoch.to_be_bytes());
+    hasher.update(NET_ID); // CHK-012
     let expected: [u8; 32] = hasher.finalize().into();
 
     assert_eq!(
@@ -128,7 +128,7 @@ fn vv_req_wire_001_edge_case_zeros() {
 
     // sha256 of 112 zero bytes
     let input = [0x00u8; 112];
-    let expected: [u8; 32] = Sha256::digest(&input).into();
+    let expected: [u8; 32] = Sha256::digest(input).into();
 
     assert_eq!(
         message, expected,

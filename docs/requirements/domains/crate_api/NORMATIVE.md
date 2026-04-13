@@ -46,3 +46,17 @@ spec-consensus-crate.md so that L2 systems can import it as a dependency.
 
 <a id="API-006"></a>**API-006** Internal modules (`prover`, `puzzles`, `validator`) MUST be `pub(crate)`. The `merkle` and `indexer` modules MUST be `pub(crate)` with selected types re-exported through `lib.rs` per spec Lines 24-55. Test-only exports MUST use `pub mod testing`.
 > **Spec:** [`API-006.md`](specs/API-006.md)
+
+---
+
+## §7 Dedicated VV Test Files
+
+<a id="API-007"></a>**API-007** API-001 (public API surface) and API-006 (module visibility) SHOULD have dedicated VV test files (`vv_req_api_001.rs`, `vv_req_api_006.rs`) that explicitly verify the public export list and module visibility constraints, rather than relying solely on compilation-verified status.
+> **Spec:** [`API-007.md`](specs/API-007.md)
+
+---
+
+## §8 Return-Not-Submit Pattern
+
+<a id="API-008"></a>**API-008** Every public method that produces coin spends (`deploy()`, `register_validator()`, `build_checkpoint()`, `recover_collateral()`, `query_membership_on_chain()`) MUST return a `SpendBundle` to the caller. The crate MUST NOT broadcast, submit, or push transactions to a Chia node. The importing project is solely responsible for broadcasting bundles via `push_tx()` or equivalent.
+> **Spec:** [`API-008.md`](specs/API-008.md)

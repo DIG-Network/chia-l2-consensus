@@ -49,8 +49,9 @@ fn vv_req_sec_008_registration_no_conditions_spread() {
 fn vv_req_sec_008_registration_only_two_conditions() {
     // The puzzle should output exactly: [assert_announcement, create_collateral]
     // Count the number of items in the output list
+    // WDC-004: renamed create_collateral → create_delay_coin
     assert!(
-        REG_SRC.contains("[assert_announcement, create_collateral]"),
+        REG_SRC.contains("[assert_announcement, create_delay_coin]"),
         "SEC-008: registration_coin must output exactly 2 conditions"
     );
 }
@@ -103,8 +104,8 @@ fn vv_req_sec_008_network_coin_keeps_conditions() {
 
 #[test]
 fn vv_req_sec_008_no_agg_sig_unsafe_anywhere() {
-    let reg_hex = include_str!("../puzzles/compiled/registration_coin.hex");
-    let chk_hex = include_str!("../puzzles/compiled/checkpoint_inner.hex");
+    let _reg_hex = include_str!("../puzzles/compiled/registration_coin.hex");
+    let _chk_hex = include_str!("../puzzles/compiled/checkpoint_inner.hex");
 
     // AGG_SIG_UNSAFE would appear as opcode 49 (0x31) if hardcoded
     // Since conditions are removed, no external injection possible either

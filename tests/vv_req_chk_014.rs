@@ -113,7 +113,14 @@ fn vv_req_chk_014_invalid_proof_rejected() {
     // Minority: k=1, n=10 → 2*1=2, 2 > 10 is FALSE
     let result = std::panic::catch_unwind(|| {
         let circuit = ConsensusCircuit::with_public_inputs(
-            [0; 32], 10, [0; 32], 10, [0; 48], [0xAA; 32], 1, // k=1, n=10
+            [0; 32],
+            10,
+            [0; 32],
+            10,
+            [0; 48],
+            [0xAA; 32],
+            1, // k=1, n=10
+            Vec::new(),
         );
         generate_proof(circuit, &pk)
     });
@@ -134,8 +141,16 @@ fn vv_req_chk_014_proof_bound_to_specific_message() {
 
     let msg = compute_checkpoint_message([0x11; 32], [0x22; 32], 1, 1, [0xAA; 32]);
 
-    let circuit =
-        ConsensusCircuit::with_public_inputs([0x22; 32], 1, [0x22; 32], 1, [0xCC; 48], msg, 1);
+    let circuit = ConsensusCircuit::with_public_inputs(
+        [0x22; 32],
+        1,
+        [0x22; 32],
+        1,
+        [0xCC; 48],
+        msg,
+        1,
+        Vec::new(),
+    );
     let proof = generate_proof(circuit, &pk).unwrap();
     assert_eq!(
         proof.len(),
@@ -158,7 +173,14 @@ fn vv_req_chk_014_valid_majority_accepted() {
     // Majority: k=3, n=5 → 2*3=6, 6 > 5 is TRUE
     let msg = compute_checkpoint_message([0x11; 32], [0x22; 32], 5, 1, [0xAA; 32]);
     let circuit = ConsensusCircuit::with_public_inputs(
-        [0x22; 32], 5, [0x22; 32], 5, [0xCC; 48], msg, 3, // k=3, n=5
+        [0x22; 32],
+        5,
+        [0x22; 32],
+        5,
+        [0xCC; 48],
+        msg,
+        3, // k=3, n=5
+        Vec::new(),
     );
     let proof = generate_proof(circuit, &pk).unwrap();
 

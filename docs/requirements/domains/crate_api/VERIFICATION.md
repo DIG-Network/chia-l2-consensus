@@ -8,5 +8,7 @@
 | [API-004](NORMATIVE.md#API-004) | ✅ | Client state accessors | epoch/state_root/etc return NotDeployed before sync; set_cache_path works; 3 VV tests |
 | [API-005](NORMATIVE.md#API-005) | ✅ | Client message computation | checkpoint_message/signing_message/is_active/announcement all return NotDeployed; 5 VV tests |
 | [API-006](NORMATIVE.md#API-006) | ✅ | Module visibility | indexer, merkle, prover, puzzles, validator all pub(crate); testing module provides VV access |
+| [API-007](NORMATIVE.md#API-007) | ✅ | Dedicated VV tests | vv_req_api_001.rs (7 tests: public API) + vv_req_api_006.rs (11 tests: visibility) |
+| [API-008](NORMATIVE.md#API-008) | ✅ | Return-not-submit | 10 tests: no push_tx/send_transaction/submit in src/ code; 4 methods return ConsensusResult<SpendBundle>; build_checkpoint naming; docs pattern |
 
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap

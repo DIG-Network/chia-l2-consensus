@@ -134,6 +134,7 @@ fn vv_req_cir_005_public_inputs_bytes_order() {
         agg_signers,
         checkpoint_msg,
         count as usize,
+        Vec::new(),
     );
 
     let inputs = circuit.public_inputs_bytes();
@@ -197,8 +198,16 @@ fn vv_req_cir_005_public_input_sizes() {
     // | 5 | 48 bytes |
     // | 6 | 32 bytes |
 
-    let circuit =
-        ConsensusCircuit::with_public_inputs([0u8; 32], 0, [0u8; 32], 0, [0u8; 48], [0u8; 32], 1);
+    let circuit = ConsensusCircuit::with_public_inputs(
+        [0u8; 32],
+        0,
+        [0u8; 32],
+        0,
+        [0u8; 48],
+        [0u8; 32],
+        1,
+        Vec::new(),
+    );
 
     let inputs = circuit.public_inputs_bytes();
 
@@ -247,6 +256,7 @@ fn vv_req_cir_005_accessors_match_public_inputs() {
         agg_signers,
         checkpoint_msg,
         count as usize,
+        Vec::new(),
     );
 
     // Verify accessors
@@ -305,6 +315,7 @@ fn vv_req_cir_005_scalar_applied_to_inputs() {
         agg_signers,
         checkpoint_msg,
         count as usize,
+        Vec::new(),
     );
 
     let inputs = circuit.public_inputs_bytes();
@@ -391,6 +402,7 @@ fn vv_req_cir_005_count_as_big_endian_u64() {
         [0u8; 48],
         [0u8; 32],
         count as usize,
+        Vec::new(),
     );
 
     let inputs = circuit.public_inputs_bytes();

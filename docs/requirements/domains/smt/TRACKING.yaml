@@ -41,12 +41,18 @@ items:
 
   - id: SMT-005
     section: "Cross-Implementation"
-    summary: "Rust and Chialisp produce identical roots"
+    summary: "Rust and CLVM/Rue produce identical roots and proofs"
     status: verified
     spec_ref: "docs/requirements/domains/smt/specs/SMT-005.md"
     tests:
-      - tests/vv_req_smt_005.rs
-    notes: "Rust side verified with test vectors. Full cross-impl testing with Rue puzzles pending Phase 3."
+      - tests/vv_req_smt_005.rs (12 Rust canonical vector tests)
+      - tests/vv_req_smt_005_cross_impl.rs::vv_req_smt_005_cross_impl_single_validator_membership
+      - tests/vv_req_smt_005_cross_impl.rs::vv_req_smt_005_cross_impl_non_membership_proof
+      - tests/vv_req_smt_005_cross_impl.rs::vv_req_smt_005_cross_impl_multiple_validators
+      - tests/vv_req_smt_005_cross_impl.rs::vv_req_smt_005_cross_impl_empty_tree_root
+      - tests/vv_req_smt_005_cross_impl.rs::vv_req_smt_005_cross_impl_announcement_hash
+      - tests/vv_req_smt_005_cross_impl.rs::vv_req_smt_005_cross_impl_wrong_root_rejected
+    notes: "Full cross-impl verified: Rust SparseMerkleTree proofs at TREE_DEPTH=32 accepted by compiled CLVM checkpoint puzzle. Tests cover membership, non-membership, multiple validators, empty tree, announcement hash, and wrong-root rejection."
 
   - id: SMT-006
     section: "Empty Tree Optimization"

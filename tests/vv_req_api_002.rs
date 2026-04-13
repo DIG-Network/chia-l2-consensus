@@ -21,9 +21,7 @@
 //! ## Completeness: HIGH
 //! ## Gaps: None significant.
 
-use chia_l2_consensus::testing::{
-    derive_launcher_id, deserialize_proving_key, run_test_setup, vk_to_bytes,
-};
+use chia_l2_consensus::testing::{derive_launcher_id, run_test_setup};
 use chia_l2_consensus::NetworkConfig;
 use chia_protocol::Bytes32;
 
@@ -41,6 +39,8 @@ fn test_config() -> NetworkConfig {
         max_signers: 20_000,
         verification_key_hex: hex::encode(&vk_bytes), // arkworks compressed format
         genesis_challenge: Bytes32::from([0x42; 32]),
+        withdraw_delay_blocks: 24_000,
+        withdraw_delay_mod_hash: Bytes32::default(),
     }
 }
 

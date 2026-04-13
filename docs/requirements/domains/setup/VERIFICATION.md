@@ -8,5 +8,6 @@
 | [SETUP-004](NORMATIVE.md#SETUP-004) | ✅ | Core dependencies | `cargo build` succeeds; all deps resolve correctly |
 | [SETUP-005](NORMATIVE.md#SETUP-005) | ✅ | Rue tooling | `rue --help` available; .rue source files exist; `puzzles/compiled/` ready |
 | [SETUP-006](NORMATIVE.md#SETUP-006) | ✅ | Build configuration | `cargo build --release` succeeds; clippy and fmt checks pass |
+| [SETUP-007](NORMATIVE.md#SETUP-007) | ✅ | Automated VV tests | vv_req_setup_001.rs (5 tests: toolchain) + vv_req_setup_002.rs (9 tests: Cargo.toml) |
 
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap

@@ -7,7 +7,6 @@
 //! `chia_sdk_driver` and `chia_sdk_test` rather than mixing with
 //! `chia_protocol` types from our crate's direct dependency.
 
-pub use chia_sdk_driver::SpendContext;
 pub use chia_sdk_test::Simulator;
 
 /// Create a fresh simulator for testing.

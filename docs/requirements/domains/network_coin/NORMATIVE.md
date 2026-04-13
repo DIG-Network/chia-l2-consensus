@@ -39,3 +39,17 @@
 
 <a id="NET-006"></a>**NET-006** A full end-to-end simulator test MUST exercise the complete network coin lifecycle using the chia-wallet-sdk simulator: deploy the network coin as a singleton (wrapping the inner puzzle via chia-wallet-sdk), register a validator with a real BLS signature, verify the registration coin is created with the correct puzzle hash and collateral amount, and verify the network coin is recreated as a new singleton coin.
 > **Spec:** [`NET-006.md`](specs/NET-006.md)
+
+---
+
+## §6 CLVM Execution Validation
+
+<a id="NET-007"></a>**NET-007** Each puzzle-behaviour requirement (NET-001 through NET-004) MUST have dedicated CLVM execution tests that deserialize the compiled `.hex` artifact, curry with test parameters, run via `run_program()`, and assert exact output conditions — source-string inspection alone is insufficient per SCHEMA.md Hard Testing Requirements.
+> **Spec:** [`NET-007.md`](specs/NET-007.md)
+
+---
+
+## §7 Failure Case Coverage
+
+<a id="NET-008"></a>**NET-008** The E2E simulator tests (NET-006) MUST include failure-path coverage: wrong BLS signature MUST be rejected, insufficient collateral MUST be rejected, and mismatched pubkey in signature MUST cause AGG_SIG_ME failure.
+> **Spec:** [`NET-008.md`](specs/NET-008.md)

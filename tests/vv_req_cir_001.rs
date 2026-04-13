@@ -99,6 +99,7 @@ fn vv_req_cir_001_circuit_with_public_inputs() {
         agg_signers,
         checkpoint_message,
         validator_count as usize,
+        Vec::new(),
     );
 
     // Verify public inputs are stored
@@ -240,6 +241,7 @@ fn vv_req_cir_001_public_input_order() {
         [0x03u8; 48], // agg_signers
         [0x04u8; 32], // checkpoint_message
         100,          // actual_signers (majority: 2*100 > 100)
+        Vec::new(),
     );
 
     // Verify order by checking accessor methods return expected values

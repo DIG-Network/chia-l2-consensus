@@ -38,7 +38,7 @@ pub enum ConsensusError {
 
     /// Not enough signers for majority consensus.
     /// The circuit requires `2k > validator_count` (CIR-004).
-    /// Collect more signatures before calling `submit_checkpoint()`.
+    /// Collect more signatures before calling `build_checkpoint()`.
     ///
     /// See [spec-groth16-circuit.md Lines 325-357](../docs/resources/spec-groth16-circuit.md) —
     /// Constraint 3: Majority Threshold.
@@ -113,6 +113,14 @@ pub enum ConsensusError {
     #[error("indexer cache error: {0}")]
     CacheError(String),
 
+    /// Blockchain query failed (chia-query).
+    /// Wraps errors from `ChiaQuery` — peer connection failures, coinset API
+    /// errors, or all sources failing.
+    ///
+    /// RPC-001: See [spec-consensus-crate.md](../docs/resources/spec-consensus-crate.md).
+    #[error("blockchain query error: {0}")]
+    RpcError(String),
+
     /// Two validators hash to the same Merkle tree slot.
     /// Probability: ~n²/2^64 for n validators (negligible for realistic sets).
     /// Reject the second registration at the L2 level.
@@ -121,6 +129,14 @@ pub enum ConsensusError {
     /// Slot Assignment.
     #[error("slot collision for pubkey: {0}")]
     SlotCollision(String),
+
+    /// Wallet does not have enough XCH to fund collateral + fees.
+    /// The validator needs to add funds before registering.
+    ///
+    /// RPC-005: Returned by `register_validator()` when `dig-l1-wallet`
+    /// coin selection fails.
+    #[error("insufficient funds for collateral: {0}")]
+    InsufficientFunds(String),
 }
 
 /// Result type alias for all consensus operations.

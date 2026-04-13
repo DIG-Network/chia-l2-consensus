@@ -7,7 +7,11 @@
 //!
 //! 1. `ConsensusClient::new(config, cache)` — create client for an existing network
 //! 2. `sync()` — fetch current on-chain state from the Chia node
-//! 3. `register_validator()` / `submit_checkpoint()` / `recover_collateral()` — operations
+//! 3. `register_validator()` / `build_checkpoint()` / `recover_collateral()` — operations
+//!
+//! All methods that produce coin spends return `SpendBundle`. The crate NEVER
+//! broadcasts transactions. The importing project is responsible for submitting
+//! bundles to a Chia full node via `push_tx()` or equivalent.
 //!
 //! ## Architecture
 //!
@@ -30,21 +34,44 @@
 
 use chia_protocol::Bytes32;
 use chia_protocol::SpendBundle;
+use chia_query::{ChiaQuery, ChiaQueryConfig};
 
 use crate::config::NetworkConfig;
-use crate::error::ConsensusResult;
+use crate::error::{ConsensusError, ConsensusResult};
 use crate::indexer::{IndexerCache, IndexerState};
 use crate::state::{CheckpointSingletonState, ValidatorSet};
+
+/// Convert a Bytes32 to a 0x-prefixed hex string for chia-query API calls.
+///
+/// RPC-001: chia-query uses `&str` hex strings, not `Bytes32`.
+pub fn bytes32_to_hex(b: &Bytes32) -> String {
+    format!("0x{}", hex::encode(b.as_ref()))
+}
+
+/// Convert a 0x-prefixed hex string back to Bytes32.
+///
+/// RPC-001: Used when parsing chia-query responses back to our types.
+pub fn hex_to_bytes32(s: &str) -> ConsensusResult<Bytes32> {
+    let s = s.strip_prefix("0x").unwrap_or(s);
+    let bytes = hex::decode(s).map_err(|e| ConsensusError::SerializationError(e.to_string()))?;
+    Bytes32::try_from(bytes.as_slice())
+        .map_err(|_| ConsensusError::SerializationError("invalid Bytes32 length".into()))
+}
 
 /// Main client for L2 consensus operations.
 ///
 /// The L2 system uses only this client and the types it returns.
 /// All internal coordination (puzzles, merkle, prover, indexer) is hidden.
 ///
+/// RPC-001: Uses `ChiaQuery` for all blockchain queries (decentralized
+/// peers + coinset.org fallback). The crate NEVER broadcasts transactions.
+///
 /// See [spec-consensus-crate.md Lines 1579-1670](../docs/resources/spec-consensus-crate.md)
 /// for the full ConsensusClient specification.
 pub struct ConsensusClient {
     config: NetworkConfig,
+    /// RPC-001: Blockchain query backend — shared with indexer and puzzle drivers.
+    query: Option<ChiaQuery>,
     indexer: IndexerState,
     /// Cached checkpoint state from last sync(). None before first sync.
     state: Option<CheckpointSingletonState>,
@@ -58,14 +85,40 @@ impl ConsensusClient {
     /// Does NOT sync with the chain. Call `sync()` before any operation
     /// that depends on current on-chain state.
     ///
+    /// The `ChiaQuery` backend is NOT initialized here — call
+    /// `connect()` to establish blockchain connectivity.
+    ///
     /// See [spec-consensus-crate.md Lines 1597-1602](../docs/resources/spec-consensus-crate.md).
     pub fn new(config: NetworkConfig, cache: IndexerCache) -> Self {
         Self {
             config,
+            query: None,
             indexer: IndexerState::new(cache),
             state: None,
             cache_path: None,
         }
+    }
+
+    /// RPC-001: Connect to the Chia blockchain via chia-query.
+    ///
+    /// Initializes the `ChiaQuery` backend with decentralized peer
+    /// connections and coinset.org fallback. Must be called before `sync()`.
+    ///
+    /// The `ChiaQueryConfig` controls network type (mainnet/testnet11),
+    /// max peers, timeouts, and fallback settings.
+    pub async fn connect(&mut self, query_config: ChiaQueryConfig) -> ConsensusResult<()> {
+        let query = ChiaQuery::new(query_config)
+            .await
+            .map_err(|e| ConsensusError::RpcError(e.to_string()))?;
+        self.query = Some(query);
+        Ok(())
+    }
+
+    /// Get a reference to the ChiaQuery backend, or error if not connected.
+    pub(crate) fn query(&self) -> ConsensusResult<&ChiaQuery> {
+        self.query
+            .as_ref()
+            .ok_or_else(|| ConsensusError::RpcError("not connected — call connect() first".into()))
     }
 
     /// Get the network configuration (deployment parameters).
@@ -109,17 +162,35 @@ impl ConsensusClient {
     }
 
     /// Register a new validator by spending the network coin.
+    /// Returns SpendBundle — the caller broadcasts it (API-008).
+    ///
+    /// RPC-005: Uses `dig-l1-wallet` for coin selection to fund collateral.
+    /// The `L1Wallet` is passed per-call, NOT stored in ConsensusClient.
     ///
     /// Builds a spend bundle that:
-    /// 1. Spends the network coin singleton with the validator's BLS pubkey
-    /// 2. Creates a registration coin with collateral (NET-003)
-    /// 3. Includes AGG_SIG_ME proving the validator controls the pubkey (NET-002)
-    /// 4. Includes pubkey memo for indexer detection (NET-005)
+    /// 1. Selects XCH coins from wallet to fund collateral + fee (RPC-005)
+    /// 2. Spends the network coin singleton with the validator's BLS pubkey
+    /// 3. Creates a registration coin with collateral (NET-003)
+    /// 4. Includes AGG_SIG_ME proving the validator controls the pubkey (NET-002)
+    /// 5. Includes pubkey memo for indexer detection (NET-005)
     ///
-    /// See [spec-consensus-crate.md Lines 1742-1790](../docs/resources/spec-consensus-crate.md).
-    /// See [spec-network-coin.md Lines 100-200](../docs/resources/spec-network-coin.md).
-    pub async fn register_validator(&self, _pubkey: &[u8; 48]) -> ConsensusResult<SpendBundle> {
-        // TODO: Implement — needs current network coin state from sync()
+    /// Returns `InsufficientFunds` if wallet balance < collateral + fee.
+    ///
+    /// See [spec-consensus-crate.md](../docs/resources/spec-consensus-crate.md).
+    /// See [spec-network-coin.md](../docs/resources/spec-network-coin.md).
+    pub async fn register_validator(
+        &self,
+        _pubkey: &[u8; 48],
+        _wallet: &dig_l1_wallet::L1Wallet,
+        _wallet_name: &str,
+        _account_index: u32,
+        _fee: u64,
+    ) -> ConsensusResult<SpendBundle> {
+        // TODO: Implement (RPC-002 + RPC-005):
+        // 1. wallet.select_coins(wallet_name, Some(account_index), collateral + fee, LargestFirst)
+        // 2. Build network coin spend via puzzles/network_coin.rs
+        // 3. Build funding spends from selected coins
+        // 4. Combine into single SpendBundle
         // See register_validator() in puzzles/network_coin.rs
         todo!()
     }
@@ -137,7 +208,7 @@ impl ConsensusClient {
     ///
     /// See [spec-consensus-crate.md Lines 1806-1900](../docs/resources/spec-consensus-crate.md).
     /// See [spec-checkpoint-singleton.md Lines 1-100](../docs/resources/spec-checkpoint-singleton.md).
-    pub async fn submit_checkpoint(
+    pub async fn build_checkpoint(
         &self,
         _new_state_root: Bytes32,
         _signers: &[[u8; 48]],
@@ -160,22 +231,52 @@ impl ConsensusClient {
         todo!()
     }
 
-    /// Recover collateral for an exited validator.
+    /// Initiate collateral recovery for an exited validator.
+    /// Returns SpendBundle — the caller broadcasts it.
+    ///
+    /// WDC-004: This creates a WITHDRAW DELAY COIN that holds the collateral
+    /// for withdraw_delay_blocks L1 blocks. After the delay, call
+    /// release_collateral() to send the funds to the destination.
     ///
     /// Builds a two-spend atomic bundle:
     /// 1. Checkpoint singleton membership query (permissionless, CHK-005/CHK-006)
     ///    → emits non-membership announcement
     /// 2. Registration coin spend asserting the announcement (REG-004)
-    ///    → returns collateral to destination
+    ///    → creates withdraw delay coin (not direct destination)
     ///
     /// The validator must already be excluded from the Merkle tree
     /// (i.e., a checkpoint that excludes them must have been accepted).
     ///
-    /// See [spec-consensus-crate.md Lines 2011-2055](../docs/resources/spec-consensus-crate.md).
-    /// See [spec-registration-coin.md Lines 200-300](../docs/resources/spec-registration-coin.md).
+    /// See [spec-consensus-crate.md](../docs/resources/spec-consensus-crate.md).
+    /// See [spec-registration-coin.md](../docs/resources/spec-registration-coin.md).
     pub async fn recover_collateral(&self, _pubkey: &[u8; 48]) -> ConsensusResult<SpendBundle> {
         // TODO: Implement — see prepare_collateral_recovery() in validator/exit.rs
         // for the off-chain parameter computation
+        todo!()
+    }
+
+    /// Release collateral from a withdraw delay coin after the delay period.
+    /// Returns SpendBundle — the caller broadcasts it (API-008).
+    ///
+    /// WDC-005: This is the second step of two-phase collateral recovery:
+    ///   1. `recover_collateral()` — creates the withdraw delay coin
+    ///   2. [wait `withdraw_delay_blocks` L1 blocks (~5 days default)]
+    ///   3. `release_collateral()` — releases funds to destination
+    ///
+    /// If the delay has not elapsed, the Chia node will reject the bundle
+    /// (ASSERT_HEIGHT_RELATIVE failure).
+    ///
+    /// No signature required (WDC-007: permissionless after delay).
+    /// CLVM cost: ~2.4M units.
+    ///
+    /// See [spec-withdraw-delay-coin.md](../docs/resources/spec-withdraw-delay-coin.md).
+    pub async fn release_collateral(
+        &self,
+        _withdraw_delay_coin: Bytes32,
+        _destination: Bytes32,
+        _amount: u64,
+    ) -> ConsensusResult<SpendBundle> {
+        // TODO: Implement using puzzles::withdraw_delay::release_collateral()
         todo!()
     }
 

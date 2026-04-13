@@ -45,7 +45,7 @@ fn vv_req_smt_003_active_leaf_is_sha256_pubkey() {
 
     // Verify manually
     let mut hasher = Sha256::new();
-    hasher.update(&pubkey);
+    hasher.update(pubkey);
     let expected: [u8; 32] = hasher.finalize().into();
 
     assert_eq!(
@@ -63,7 +63,7 @@ fn vv_req_smt_003_empty_leaf_is_sha256_48_zeros() {
     let zero_pubkey = [0x00u8; 48];
 
     let mut hasher = Sha256::new();
-    hasher.update(&zero_pubkey);
+    hasher.update(zero_pubkey);
     let expected: [u8; 32] = hasher.finalize().into();
 
     assert_eq!(

@@ -210,7 +210,7 @@ fn vv_req_val_002_registration_message_matches_wire_spec() {
     // Manual computation per WIRE-005
     let mut hasher = Sha256::new();
     hasher.update(b"register"); // 8 bytes
-    hasher.update(&kp.pubkey); // 48 bytes
+    hasher.update(kp.pubkey); // 48 bytes
     let expected: [u8; 32] = hasher.finalize().into();
 
     let actual = compute_registration_message(&kp.pubkey);
@@ -252,6 +252,8 @@ fn vv_req_val_002_collateral_from_config() {
         max_signers: 20_000,
         verification_key_hex: String::new(),
         genesis_challenge: chia_protocol::Bytes32::default(),
+        withdraw_delay_blocks: 24_000,
+        withdraw_delay_mod_hash: chia_protocol::Bytes32::default(),
     };
 
     assert_eq!(

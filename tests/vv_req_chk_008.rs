@@ -225,6 +225,7 @@ fn vv_req_chk_008_proof_generation() {
         [0xCC; 48], // agg_signers
         [0xDD; 32], // checkpoint_message
         1,          // actual_signers (majority: 2*1 > 1)
+        Vec::new(),
     );
 
     let proof_bytes = generate_proof(circuit, &pk).expect("CHK-008: Proof must generate");
@@ -300,9 +301,9 @@ fn vv_req_chk_008_vk_ic_points() {
 
 #[test]
 fn vv_req_chk_008_pairing_with_blst_direct() {
-    use ark_bls12_381::{Bls12_381, Fr, G1Affine, G1Projective, G2Projective};
+    use ark_bls12_381::{Fr, G1Projective};
     use ark_ec::CurveGroup;
-    use ark_ff::{BigInteger, PrimeField};
+
     use ark_serialize::CanonicalSerialize;
     use chia_l2_consensus::testing::bytes_to_scalar;
 
@@ -335,6 +336,7 @@ fn vv_req_chk_008_pairing_with_blst_direct() {
         agg_signers,
         checkpoint_msg,
         vc as usize,
+        Vec::new(),
     );
     let proof_bytes = generate_proof(circuit, &pk).expect("Proof");
 
@@ -428,7 +430,7 @@ fn vv_req_chk_008_pairing_with_blst_direct() {
 
     // STEP 0: Compare IC[1]*s1 in CLVM vs arkworks
     {
-        let scalar_hash = Sha256::digest(&vmr);
+        let scalar_hash = Sha256::digest(vmr);
         let s1_bytes: Vec<u8> = scalar_hash.to_vec();
         eprintln!(
             "s1 first byte: 0x{:02x} (negative in CLVM: {})",
@@ -444,7 +446,7 @@ fn vv_req_chk_008_pairing_with_blst_direct() {
             let t = a.new_pair(s1_node, a.nil()).unwrap();
             a.new_pair(ic1_node, t).unwrap()
         };
-        let g1mul_prog = a.new_pair(g1mul_op, g1mul_args).unwrap();
+        let _g1mul_prog = a.new_pair(g1mul_op, g1mul_args).unwrap();
         // Use (q . value) to quote the literal values
         // Actually, opcode 50 will evaluate its args. Since ic1_node and s1_node are atoms,
         // they'll be treated as paths. We need to quote them.
@@ -514,12 +516,12 @@ fn vv_req_chk_008_pairing_with_blst_direct() {
 
             // Build IC[i]*s_i terms
             let scalars_bytes: [&[u8]; 6] = [
-                &Sha256::digest(&vmr) as &[u8],
-                &Sha256::digest(&vc.to_be_bytes()) as &[u8],
-                &Sha256::digest(&new_vmr) as &[u8],
-                &Sha256::digest(&new_vc.to_be_bytes()) as &[u8],
-                &Sha256::digest(&agg_signers) as &[u8],
-                &Sha256::digest(&checkpoint_msg) as &[u8],
+                &Sha256::digest(vmr) as &[u8],
+                &Sha256::digest(vc.to_be_bytes()) as &[u8],
+                &Sha256::digest(new_vmr) as &[u8],
+                &Sha256::digest(new_vc.to_be_bytes()) as &[u8],
+                &Sha256::digest(agg_signers) as &[u8],
+                &Sha256::digest(checkpoint_msg) as &[u8],
             ];
 
             // Start with IC[0]
@@ -662,6 +664,7 @@ fn vv_req_chk_008_ark_to_zcash_format() {
         agg_signers,
         checkpoint_msg,
         vc as usize,
+        Vec::new(),
     );
     use chia_l2_consensus::testing::bytes_to_scalar;
     let public_inputs = vec![
@@ -746,7 +749,14 @@ fn vv_req_chk_008_ark_to_zcash_format() {
 
     // Check proof points
     let circuit = ConsensusCircuit::with_public_inputs(
-        [0xAA; 32], 1, [0xBB; 32], 1, [0xCC; 48], [0xDD; 32], 1,
+        [0xAA; 32],
+        1,
+        [0xBB; 32],
+        1,
+        [0xCC; 48],
+        [0xDD; 32],
+        1,
+        Vec::new(),
     );
     let proof_bytes = generate_proof(circuit, &pk).expect("Proof");
     let proof_a = &proof_bytes[0..48];
@@ -829,6 +839,7 @@ fn vv_req_chk_008_checkpoint_path_with_real_proof() {
         agg_signers,
         checkpoint_msg,
         vc as usize,
+        Vec::new(),
     );
     let proof_bytes = generate_proof(circuit, &pk).expect("Proof");
     let proof_a: [u8; 48] = proof_bytes[0..48].try_into().unwrap();
@@ -977,6 +988,7 @@ fn vv_req_chk_008_checkpoint_in_simulator() -> anyhow::Result<()> {
         agg_signers,
         checkpoint_msg,
         vc as usize,
+        Vec::new(),
     );
     let proof_bytes = generate_proof(circuit, &pk).expect("Proof");
     let proof_a: [u8; 48] = proof_bytes[0..48].try_into().unwrap();
@@ -1113,9 +1125,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
     use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
     use chia_sdk_test::Simulator;
     use clvm_traits::ToClvm;
-    use clvm_utils::{
-        curry_tree_hash, tree_hash, tree_hash_atom, tree_hash_pair, CurriedProgram, TreeHash,
-    };
+    use clvm_utils::{curry_tree_hash, tree_hash, CurriedProgram, TreeHash};
 
     use blst::min_pk as bls;
     const DST: &[u8] = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_AUG_";
@@ -1218,7 +1228,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
     };
 
     // ── Helper to compute inner puzzle hash for a given state ────────
-    let compute_inner_ph =
+    let _compute_inner_ph =
         |a: &mut clvmr::Allocator, sr: &[u8; 32], ep: u64, vmr: &[u8; 32], vc: u64| -> TreeHash {
             // Build the state struct as CLVM nodes, then tree_hash it
             let nil = a.nil();
@@ -1298,6 +1308,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
         agg_signers,
         ckpt_msg_1,
         state0_vc as usize,
+        Vec::new(),
     );
     let proof_1 = generate_proof(circuit_1, &pk).expect("Proof 1");
     let scalars_1: [[u8; 32]; 6] = [
@@ -1392,6 +1403,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
         agg_signers,
         ckpt_msg_2,
         new_vc_1 as usize,
+        Vec::new(),
     );
     let proof_2 = generate_proof(circuit_2, &pk).expect("Proof 2");
     let scalars_2: [[u8; 32]; 6] = [
@@ -1602,7 +1614,14 @@ fn vv_req_chk_008_invalid_proof_rejected() {
     // Use INVALID proof (generate proof for WRONG inputs, then use with correct scalars)
     // This simulates a proof forgery attempt: valid proof format but wrong inputs
     let wrong_circuit = ConsensusCircuit::with_public_inputs(
-        [0xFF; 32], 99, [0xFF; 32], 99, [0xFF; 48], [0xFF; 32], 99,
+        [0xFF; 32],
+        99,
+        [0xFF; 32],
+        99,
+        [0xFF; 48],
+        [0xFF; 32],
+        99,
+        Vec::new(),
     );
     let wrong_proof_bytes = generate_proof(wrong_circuit, &pk).expect("Wrong proof");
     let proof_a: [u8; 48] = wrong_proof_bytes[0..48].try_into().unwrap();
@@ -1709,6 +1728,7 @@ fn vv_req_chk_008_trace_puzzle_pairing_args() {
         agg_signers,
         checkpoint_msg,
         vc as usize,
+        Vec::new(),
     );
     let proof_bytes = generate_proof(circuit, &pk).expect("Proof");
     let proof_a: [u8; 48] = proof_bytes[0..48].try_into().unwrap();
@@ -2283,6 +2303,7 @@ fn vv_req_cir_004_majority_proof_verified_on_chain() {
         agg_signers,
         checkpoint_msg,
         3, // actual_signers = 3 (majority of 5)
+        Vec::new(),
     );
     let proof_bytes = generate_proof(circuit, &pk).expect("Majority proof must generate");
 
@@ -2361,7 +2382,14 @@ fn vv_req_cir_004_minority_proof_fails() {
 
     // MINORITY: k=2 signers out of n=5 validators (2*2=4 ≤ 5) ✗
     let circuit = ConsensusCircuit::with_public_inputs(
-        [0x11; 32], 5, [0x22; 32], 5, [0xCC; 48], [0xDD; 32], 2, // minority
+        [0x11; 32],
+        5,
+        [0x22; 32],
+        5,
+        [0xCC; 48],
+        [0xDD; 32],
+        2, // minority
+        Vec::new(),
     );
 
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -2384,8 +2412,16 @@ fn vv_req_cir_004_boundary_majority() {
     let pk = deserialize_proving_key(&pk_bytes).expect("PK");
 
     let try_prove = |label: &str, vc: u64, k: usize, expect_valid: bool| {
-        let circuit =
-            ConsensusCircuit::with_public_inputs([0; 32], vc, [0; 32], vc, [0; 48], [0; 32], k);
+        let circuit = ConsensusCircuit::with_public_inputs(
+            [0; 32],
+            vc,
+            [0; 32],
+            vc,
+            [0; 48],
+            [0; 32],
+            k,
+            Vec::new(),
+        );
         // Arkworks panics on unsatisfied constraints, so catch panics
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             generate_proof(circuit, &pk)

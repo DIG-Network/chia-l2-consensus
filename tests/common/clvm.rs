@@ -280,7 +280,7 @@ pub fn build_checkpoint_membership_query_env(
     let t = a.new_pair(td, t).unwrap();
 
     // IC struct: (ic0 . (ic1 . (ic2 . (ic3 . (ic4 . (ic5 . ic6))))))
-    let ic_nodes: Vec<_> = ic.iter().map(|p| a.new_atom(*p).unwrap()).collect();
+    let ic_nodes: Vec<_> = ic.iter().map(|p| a.new_atom(p).unwrap()).collect();
     let ic_struct = build_struct(a, &ic_nodes);
     let t = a.new_pair(ic_struct, t).unwrap();
 
@@ -297,11 +297,12 @@ pub fn build_checkpoint_membership_query_env(
     a.new_pair(imh, t).unwrap()
 }
 
-/// Build registration coin env as flat list.
-/// (PK . (CKPT_ID . (epoch . (dest . (amt . (conds . nil))))))
+/// Build registration coin env as flat list (WDC-004: 4 curried + 3 solution).
+/// (PK . (CKPT_ID . (WDC_MOD . (WDC_DELAY . (epoch . (dest . (amt . nil)))))))
 ///
 /// All parameters passed as single right-linked list — Rue-compiled puzzles
 /// expect this layout. Integers use CLVM signed encoding via `u64_to_clvm`.
+/// Uses default WDC params ([0x55;32], 24000) for backward-compatible call sites.
 pub fn build_reg_coin_env(
     a: &mut Allocator,
     pk: &[u8],
@@ -310,15 +311,18 @@ pub fn build_reg_coin_env(
     dest: &[u8],
     amt: u64,
 ) -> NodePtr {
-    let conds = a.nil();
     let nil = a.nil();
-    let t = a.new_pair(conds, nil).unwrap();
     let amt_n = u64_to_clvm(a, amt);
-    let t = a.new_pair(amt_n, t).unwrap();
+    let t = a.new_pair(amt_n, nil).unwrap();
     let dest_n = a.new_atom(dest).unwrap();
     let t = a.new_pair(dest_n, t).unwrap();
     let epoch_n = u64_to_clvm(a, epoch);
     let t = a.new_pair(epoch_n, t).unwrap();
+    // WDC-004: default withdraw delay params
+    let delay_n = u64_to_clvm(a, 24_000);
+    let t = a.new_pair(delay_n, t).unwrap();
+    let wdc_mod_n = a.new_atom(&[0x55u8; 32]).unwrap();
+    let t = a.new_pair(wdc_mod_n, t).unwrap();
     let ckpt_n = a.new_atom(ckpt_id).unwrap();
     let t = a.new_pair(ckpt_n, t).unwrap();
     let pk_n = a.new_atom(pk).unwrap();

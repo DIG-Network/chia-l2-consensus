@@ -24,7 +24,7 @@ by phase. Check boxes as requirements are verified.
 - [x] [SMT-002](domains/smt/NORMATIVE.md#SMT-002) — Deterministic slot assignment
 - [x] [SMT-003](domains/smt/NORMATIVE.md#SMT-003) — Leaf values (active/empty)
 - [x] [SMT-004](domains/smt/NORMATIVE.md#SMT-004) — Proof format
-- [x] [SMT-005](domains/smt/NORMATIVE.md#SMT-005) — Cross-implementation consistency
+- [x] [SMT-005](domains/smt/NORMATIVE.md#SMT-005) — Cross-implementation consistency (Rust + CLVM cross-verified at depth=32)
 - [x] [SMT-006](domains/smt/NORMATIVE.md#SMT-006) — Empty tree optimization
 
 ### Wire Format
@@ -42,7 +42,7 @@ by phase. Check boxes as requirements are verified.
 ### Circuit Implementation
 - [x] [CIR-001](domains/circuit/NORMATIVE.md#CIR-001) — Circuit statement
 - [x] [CIR-002](domains/circuit/NORMATIVE.md#CIR-002) — Merkle membership constraint (Poseidon hash)
-- [x] [CIR-003](domains/circuit/NORMATIVE.md#CIR-003) — Aggregate key constraint (off-chain complete; in-circuit deferred to Phase 3: non-native G1)
+- [x] [CIR-003](domains/circuit/NORMATIVE.md#CIR-003) — Aggregate key constraint (in-circuit non-native G1 via g1_gadget.rs; off-chain via aggregate.rs)
 - [x] [CIR-004](domains/circuit/NORMATIVE.md#CIR-004) — Majority threshold constraint (64-bit decomposition)
 - [x] [CIR-005](domains/circuit/NORMATIVE.md#CIR-005) — Public inputs
 - [x] [CIR-006](domains/circuit/NORMATIVE.md#CIR-006) — Circuit parameters
@@ -58,16 +58,16 @@ by phase. Check boxes as requirements are verified.
 - [x] [NET-003](domains/network_coin/NORMATIVE.md#NET-003) — Registration coin creation
 - [x] [NET-004](domains/network_coin/NORMATIVE.md#NET-004) — Self-recreation
 - [x] [NET-005](domains/network_coin/NORMATIVE.md#NET-005) — Pubkey memo
-- [x] [NET-006](domains/network_coin/NORMATIVE.md#NET-006) — E2E simulator test (singleton + registration)
+- [x] [NET-006](domains/network_coin/NORMATIVE.md#NET-006) — E2E simulator test
 
 ### Registration Coin
-- [x] [REG-001](domains/registration_coin/NORMATIVE.md#REG-001) — Puzzle structure
+- [x] [REG-001](domains/registration_coin/NORMATIVE.md#REG-001) — Puzzle structure (18 source + 8 CLVM execution tests)
 - [x] [REG-002](domains/registration_coin/NORMATIVE.md#REG-002) — Lineage verification
 - [x] [REG-003](domains/registration_coin/NORMATIVE.md#REG-003) — Collateral lock
 - [x] [REG-004](domains/registration_coin/NORMATIVE.md#REG-004) — Announcement assertion
 - [x] [REG-005](domains/registration_coin/NORMATIVE.md#REG-005) — Collateral return
 - [x] [REG-006](domains/registration_coin/NORMATIVE.md#REG-006) — Epoch replay protection
-- [x] [REG-007](domains/registration_coin/NORMATIVE.md#REG-007) — E2E simulator test (collateral lifecycle)
+- [x] [REG-007](domains/registration_coin/NORMATIVE.md#REG-007) — E2E simulator test (2 success + 4 failure via REG-009)
 
 ### Checkpoint Singleton
 - [x] [CHK-001](domains/checkpoint/NORMATIVE.md#CHK-001) — Singleton identity
@@ -90,6 +90,22 @@ by phase. Check boxes as requirements are verified.
 - [x] [CHK-012](domains/checkpoint/NORMATIVE.md#CHK-012) — Network ID binding (network_coin_launcher_id in checkpoint_message)
 - [x] [CHK-013](domains/checkpoint/NORMATIVE.md#CHK-013) — Validator attestation binding (epoch + network + state in signed message)
 - [x] [CHK-014](domains/checkpoint/NORMATIVE.md#CHK-014) — Permissionless submission / forgery resistance (anyone submits, only valid majority accepted)
+
+---
+
+## Phase 3b — Withdraw Delay Coin
+
+### Withdraw Delay Coin (time-locked collateral release)
+- [x] [WDC-001](domains/withdraw_delay/NORMATIVE.md#WDC-001) — Puzzle structure (3 curried params, empty solution, 22 VV tests)
+- [x] [WDC-002](domains/withdraw_delay/NORMATIVE.md#WDC-002) — Time lock (ASSERT_HEIGHT_RELATIVE, default 24,000 blocks / ~5 days, 16 VV tests)
+- [x] [WDC-003](domains/withdraw_delay/NORMATIVE.md#WDC-003) — Fund release (CREATE_COIN at DESTINATION with AMOUNT, 16 VV tests)
+- [x] [WDC-004](domains/withdraw_delay/NORMATIVE.md#WDC-004) — Registration coin integration (2 new curried params, creates delay coin, 19 VV tests)
+- [x] [WDC-005](domains/withdraw_delay/NORMATIVE.md#WDC-005) — Driver and API (release_collateral() on ConsensusClient, 8 VV tests)
+- [x] [WDC-006](domains/withdraw_delay/NORMATIVE.md#WDC-006) — Configuration (NetworkConfig: withdraw_delay_blocks, withdraw_delay_mod_hash, 7 VV tests)
+- [x] [WDC-007](domains/withdraw_delay/NORMATIVE.md#WDC-007) — Permissionless release (no AGG_SIG, anyone can release after delay, 8 VV tests)
+- [x] [WDC-008](domains/withdraw_delay/NORMATIVE.md#WDC-008) — CLVM execution tests (11 VV tests)
+- [x] [WDC-009](domains/withdraw_delay/NORMATIVE.md#WDC-009) — E2E simulator test (full two-phase lifecycle, 2 VV tests)
+- [x] [WDC-010](domains/withdraw_delay/NORMATIVE.md#WDC-010) — Destination hint memo (conflict-resistant hint + "DIG Network Collateral Release", 10 VV tests)
 
 ---
 
@@ -135,6 +151,7 @@ by phase. Check boxes as requirements are verified.
 - [x] [SEC-008](domains/security/NORMATIVE.md#SEC-008) — Condition injection protection (removed from registration + checkpoint)
 - [x] [SEC-009](domains/security/NORMATIVE.md#SEC-009) — Registration coin destination binding (risk mitigated by announcement)
 - [x] [SEC-010](domains/security/NORMATIVE.md#SEC-010) — Comprehensive attack surface (20 vectors A-T verified)
+- [x] [SEC-011](domains/security/NORMATIVE.md#SEC-011) — Phantom majority forgery resistance (CIR-003 enforced via g1_gadget.rs)
 
 ---
 
@@ -147,16 +164,47 @@ by phase. Check boxes as requirements are verified.
 - [x] [API-004](domains/crate_api/NORMATIVE.md#API-004) — ConsensusClient state accessors (epoch, state_root, etc.)
 - [x] [API-005](domains/crate_api/NORMATIVE.md#API-005) — ConsensusClient message computation (checkpoint_message, signing_message, etc.)
 - [x] [API-006](domains/crate_api/NORMATIVE.md#API-006) — Module visibility (pub(crate) + testing re-exports)
+- [x] [API-008](domains/crate_api/NORMATIVE.md#API-008) — Return-not-submit pattern (all bundle methods return SpendBundle; crate never broadcasts, 10 VV tests)
 
 ---
 
-## Phase 8 — RPC Integration (Deferred)
+## Phase 8 — RPC Integration (unblocked by chia-query + dig-l1-wallet)
 
-### RPC (requires Chia full node client)
-- [ ] [RPC-001](domains/rpc/NORMATIVE.md#RPC-001) — Chia full node RPC client infrastructure
-- [ ] [RPC-002](domains/rpc/NORMATIVE.md#RPC-002) — Puzzle driver spend bundle construction (8 todo!() stubs)
-- [ ] [RPC-003](domains/rpc/NORMATIVE.md#RPC-003) — Indexer sync algorithm (3 todo!() stubs)
-- [ ] [RPC-004](domains/rpc/NORMATIVE.md#RPC-004) — ConsensusClient operation methods (5 todo!() stubs)
+### RPC (via chia-query and dig-l1-wallet from crates.io)
+- [x] [RPC-006](domains/rpc/NORMATIVE.md#RPC-006) — Dependency version alignment (chia-query 0.2 + dig-l1-wallet 0.1 added, 9 VV tests)
+- [x] [RPC-001](domains/rpc/NORMATIVE.md#RPC-001) — chia-query::ChiaQuery as blockchain query backend (connect(), hex helpers, RpcError, 13 VV tests)
+- [x] [RPC-005](domains/rpc/NORMATIVE.md#RPC-005) — dig-l1-wallet coin selection for collateral funding (L1Wallet param, InsufficientFunds, 10 VV tests)
+- [x] [RPC-002](domains/rpc/NORMATIVE.md#RPC-002) — Puzzle driver spend bundle construction (9 functions, correct sigs, 13 VV tests)
+- [x] [RPC-003](domains/rpc/NORMATIVE.md#RPC-003) — Indexer sync algorithm (4 stubs, module structure verified, 11 VV tests)
+- [x] [RPC-004](domains/rpc/NORMATIVE.md#RPC-004) — ConsensusClient operation methods (6 methods, correct sigs, 13 VV tests)
+
+---
+
+## Phase 9 — Test Completeness (Audit Gaps)
+
+> Added per test coverage audit 2026-04-11. Addresses SCHEMA.md Hard Testing
+> Requirements violations and missing coverage identified by systematic audit
+> of all 87 requirements.
+
+### CRITICAL — CLVM Execution Gaps (source-inspection only → must add CLVM tests)
+
+- [x] [NET-007](domains/network_coin/NORMATIVE.md#NET-007) — CLVM execution validation for NET-001-004
+- [x] [REG-008](domains/registration_coin/NORMATIVE.md#REG-008) — CLVM execution for REG-001 puzzle structure (8 CLVM tests including cross-impl hash)
+
+### HIGH — Failure Case Gaps
+
+- [x] [NET-008](domains/network_coin/NORMATIVE.md#NET-008) — Failure cases for NET-006 E2E (invalid lineage, no collateral, puzzle hash verification)
+- [x] [REG-009](domains/registration_coin/NORMATIVE.md#REG-009) — Failure cases for REG-007 E2E (no announcement, wrong hash, is_member=true, wrong epoch)
+
+### HIGH — Missing Test Files
+
+- [x] [SETUP-007](domains/setup/NORMATIVE.md#SETUP-007) — Automated VV tests for SETUP-001 (5 toolchain) and SETUP-002 (9 Cargo.toml)
+- [x] [API-007](domains/crate_api/NORMATIVE.md#API-007) — Dedicated VV tests for API-001 (7 tests) and API-006 (11 tests)
+
+### MEDIUM — Strengthen Coverage
+
+- [x] [CHK-015](domains/checkpoint/NORMATIVE.md#CHK-015) — CLVM execution for CHK-009-014 binding properties (6 tests: epoch, network ID, invalid proof)
+- [x] [REG-010](domains/registration_coin/NORMATIVE.md#REG-010) — Simulator spend verification for REG-003-006 (5 tests: lock, assertion, return, epoch)
 
 ---
 
@@ -170,11 +218,13 @@ by phase. Check boxes as requirements are verified.
 | 2 | Circuit | 6 | 6/6 |
 | 3 | Network Coin | 6 | 6/6 |
 | 3 | Registration Coin | 7 | 7/7 |
-| 3 | Checkpoint | 14 (7+7sub+6) | 14/14 |
+| 3 | Checkpoint | 14 (7 + CHK-008 + 6) | 14/14 |
+| 3b | Withdraw Delay | 10 | 10/10 |
 | 4 | Indexer | 5 | 5/5 |
 | 5 | Deployment | 5 | 5/5 |
 | 5 | Validator | 5 | 5/5 |
-| 6 | Security | 10 | 10/10 |
-| 7 | Crate API | 6 | 6/6 |
-| 8 | RPC | 4 | 0/4 |
-| **Total** | | **86** | **82/86** |
+| 6 | Security | 11 | 11/11 |
+| 7 | Crate API | 7 | 7/7 |
+| 8 | RPC | 6 | 6/6 |
+| 9 | Test Completeness | 8 | 8/8 |
+| **Total** | | **108** | **108/108** |

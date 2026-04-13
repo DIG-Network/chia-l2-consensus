@@ -19,7 +19,7 @@
 //! ## Completeness: MODERATE
 //! ## Gaps: Does not test CheckpointSingletonState construction (tested in IDX-001).
 
-use chia_l2_consensus::{CheckpointSingletonState, ValidatorInfo, ValidatorSet};
+use chia_l2_consensus::{ValidatorInfo, ValidatorSet};
 use chia_protocol::{Bytes32, Coin};
 
 #[test]

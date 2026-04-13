@@ -43,3 +43,10 @@
 
 <a id="SETUP-006"></a>**SETUP-006** Release builds MUST use optimization level 3 with LTO enabled. The project MUST pass `cargo clippy -- -D warnings` and `cargo fmt --check` before commits.
 > **Spec:** [`SETUP-006.md`](specs/SETUP-006.md)
+
+---
+
+## §7 Automated Verification Tests
+
+<a id="SETUP-007"></a>**SETUP-007** SETUP-001 (Rust toolchain) and SETUP-002 (Cargo.toml) SHOULD have automated VV test files that verify toolchain presence (rustc/cargo version) and Cargo.toml structure (name, edition, pinned dependencies) rather than relying on manual verification alone.
+> **Spec:** [`SETUP-007.md`](specs/SETUP-007.md)

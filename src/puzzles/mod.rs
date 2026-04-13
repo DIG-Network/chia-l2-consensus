@@ -19,8 +19,10 @@ mod checkpoint;
 mod deploy;
 mod network_coin;
 mod registration_coin;
+mod withdraw_delay;
 
 pub use checkpoint::*;
 pub use deploy::*;
 pub use network_coin::*;
 pub use registration_coin::*;
+pub use withdraw_delay::*;

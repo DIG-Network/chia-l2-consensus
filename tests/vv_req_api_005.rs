@@ -33,6 +33,8 @@ fn dummy_config() -> NetworkConfig {
         max_signers: 20_000,
         verification_key_hex: String::new(),
         genesis_challenge: Bytes32::default(),
+        withdraw_delay_blocks: 24_000,
+        withdraw_delay_mod_hash: Bytes32::default(),
     }
 }
 

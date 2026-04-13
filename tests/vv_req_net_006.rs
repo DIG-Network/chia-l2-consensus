@@ -89,13 +89,16 @@ fn reg_mod_hash() -> Bytes32 {
 }
 
 /// Build flat env for the network coin inner puzzle (all params as right-linked list).
-/// Layout: (INNER_MOD_HASH reg_mod_hash collateral ckpt_id pubkey . conditions)
+/// WDC-004: Now 6 curried + 2 solution = 8 params.
+/// Layout: (INNER_MOD_HASH reg_mod_hash collateral ckpt_id wdc_mod wdc_delay pubkey . conditions)
 fn build_flat_env(
     a: &mut clvmr::Allocator,
     inner_mod_hash: &[u8],
     reg_hash: &[u8],
     collateral: u64,
     ckpt_id: &[u8],
+    wdc_mod_hash: &[u8],
+    wdc_delay: u64,
     pubkey: &[u8],
 ) -> clvmr::NodePtr {
     // Build right-to-left.
@@ -106,6 +109,11 @@ fn build_flat_env(
     let conds = a.new_pair(nil, nil).unwrap(); // (nil . nil) for empty conditions
     let pk = a.new_atom(pubkey).unwrap();
     let t = a.new_pair(pk, conds).unwrap();
+    // WDC-004: Add withdraw delay params
+    let delay = common::clvm::u64_to_clvm(a, wdc_delay);
+    let t = a.new_pair(delay, t).unwrap();
+    let wdm = a.new_atom(wdc_mod_hash).unwrap();
+    let t = a.new_pair(wdm, t).unwrap();
     let ck = a.new_atom(ckpt_id).unwrap();
     let t = a.new_pair(ck, t).unwrap();
     // Collateral as CLVM signed integer
@@ -138,6 +146,8 @@ fn vv_req_net_006_inner_puzzle_flat_env() {
         &rmh,
         COLLATERAL_AMOUNT,
         &[0x33u8; 32],
+        &[0x55u8; 32], // WDC-004: withdraw_delay_mod_hash
+        24_000,        // WDC-004: withdraw_delay_blocks
         &[0x44u8; 48],
     );
 
@@ -274,6 +284,8 @@ fn vv_req_net_006_register_validator() -> anyhow::Result<()> {
         &rmh,
         COLLATERAL_AMOUNT,
         &ckpt,
+        &[0x55u8; 32], // WDC-004: withdraw_delay_mod_hash
+        24_000,        // WDC-004: withdraw_delay_blocks
         &pk_bytes,
     );
 
@@ -380,6 +392,8 @@ fn vv_req_net_006_sequential_registrations() -> anyhow::Result<()> {
             &rmh,
             COLLATERAL_AMOUNT,
             &ckpt,
+            &[0x55u8; 32], // WDC-004: withdraw_delay_mod_hash
+            24_000,        // WDC-004: withdraw_delay_blocks
             &pk_bytes,
         );
 
@@ -407,10 +421,7 @@ fn vv_req_net_006_sequential_registrations() -> anyhow::Result<()> {
         let recreated = children
             .iter()
             .find(|cs| cs.coin.amount == 1)
-            .expect(&format!(
-                "NET-006: Singleton recreated after registration {}",
-                i
-            ));
+            .unwrap_or_else(|| panic!("NET-006: Singleton recreated after registration {}", i));
 
         // Build lineage proof for next spend
         parent_proof = Proof::Lineage(LineageProof {

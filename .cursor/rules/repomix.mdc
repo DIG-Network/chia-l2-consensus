@@ -1,0 +1,28 @@
+---
+alwaysApply: true
+---
+
+# Repomix workflow (sites)
+
+Upstream: [yamadashy/repomix](https://github.com/yamadashy/repomix). CLI: **`npx repomix@latest`** (no global install required).
+
+## Before any code change (required)
+
+1. **Pick scope** — the smallest directory that contains **every** file you will add or edit **within one logical unit** (e.g. `docs`, `cdn.silicon.net`, or a single git submodule root such as `silicon.net`).
+2. **Submodule rule** — if edits span **more than one** submodule (or submodule + sibling), run **one Repomix pack per submodule** (and one for `docs/`, `cdn.silicon.net`, etc. as needed). Do **not** satisfy multi-submodule work with a single pack of the sites root unless the only changes are in the parent repo.
+3. **Pack** — always run from the **sites** repo root (`sites/`). Send **all** outputs to **`sites/.repomix/`** with **distinct** filenames (never write packs inside submodule trees):
+   ```bash
+   npx repomix@latest silicon.net -o .repomix/pack-silicon-net.xml
+   npx repomix@latest dashboard.silicon.net -o .repomix/pack-dashboard.xml
+   ```
+   Name files predictably, e.g. `pack-<submodule-dir>.xml` or `pack-docs.xml`. Default without `-o` is `repomix-output.xml` in the **current working directory** (see upstream docs) — avoid that by always passing `-o` under `.repomix/`.
+4. **Load** — **read every pack** that covers your edit scope **before** proposing or applying patches. No code edits until those files have been read in this session (or regenerated if the tree changed since the last read).
+
+## Hygiene
+
+- Add **`.repomix/`** to `.gitignore` if not already (packed outputs are local context, not source of truth).
+- Repomix respects **`.gitignore`** / **`.repomixignore`**; do not bypass ignores to pull in secrets.
+
+## One-liner
+
+**Per scope: `npx repomix@latest <scope> -o .repomix/pack-<scope>.xml` from sites root → read all relevant packs → edit. Multiple submodules ⇒ multiple packs, all under `.repomix/`.**

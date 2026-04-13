@@ -85,6 +85,26 @@ domains:
       tracking: domains/security/TRACKING.yaml
       requirement_specs: ../design/requirements/security
 
+  - id: rpc
+    title: "RPC Integration"
+    summary: "Blockchain queries via chia-query, coin selection via dig-l1-wallet. Implements all todo!() stubs."
+    status: active
+    paths:
+      normative: domains/rpc/NORMATIVE.md
+      verification: domains/rpc/VERIFICATION.md
+      tracking: domains/rpc/TRACKING.yaml
+      requirement_specs: domains/rpc/specs
+
+  - id: withdraw_delay
+    title: "Withdraw Delay Coin"
+    summary: "Time-locked collateral release. Registration coin creates delay coin; funds released after 24,000 L1 blocks (~5 days)."
+    status: active
+    paths:
+      normative: domains/withdraw_delay/NORMATIVE.md
+      verification: domains/withdraw_delay/VERIFICATION.md
+      tracking: domains/withdraw_delay/TRACKING.yaml
+      requirement_specs: domains/withdraw_delay/specs
+
   - id: deployment
     title: "Deployment"
     summary: "Trusted setup. Genesis coin. Network configuration. On-chain verification."

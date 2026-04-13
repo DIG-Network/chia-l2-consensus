@@ -94,7 +94,7 @@ fn chk_inner_mod_hash() -> Bytes32 {
 
 // ── Flat env builders ───────────────────────────────────────────────
 
-/// Build network coin inner flat env.
+/// Build network coin inner flat env (WDC-004: 6 curried + 2 solution).
 fn build_net_env(
     a: &mut clvmr::Allocator,
     checkpoint_id: &[u8; 32],
@@ -104,6 +104,11 @@ fn build_net_env(
     let conds = a.new_pair(nil, nil).unwrap();
     let pk = a.new_atom(pubkey).unwrap();
     let t = a.new_pair(pk, conds).unwrap();
+    // WDC-004: add withdraw delay params
+    let delay = common::clvm::u64_to_clvm(a, 24_000);
+    let t = a.new_pair(delay, t).unwrap();
+    let wdm = a.new_atom(&[0x55u8; 32]).unwrap();
+    let t = a.new_pair(wdm, t).unwrap();
     let ck = a.new_atom(checkpoint_id).unwrap();
     let t = a.new_pair(ck, t).unwrap();
     let col = common::clvm::u64_to_clvm(a, COLLATERAL_AMOUNT);
@@ -124,7 +129,7 @@ fn build_chk_query_env(
     is_member: bool,
 ) -> clvmr::NodePtr {
     let nil = a.nil();
-    let empty_leaf: [u8; 32] = Sha256::digest(&[0u8; 48]).into();
+    let empty_leaf: [u8; 32] = Sha256::digest([0u8; 48]).into();
 
     // Build right-to-left: all 19 params
 
@@ -231,8 +236,8 @@ fn build_chk_query_env(
 
 // ── Registration coin solution builder ──────────────────────────────
 
-/// Build registration coin solution: (epoch dest amt . (nil.nil))
-/// The registration coin uses standard CurriedProgram (no Rue helpers).
+/// Build registration coin solution: (epoch dest amt . nil)
+/// SEC-008: No conditions passthrough. WDC-004: 3 solution params only.
 fn build_reg_solution(
     a: &mut clvmr::Allocator,
     epoch: u64,
@@ -240,9 +245,8 @@ fn build_reg_solution(
     amount: u64,
 ) -> clvmr::NodePtr {
     let nil = a.nil();
-    let conds = a.new_pair(nil, nil).unwrap(); // empty conditions
     let amt = common::clvm::u64_to_clvm(a, amount);
-    let t = a.new_pair(amt, conds).unwrap();
+    let t = a.new_pair(amt, nil).unwrap();
     let dest = a.new_atom(destination).unwrap();
     let t = a.new_pair(dest, t).unwrap();
     let ep = common::clvm::u64_to_clvm(a, epoch);
@@ -264,7 +268,7 @@ fn vv_req_reg_007_create_registration_coin() -> anyhow::Result<()> {
     let ctx = &mut SpendContext::new();
     let (chk_sk, chk_pk, _, chk_p2) = sim.new_p2(1)?;
     let chk_launcher = Launcher::new(chk_p2.coin_id(), 1);
-    let chk_launcher_id = chk_launcher.coin().coin_id();
+    let _chk_launcher_id = chk_launcher.coin().coin_id();
     let (chk_conds, chk_singleton) = chk_launcher.spend(ctx, chk_inner_mod_hash(), ())?;
     StandardLayer::new(chk_pk).spend(ctx, chk_p2, chk_conds)?;
     sim.spend_coins(ctx.take(), &[chk_sk])?;
@@ -403,7 +407,7 @@ fn vv_req_reg_007_cross_coin_collateral_recovery() -> anyhow::Result<()> {
     let ctx = &mut SpendContext::new();
 
     // For depth=0: non-membership root = EMPTY_LEAF_HASH (no validator at slot)
-    let empty_leaf: [u8; 32] = Sha256::digest(&[0u8; 48]).into();
+    let empty_leaf: [u8; 32] = Sha256::digest([0u8; 48]).into();
     let epoch: u64 = 0;
     let validator_count: u64 = 0;
 
@@ -438,12 +442,17 @@ fn vv_req_reg_007_cross_coin_collateral_recovery() -> anyhow::Result<()> {
     .to_clvm(&mut ctx.allocator)?;
     ctx.spend(chk_singleton, Spend::new(chk_puzzle, chk_sol))?;
 
-    // Spend 2: Registration coin (no Rue helpers → standard curry works)
-    // Build curried puzzle manually to avoid derive macro issues
+    // Spend 2: Registration coin (WDC-004: now 4 curried params)
     let reg_mod = node_from_bytes(&mut ctx.allocator, &reg_hex())?;
     let pk_atom = ctx.allocator.new_atom(&pk_bytes).unwrap();
     let ckpt_atom = ctx.allocator.new_atom(&chk_coin_id).unwrap();
-    let reg_curried = clvm_curry(&mut ctx.allocator, reg_mod, &[pk_atom, ckpt_atom]);
+    let wdc_mod_atom = ctx.allocator.new_atom(&[0x55u8; 32]).unwrap();
+    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut ctx.allocator, 24_000);
+    let reg_curried = clvm_curry(
+        &mut ctx.allocator,
+        reg_mod,
+        &[pk_atom, ckpt_atom, wdc_mod_atom, wdc_delay_atom],
+    );
 
     // Destination for collateral return
     let dest = [0xDD; 32];

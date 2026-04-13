@@ -39,6 +39,7 @@ Each requirement also has a dedicated specification file in
 | Security | `security/` | `SEC` | Security assumptions and properties |
 | Deployment | `deployment/` | `DEP` | Deployment and setup procedures |
 | Validator | `validator/` | `VAL` | Validator onboarding and operations |
+| Withdraw Delay | `withdraw_delay/` | `WDC` | Time-locked collateral release after validator exit |
 | Crate API | `crate_api/` | `API` | Public API conformance to spec-consensus-crate.md |
 
 **Immutability:** Requirement IDs are permanent. Deprecate requirements rather

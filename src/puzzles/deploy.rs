@@ -130,6 +130,10 @@ pub fn deploy_both_singletons(
     let verification_key_hex = hex::encode(&vk_bytes);
 
     // --- Build NetworkConfig ---
+    // WDC-006: Parse withdraw delay coin mod hash from compiled artifact
+    let withdraw_delay_mod_hash =
+        parse_mod_hash(crate::puzzles::withdraw_delay::WITHDRAW_DELAY_COIN_MOD_HASH_HEX)?;
+
     let config = NetworkConfig {
         network_coin_launcher_id: net_launcher_id,
         checkpoint_launcher_id: chk_launcher_id,
@@ -140,6 +144,8 @@ pub fn deploy_both_singletons(
         max_signers: crate::prover::circuit::MAX_SIGNERS,
         verification_key_hex,
         genesis_challenge,
+        withdraw_delay_blocks: crate::puzzles::withdraw_delay::DEFAULT_WITHDRAW_DELAY_BLOCKS,
+        withdraw_delay_mod_hash,
     };
 
     Ok((net_singleton, chk_singleton, config))

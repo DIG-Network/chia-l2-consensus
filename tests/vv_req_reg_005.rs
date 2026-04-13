@@ -68,18 +68,20 @@ fn run_and_get_create_coin(
 
 // ── CREATE_COIN destination ────────────────────────────────────────
 
-/// Verifies the CREATE_COIN puzzle_hash equals the solution's destination.
-/// Runs the compiled puzzle and extracts the first CREATE_COIN condition.
-/// Passing proves the collateral goes to the address the spender specified.
+/// WDC-004: The CREATE_COIN puzzle_hash is now the withdraw delay coin hash,
+/// NOT the raw destination. Verifies it's a valid 32-byte hash that differs
+/// from the raw destination.
 #[test]
 fn vv_req_reg_005_create_coin_has_correct_destination() {
     let dest = [0xDD; 32];
     let (d, _) = run_and_get_create_coin(&[0xAA; 48], &[0xBB; 32], 1, &dest, 1_000_000);
-    assert_eq!(
+    // WDC-004: destination is now the delay coin puzzle hash
+    assert_ne!(
         d,
         dest.to_vec(),
-        "REG-005: CREATE_COIN puzzle_hash must match destination"
+        "REG-005/WDC-004: CREATE_COIN puzzle_hash must be delay coin hash, NOT raw destination"
     );
+    assert_eq!(d.len(), 32, "REG-005: puzzle_hash must be 32 bytes");
 }
 
 /// Verifies that different destinations in the solution produce different

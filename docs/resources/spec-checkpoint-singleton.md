@@ -334,7 +334,7 @@ pub struct CheckpointSingletonConfig {
 
 ### Checkpoint Spend
 
-Called by `ConsensusClient.submit_checkpoint()`
+Called by `ConsensusClient.build_checkpoint()`
 (→ see [spec-consensus-crate](spec-consensus-crate.md) — Checkpoint
 Submission). The proof comes from the Groth16 circuit
 (→ see [spec-groth16-circuit](spec-groth16-circuit.md) — Proof Generation)

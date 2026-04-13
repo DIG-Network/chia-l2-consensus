@@ -149,6 +149,20 @@ items:
       - tests/vv_req_chk_013.rs
     notes: "11 VV tests: message includes all 3 fields, signature verifies, changing any field invalidates, multi-validator aggregation, proof bound to message, puzzle recomputes internally, two-check design present, complete attestation flow."
 
+  - id: CHK-015
+    section: "CLVM Execution for Binding Properties"
+    summary: "CLVM execution tests for CHK-009-014 binding properties"
+    status: verified
+    spec_ref: "docs/requirements/domains/checkpoint/specs/CHK-015.md"
+    tests:
+      - tests/vv_req_chk_015.rs::vv_req_chk_015_epoch_binding_different_announcements
+      - tests/vv_req_chk_015.rs::vv_req_chk_015_epoch_binding_cross_impl_hash
+      - tests/vv_req_chk_015.rs::vv_req_chk_015_network_id_binding_scalar_mismatch
+      - tests/vv_req_chk_015.rs::vv_req_chk_015_invalid_proof_rejected
+      - tests/vv_req_chk_015.rs::vv_req_chk_015_corrupted_proof_byte_rejected
+      - tests/vv_req_chk_015.rs::vv_req_chk_015_spec_exists
+    notes: "6 CLVM execution tests: epoch binding via membership query announcement (2 tests at 4 epochs), network ID binding via scalar s6 mismatch when NCLI changes, invalid proof rejection (zeros + corrupted bytes)."
+
   - id: CHK-014
     section: "Permissionless Submission / Forgery Resistance"
     summary: "Anyone can submit but puzzle rejects forged proofs/signatures"

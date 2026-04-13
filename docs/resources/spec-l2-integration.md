@@ -181,7 +181,7 @@ async fn try_submit_checkpoint(
 
     // Step 6: Generate proof and build spend bundle
     // Proof generation: 5-15 minutes per spec-groth16-circuit — Constraint Count Estimates
-    // Runs in spawn_blocking per spec-consensus-crate — submit_checkpoint()
+    // Runs in spawn_blocking per spec-consensus-crate — build_checkpoint()
     println!("generating proof ({} signers)...", signatures.len());
 
     let pubkeys: Vec<_> = signatures.iter().map(|(pk, _)| *pk).collect();
@@ -189,7 +189,7 @@ async fn try_submit_checkpoint(
 
     let bundle = {
         let c = client.lock().await;
-        c.submit_checkpoint(
+        c.build_checkpoint(
             new_state_root,
             new_merkle_root,
             new_count,
@@ -198,7 +198,7 @@ async fn try_submit_checkpoint(
         ).await?
     };
 
-    // Step 7: Submit — the crate returns the bundle but does not submit
+    // Step 7: Broadcast — the crate returns the bundle, the L2 broadcasts it
     node.push_tx(bundle).await?;
     println!("checkpoint submitted");
 
@@ -413,17 +413,19 @@ epoch and be rejected. Use a mutex or semaphore.
 
 **Proof generation is blocking**
 
-`submit_checkpoint()` runs proof generation in `spawn_blocking` but still
+`build_checkpoint()` runs proof generation in `spawn_blocking` but still
 consumes a thread for 5–15 minutes per
 [spec-groth16-circuit](spec-groth16-circuit.md) — Constraint Count Estimates.
 Make sure your thread pool is large enough. Do not set a short timeout on the
-`submit_checkpoint()` future.
+`build_checkpoint()` future.
 
-**The crate does not submit bundles**
+**The crate builds bundles but NEVER broadcasts them**
 
-`submit_checkpoint()` and `recover_collateral()` return `SpendBundle` but do
-not submit to the node. The L2 is responsible for submission. This keeps the
-crate testable and lets the L2 inspect or modify the bundle if needed.
+`build_checkpoint()`, `recover_collateral()`, `register_validator()`,
+`query_membership_on_chain()`, and `deploy()` all return `SpendBundle` but
+do not broadcast to the node. The L2 is solely responsible for broadcasting
+via `push_tx()` or equivalent. This keeps the crate testable and lets the L2
+inspect, modify, combine, or time the bundle broadcast as needed.
 
 **Always sync before checkpoint submission**
 

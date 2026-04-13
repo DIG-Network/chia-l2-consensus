@@ -686,7 +686,7 @@ Checkpoint time (whenever L2 achieves majority consensus):
         * epoch increments by 1
         * new state committed on L1
         * checkpoint announcement emitted (→ spec-wire-format — Checkpoint State Announcement)
-(→ spec-consensus-crate — submit_checkpoint(), spec-l2-integration — Checkpoint Submission Flow)
+(→ spec-consensus-crate — build_checkpoint(), spec-l2-integration — Checkpoint Submission Flow)
         |
         v
 Validator exits (voluntary or forced via majority consensus):

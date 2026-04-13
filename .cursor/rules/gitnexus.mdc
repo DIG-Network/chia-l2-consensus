@@ -1,0 +1,30 @@
+---
+alwaysApply: true
+---
+
+# GitNexus workflow (sites)
+
+Upstream: [nxpatterns/gitnexus](https://github.com/nxpatterns/gitnexus). CLI from repo root: `npx gitnexus …` (after `npm install` if `gitnexus` is in `devDependencies`).
+
+## 0 — Before trusting the graph
+
+1. Run **`npx gitnexus status`** (or read `gitnexus://repo/<name>/context` if MCP exposes staleness).
+2. If the index is **missing or stale**, run **`npx gitnexus analyze`** (add `-f` for full rebuild) and only then use GitNexus tools.
+3. Do **not** use `gitnexus_query` / `gitnexus_impact` / `gitnexus_context` for decisions until step 2 passes.
+
+## 1 — Before changing code
+
+For every edit that touches a **named symbol** (function, class, method, exported value):
+
+1. **`gitnexus_impact`** on that symbol (`direction: upstream` unless exploring callees).
+2. If impact is **high/critical** or blast radius is unclear, add **`gitnexus_context`** and/or **`gitnexus_query`** before editing.
+3. For **renames**, use **`gitnexus_rename`** with `dry_run: true` first; never raw find-replace across the graph.
+
+## 2 — After changing code
+
+1. Run **`npx gitnexus analyze`** so the local index matches the tree (required after non-trivial edits before the next session or impact check).
+2. Optionally **`gitnexus_detect_changes`** before commit to sanity-check scope vs intent.
+
+## 3 — One-line loop
+
+**status → (analyze if needed) → impact → edit → analyze → (detect_changes → commit).**
