@@ -117,6 +117,22 @@ pub struct NetworkConfig {
     /// Individual Signatures.
     #[serde(with = "bytes32_hex")]
     pub genesis_challenge: Bytes32,
+
+    /// Number of L1 blocks a validator must wait after collateral recovery
+    /// before funds are released from the withdraw delay coin.
+    /// Default: 24,000 (~5 days at ~18s/block).
+    /// Fixed at deployment; cannot change without redeploying all puzzles.
+    ///
+    /// WDC-006: See [spec-withdraw-delay-coin.md](../docs/resources/spec-withdraw-delay-coin.md).
+    pub withdraw_delay_blocks: u64,
+
+    /// Tree hash of the uncurried withdraw delay coin puzzle.
+    /// Curried into registration coins so they can compute the delay coin
+    /// puzzle hash on-chain. Also used by the indexer for delay coin detection.
+    ///
+    /// WDC-006: See [spec-withdraw-delay-coin.md](../docs/resources/spec-withdraw-delay-coin.md).
+    #[serde(with = "bytes32_hex")]
+    pub withdraw_delay_mod_hash: Bytes32,
 }
 
 impl NetworkConfig {

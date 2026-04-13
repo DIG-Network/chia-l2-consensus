@@ -20,4 +20,6 @@
 | [CHK-013](NORMATIVE.md#CHK-013) | ✅ | Validator attestation | Validators sign epoch+network+state; bls_verify + Groth16 prove majority attestation; 11 VV tests |
 | [CHK-014](NORMATIVE.md#CHK-014) | ✅ | Permissionless/forgery | No AGG_SIG (anyone submits); both checks reject forgery; minority rejected; internal computation; 11 VV tests |
 
+| [CHK-015](NORMATIVE.md#CHK-015) | ✅ | CLVM for binding props | 6 tests: epoch binding (2 announcement tests at 4 epochs), network ID (scalar mismatch), invalid proof rejection (2 tests); all via compiled .hex |
+
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap

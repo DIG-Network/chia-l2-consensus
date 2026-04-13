@@ -256,6 +256,8 @@ fn vv_req_dep_005_vk_hash_matches_vk_content() {
         max_signers: 20_000,
         verification_key_hex: hex::encode(&vk_bytes),
         genesis_challenge: chia_protocol::Bytes32::default(),
+        withdraw_delay_blocks: 24_000,
+        withdraw_delay_mod_hash: chia_protocol::Bytes32::default(),
     };
 
     let artifacts = DeploymentArtifacts::from_config(&config, &vk_hash);

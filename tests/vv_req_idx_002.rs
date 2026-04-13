@@ -99,7 +99,6 @@ fn vv_req_idx_002_try_parse_valid_registration() {
     use chia_l2_consensus::testing::{
         registration_coin_puzzle_hash, try_parse_registration_coin, LineageChecker,
     };
-    use chia_l2_consensus::NetworkConfig;
 
     let pubkey = [0xAA; 48];
     let reg_mod_hash = Bytes32::from([0x11; 32]);

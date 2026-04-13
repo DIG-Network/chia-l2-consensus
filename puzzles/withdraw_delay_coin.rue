@@ -1,0 +1,44 @@
+// withdraw_delay_coin.rue
+//
+// WDC-001: Puzzle structure — curried with DESTINATION + AMOUNT + WITHDRAW_DELAY_BLOCKS
+// WDC-002: Time lock — ASSERT_HEIGHT_RELATIVE enforces block delay
+// WDC-003: Fund release — CREATE_COIN at DESTINATION with AMOUNT after delay
+// WDC-007: Permissionless — no AGG_SIG conditions, anyone can spend after delay
+//
+// See spec-withdraw-delay-coin.md for specification.
+//
+// Holds collateral during a mandatory waiting period after validator exit.
+// Created by the registration coin (WDC-004). Can only release funds to the
+// curried DESTINATION after WITHDRAW_DELAY_BLOCKS L1 blocks have passed.
+//
+// Security (SEC-008): No solution parameters, no passthrough conditions.
+// All behaviour is locked at creation time via currying.
+
+fn main(
+    // WDC-001: Curried parameters (set by registration coin at creation time)
+    DESTINATION: Bytes32,       // Puzzle hash where collateral goes after delay
+    AMOUNT: Int,                // Collateral amount in mojos
+    WITHDRAW_DELAY_BLOCKS: Int, // L1 blocks to wait (default: 24,000 ≈ 5 days)
+
+    // SEC-008: No solution parameters — prevents condition injection.
+    // All behaviour determined by curried params.
+) -> List<Condition> {
+
+    // WDC-002: Enforce time lock — coin cannot be spent until
+    // WITHDRAW_DELAY_BLOCKS L1 blocks have passed since creation.
+    // Uses Chia's ASSERT_HEIGHT_RELATIVE (opcode 82).
+    let assert_delay = AssertHeightRelative {
+        height: WITHDRAW_DELAY_BLOCKS,
+    };
+
+    // WDC-003: Release collateral to the locked-in destination.
+    // Memo identifies this as a DIG Network collateral release transaction.
+    let release_funds = CreateCoin {
+        puzzle_hash: DESTINATION,
+        amount: AMOUNT,
+        memos: Memos { value: "DIG Network Collateral Release" },
+    };
+
+    // WDC-007: Exactly two conditions — no AGG_SIG, permissionless after delay.
+    [assert_delay, release_funds]
+}

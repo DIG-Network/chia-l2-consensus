@@ -60,7 +60,8 @@ use common::clvm::*;
 
 const REG_COIN_HEX: &str = include_str!("../puzzles/compiled/registration_coin.hex");
 
-/// Build registration coin env: (PK . (CKPT_ID . (epoch . (dest . (amt . (conds . nil))))))
+/// Build registration coin env with WDC-004 params:
+/// (PK . (CKPT_ID . (WDC_MOD . (WDC_DELAY . (epoch . (dest . (amt . nil)))))))
 fn build_env(
     a: &mut Allocator,
     pk: &[u8],
@@ -69,27 +70,32 @@ fn build_env(
     dest: &[u8],
     amt: u64,
 ) -> clvmr::NodePtr {
-    let conds = a.nil();
+    // Use a default WDC mod hash for tests that don't care about it
+    build_env_full(a, pk, ckpt_id, &[0x55; 32], 24_000, epoch, dest, amt)
+}
+
+/// Full registration coin env with all 7 params.
+fn build_env_full(
+    a: &mut Allocator,
+    pk: &[u8],
+    ckpt_id: &[u8],
+    wdc_mod_hash: &[u8],
+    wdc_delay: u64,
+    epoch: u64,
+    dest: &[u8],
+    amt: u64,
+) -> clvmr::NodePtr {
     let nil = a.nil();
-    let t = a.new_pair(conds, nil).unwrap();
-    let amt_bytes: Vec<u8> = if amt == 0 {
-        vec![]
-    } else {
-        let b = amt.to_be_bytes();
-        b.iter().copied().skip_while(|&x| x == 0).collect()
-    };
-    let amt_node = a.new_atom(&amt_bytes).unwrap();
-    let t = a.new_pair(amt_node, t).unwrap();
+    let amt_node = common::clvm::u64_to_clvm(a, amt);
+    let t = a.new_pair(amt_node, nil).unwrap();
     let dest_node = a.new_atom(dest).unwrap();
     let t = a.new_pair(dest_node, t).unwrap();
-    let epoch_bytes: Vec<u8> = if epoch == 0 {
-        vec![]
-    } else {
-        let b = epoch.to_be_bytes();
-        b.iter().copied().skip_while(|&x| x == 0).collect()
-    };
-    let epoch_node = a.new_atom(&epoch_bytes).unwrap();
+    let epoch_node = common::clvm::u64_to_clvm(a, epoch);
     let t = a.new_pair(epoch_node, t).unwrap();
+    let delay_node = common::clvm::u64_to_clvm(a, wdc_delay);
+    let t = a.new_pair(delay_node, t).unwrap();
+    let wdc_mod_node = a.new_atom(wdc_mod_hash).unwrap();
+    let t = a.new_pair(wdc_mod_node, t).unwrap();
     let ckpt_node = a.new_atom(ckpt_id).unwrap();
     let t = a.new_pair(ckpt_node, t).unwrap();
     let pk_node = a.new_atom(pk).unwrap();

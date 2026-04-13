@@ -16,6 +16,7 @@
 
 mod aggregate;
 pub mod circuit;
+pub mod g1_gadget;
 mod majority;
 mod prove;
 mod serialize;

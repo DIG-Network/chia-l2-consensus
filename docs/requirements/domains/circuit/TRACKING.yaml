@@ -23,12 +23,17 @@ items:
 
   - id: CIR-003
     section: "Constraints"
-    summary: "G1 sum equals agg_signers"
-    status: complete
+    summary: "G1 sum equals agg_signers — enforced via non-native G1 arithmetic"
+    status: verified
     spec_ref: "docs/design/requirements/circuit/CIR-003.md"
     tests:
       - tests/vv_req_cir_003.rs
-    notes: "aggregate_pubkeys() and verify_aggregate() functions in src/prover/aggregate.rs"
+      - tests/vv_req_cir_003_constraint.rs::vv_req_cir_003_correct_aggregate_succeeds
+      - tests/vv_req_cir_003_constraint.rs::vv_req_cir_003_wrong_aggregate_fails
+      - tests/vv_req_cir_003_constraint.rs::vv_req_cir_003_phantom_majority_blocked
+      - tests/vv_req_cir_003_constraint.rs::vv_req_cir_003_single_signer
+      - tests/vv_req_cir_003_constraint.rs::vv_req_cir_003_empty_pubkeys_skips_constraint
+    notes: "Non-native G1 arithmetic in src/prover/g1_gadget.rs. enforce_aggregate_key() decompresses pubkeys to (x,y) Fq coordinates, verifies on-curve, accumulates via constrained affine addition, enforces sum == agg_signers. Off-chain aggregate in src/prover/aggregate.rs."
 
   - id: CIR-004
     section: "Constraints"

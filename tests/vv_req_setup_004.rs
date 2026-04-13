@@ -126,7 +126,7 @@ fn vv_req_setup_004_utility_dependencies() {
     assert_eq!(result.len(), 32);
 
     // Verify hex encoding works
-    let encoded = encode(&[0xde, 0xad, 0xbe, 0xef]);
+    let encoded = encode([0xde, 0xad, 0xbe, 0xef]);
     assert_eq!(encoded, "deadbeef");
 
     // Verify hex decoding works

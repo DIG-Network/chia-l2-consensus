@@ -44,6 +44,12 @@ anyhow    = "1"
 
 sha2 = "0.10"
 
+# Blockchain queries (RPC-001) — decentralized peers + coinset.org fallback
+chia-query = "0.2"
+
+# Wallet integration (RPC-005) — coin selection for collateral funding
+dig-l1-wallet = "0.1"
+
 # Chia SDK — wallet operations, spend bundles, singleton handling
 chia-sdk-driver = "0.18"   # SpendContext, StandardLayer, Launcher
 

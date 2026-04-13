@@ -97,8 +97,10 @@ fn vv_req_chk_012_proof_bound_to_network() {
     let msg_a = compute_checkpoint_message(sr, mr, vc, epoch, [0xAA; 32]);
     let msg_b = compute_checkpoint_message(sr, mr, vc, epoch, [0xBB; 32]);
 
-    let circuit_a = ConsensusCircuit::with_public_inputs(mr, vc, mr, vc, [0xCC; 48], msg_a, 1);
-    let circuit_b = ConsensusCircuit::with_public_inputs(mr, vc, mr, vc, [0xCC; 48], msg_b, 1);
+    let circuit_a =
+        ConsensusCircuit::with_public_inputs(mr, vc, mr, vc, [0xCC; 48], msg_a, 1, Vec::new());
+    let circuit_b =
+        ConsensusCircuit::with_public_inputs(mr, vc, mr, vc, [0xCC; 48], msg_b, 1, Vec::new());
 
     let proof_a = generate_proof(circuit_a, &pk).expect("Proof A");
     let proof_b = generate_proof(circuit_b, &pk).expect("Proof B");

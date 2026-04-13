@@ -9,8 +9,14 @@ items:
     status: verified
     spec_ref: "docs/requirements/domains/crate_api/specs/API-001.md"
     tests:
-      - "Compilation-verified: all ~55 VV test files import via testing:: module"
-    notes: "Verified by compilation — if exports were wrong, all VV tests would fail to compile. No dedicated test file needed."
+      - tests/vv_req_api_001.rs::vv_req_api_001_public_types_importable
+      - tests/vv_req_api_001.rs::vv_req_api_001_consensus_client_is_entry_point
+      - tests/vv_req_api_001.rs::vv_req_api_001_network_config_serde
+      - tests/vv_req_api_001.rs::vv_req_api_001_testing_module_accessible
+      - tests/vv_req_api_001.rs::vv_req_api_001_internal_types_behind_testing
+      - tests/vv_req_api_001.rs::vv_req_api_001_lib_rs_structure
+      - tests/vv_req_api_001.rs::vv_req_api_001_expected_reexports_in_lib
+    notes: "7 VV tests: public types importable, ConsensusClient entry point, NetworkConfig serde, testing module accessible, internal types behind testing, lib.rs pub(crate), expected re-exports."
 
   - id: API-002
     section: "NetworkConfig Completeness"
@@ -54,5 +60,34 @@ items:
     status: verified
     spec_ref: "docs/requirements/domains/crate_api/specs/API-006.md"
     tests:
-      - "Compilation-verified: all internal modules are pub(crate), VV tests compile via testing::"
-    notes: "Verified by compilation — if visibility were wrong, all VV test files would fail to compile."
+      - tests/vv_req_api_006.rs::vv_req_api_006_testing_wire_format_exports
+      - tests/vv_req_api_006.rs::vv_req_api_006_testing_circuit_exports
+      - tests/vv_req_api_006.rs::vv_req_api_006_testing_aggregation_exports
+      - tests/vv_req_api_006.rs::vv_req_api_006_testing_majority_exports
+      - tests/vv_req_api_006.rs::vv_req_api_006_testing_setup_exports
+      - tests/vv_req_api_006.rs::vv_req_api_006_testing_merkle_exports
+      - tests/vv_req_api_006.rs::vv_req_api_006_testing_indexer_exports
+      - tests/vv_req_api_006.rs::vv_req_api_006_testing_validator_exports
+      - tests/vv_req_api_006.rs::vv_req_api_006_testing_deployment_exports
+      - tests/vv_req_api_006.rs::vv_req_api_006_pub_crate_modules
+      - tests/vv_req_api_006.rs::vv_req_api_006_testing_module_documented
+    notes: "11 VV tests: all testing:: re-export categories verified, pub(crate) modules, documentation."
+
+  - id: API-007
+    section: "Dedicated VV Test Files"
+    summary: "VV test files for API-001 and API-006"
+    status: verified
+    spec_ref: "docs/requirements/domains/crate_api/specs/API-007.md"
+    tests:
+      - tests/vv_req_api_001.rs
+      - tests/vv_req_api_006.rs
+    notes: "vv_req_api_001.rs (7 tests: public API surface) + vv_req_api_006.rs (11 tests: module visibility, re-exports)"
+
+  - id: API-008
+    section: "Return-Not-Submit Pattern"
+    summary: "All bundle methods return SpendBundle; crate never broadcasts"
+    status: verified
+    spec_ref: "docs/requirements/domains/crate_api/specs/API-008.md"
+    tests:
+      - tests/vv_req_api_008.rs (10 tests)
+    notes: "No push_tx/send_transaction/submit_spend_bundle in src/ code (comments OK). build_checkpoint/register_validator/recover_collateral/release_collateral all return ConsensusResult<SpendBundle>. Method named build_checkpoint not submit_checkpoint. Client docs pattern."

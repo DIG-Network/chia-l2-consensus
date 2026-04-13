@@ -256,6 +256,7 @@ fn vv_req_dep_001_proof_verifies_with_setup_vk() {
         [0xCC; 48], // agg_signers
         [0xDD; 32], // checkpoint_message
         1,          // actual_signers
+        Vec::new(),
     );
 
     let proof_bytes = generate_proof(circuit, &pk).expect("DEP-001: Proof generation");

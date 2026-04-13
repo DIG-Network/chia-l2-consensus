@@ -71,3 +71,10 @@
 
 <a id="SEC-010"></a>**SEC-010** All 20 identified attack vectors (A-T) MUST be verified as addressed, mitigated, or acknowledged. This includes: proof replay, cross-network replay, state forgery, minority checkpoint, fake registration, collateral theft, epoch manipulation, double checkpoint, signature subtraction, rogue key, Merkle forgery, front-running, singleton destruction, VK substitution, spam, censorship, stale proofs, announcement spoofing, and bundle splitting.
 > **Spec:** [`SEC-010.md`](specs/SEC-010.md)
+
+---
+
+## §11 Phantom Majority Forgery Resistance
+
+<a id="SEC-011"></a>**SEC-011** The system MUST prevent phantom majority attacks where an attacker with the proving key and a single BLS keypair forges a Groth16 proof claiming an arbitrary number of signers. CIR-003 (aggregate key constraint) MUST be enforced in the circuit, binding `agg_signers` to the G1 sum of k legitimate validator pubkeys. Production proofs MUST supply signing pubkeys to `with_public_inputs()` to activate CIR-003 enforcement.
+> **Spec:** [`SEC-011.md`](specs/SEC-011.md)

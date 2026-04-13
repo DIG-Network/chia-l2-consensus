@@ -6,18 +6,32 @@ items:
   - id: SETUP-001
     section: "Rust Toolchain"
     summary: "Rust 2021 edition, stable toolchain, rustfmt, clippy"
-    status: implemented
+    status: verified
     spec_ref: "docs/requirements/domains/setup/specs/SETUP-001.md"
-    tests: []
-    notes: "rust-toolchain.toml created; rustc 1.94.1, rustfmt, clippy verified"
+    tests:
+      - tests/vv_req_setup_001.rs::vv_req_setup_001_rustc_available
+      - tests/vv_req_setup_001.rs::vv_req_setup_001_cargo_available
+      - tests/vv_req_setup_001.rs::vv_req_setup_001_rustfmt_available
+      - tests/vv_req_setup_001.rs::vv_req_setup_001_clippy_available
+      - tests/vv_req_setup_001.rs::vv_req_setup_001_edition_2021
+    notes: "5 VV tests: rustc, cargo, rustfmt, clippy available; edition 2021 in Cargo.toml"
 
   - id: SETUP-002
     section: "Cargo.toml Configuration"
     summary: "Crate name, version, edition, pinned dependencies"
-    status: implemented
+    status: verified
     spec_ref: "docs/requirements/domains/setup/specs/SETUP-002.md"
-    tests: []
-    notes: "Cargo.toml created; cargo check passes; 294 packages resolved"
+    tests:
+      - tests/vv_req_setup_002.rs::vv_req_setup_002_crate_name
+      - tests/vv_req_setup_002.rs::vv_req_setup_002_crate_version
+      - tests/vv_req_setup_002.rs::vv_req_setup_002_edition_2021
+      - tests/vv_req_setup_002.rs::vv_req_setup_002_chia_deps
+      - tests/vv_req_setup_002.rs::vv_req_setup_002_arkworks_deps
+      - tests/vv_req_setup_002.rs::vv_req_setup_002_blst_dep
+      - tests/vv_req_setup_002.rs::vv_req_setup_002_sha2_dep
+      - tests/vv_req_setup_002.rs::vv_req_setup_002_no_wildcard_versions
+      - tests/vv_req_setup_002.rs::vv_req_setup_002_release_lto
+    notes: "9 VV tests: name, version, edition, chia/ark/blst/sha2 deps, no wildcards, LTO"
 
   - id: SETUP-003
     section: "Project Structure"
@@ -54,3 +68,13 @@ items:
     tests:
       - tests/vv_req_setup_006.rs
     notes: "Release profile configured (opt-level=3, lto=true, codegen-units=1); cargo fmt and clippy pass"
+
+  - id: SETUP-007
+    section: "Automated Verification Tests"
+    summary: "VV tests for SETUP-001 (toolchain) and SETUP-002 (Cargo.toml)"
+    status: verified
+    spec_ref: "docs/requirements/domains/setup/specs/SETUP-007.md"
+    tests:
+      - tests/vv_req_setup_001.rs
+      - tests/vv_req_setup_002.rs
+    notes: "vv_req_setup_001.rs (5 tests: toolchain checks) + vv_req_setup_002.rs (9 tests: Cargo.toml structure)"

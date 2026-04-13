@@ -7,5 +7,7 @@
 //! use common::sim::*;
 //! ```
 
+#[allow(dead_code)]
 pub mod clvm;
+#[allow(dead_code)]
 pub mod sim;

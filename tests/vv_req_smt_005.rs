@@ -78,7 +78,7 @@ mod test_vectors {
     /// Active leaf for PUBKEY_ONES = sha256([0x01; 48])
     pub fn expected_active_leaf_ones() -> [u8; 32] {
         let mut hasher = Sha256::new();
-        hasher.update(&PUBKEY_ONES);
+        hasher.update(PUBKEY_ONES);
         hasher.finalize().into()
     }
 
@@ -86,7 +86,7 @@ mod test_vectors {
     #[allow(dead_code)]
     pub fn expected_slot_ones() -> u64 {
         let mut hasher = Sha256::new();
-        hasher.update(&PUBKEY_ONES);
+        hasher.update(PUBKEY_ONES);
         let hash: [u8; 32] = hasher.finalize().into();
         let n = u64::from_be_bytes(hash[0..8].try_into().unwrap());
         n % (1u64 << 32)

@@ -46,3 +46,24 @@
 
 <a id="REG-007"></a>**REG-007** A full end-to-end simulator test MUST exercise the complete registration coin lifecycle using the chia-wallet-sdk simulator: create a registration coin via network coin spend, verify collateral is locked, then execute collateral recovery by spending the checkpoint singleton (membership query path) and registration coin in the same spend bundle with cross-coin announcement matching.
 > **Spec:** [`REG-007.md`](specs/REG-007.md)
+
+---
+
+## §7 CLVM Execution Validation
+
+<a id="REG-008"></a>**REG-008** REG-001 (puzzle structure) MUST have dedicated CLVM execution tests that deserialize the compiled `.hex` artifact, curry with test parameters, run via `run_program()`, and assert exact output conditions — source-string inspection alone is insufficient per SCHEMA.md Hard Testing Requirements.
+> **Spec:** [`REG-008.md`](specs/REG-008.md)
+
+---
+
+## §8 Failure Case Coverage
+
+<a id="REG-009"></a>**REG-009** The E2E simulator tests (REG-007) MUST include failure-path coverage: spending without a checkpoint announcement MUST fail, spending with a wrong announcement hash MUST fail, spending with is_member=0x01 MUST fail, and spending with a wrong epoch MUST fail.
+> **Spec:** [`REG-009.md`](specs/REG-009.md)
+
+---
+
+## §9 Simulator Spend Verification
+
+<a id="REG-010"></a>**REG-010** REG-003 through REG-006 SHOULD have simulator-level spend bundle tests verifying that the CLVM-level behaviour (announcement assertion, collateral return, epoch binding) holds in a full consensus context with real coin spends.
+> **Spec:** [`REG-010.md`](specs/REG-010.md)

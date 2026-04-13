@@ -80,7 +80,7 @@ Well within limits. Fee at standard rates: approximately 0.0000053 XCH.
 Full puzzle spec: [spec-checkpoint-singleton](spec-checkpoint-singleton.md) —
 Spend Path 1. This is the most expensive spend in the system due to the
 Groth16 pairing verification and BLS verification. Submitted by
-[spec-consensus-crate](spec-consensus-crate.md) — submit_checkpoint(). The
+[spec-consensus-crate](spec-consensus-crate.md) — build_checkpoint(). The
 L2 integration flow is in
 [spec-l2-integration](spec-l2-integration.md) — Checkpoint Submission Flow.
 

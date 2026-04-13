@@ -151,8 +151,14 @@ fn vv_req_sec_001_circuit_rejects_minority() {
     // Arkworks panics when constraints are unsatisfied rather than returning Err
     let result = std::panic::catch_unwind(|| {
         let circuit = ConsensusCircuit::with_public_inputs(
-            [0xAA; 32], 5, [0xBB; 32], 5, [0xCC; 48], [0xDD; 32],
+            [0xAA; 32],
+            5,
+            [0xBB; 32],
+            5,
+            [0xCC; 48],
+            [0xDD; 32],
             2, // actual_signers = 2 (minority of 5)
+            Vec::new(),
         );
         generate_proof(circuit, &pk)
     });
@@ -175,8 +181,14 @@ fn vv_req_sec_001_circuit_accepts_majority() {
 
     // Majority: k=3, n=5 → 2*3=6, 6 > 5 is TRUE
     let circuit = ConsensusCircuit::with_public_inputs(
-        [0xAA; 32], 5, [0xBB; 32], 5, [0xCC; 48], [0xDD; 32],
+        [0xAA; 32],
+        5,
+        [0xBB; 32],
+        5,
+        [0xCC; 48],
+        [0xDD; 32],
         3, // actual_signers = 3 (majority of 5)
+        Vec::new(),
     );
 
     let result = generate_proof(circuit, &pk);
@@ -197,8 +209,14 @@ fn vv_req_sec_001_circuit_rejects_exact_half() {
     // Exactly half: k=3, n=6 → 2*3=6, 6 > 6 is FALSE
     let result = std::panic::catch_unwind(|| {
         let circuit = ConsensusCircuit::with_public_inputs(
-            [0xAA; 32], 6, [0xBB; 32], 6, [0xCC; 48], [0xDD; 32],
+            [0xAA; 32],
+            6,
+            [0xBB; 32],
+            6,
+            [0xCC; 48],
+            [0xDD; 32],
             3, // actual_signers = 3 (exactly half of 6)
+            Vec::new(),
         );
         generate_proof(circuit, &pk)
     });

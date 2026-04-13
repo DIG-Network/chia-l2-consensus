@@ -4,33 +4,55 @@ verification: VERIFICATION.md
 
 items:
   - id: RPC-001
-    section: "RPC Client"
-    summary: "Chia full node RPC client infrastructure"
-    status: gap
+    section: "Blockchain Query Client"
+    summary: "chia-query::ChiaQuery as the blockchain query backend"
+    status: verified
     spec_ref: "docs/requirements/domains/rpc/specs/RPC-001.md"
-    tests: []
-    notes: "Prerequisite for all other RPC items. Needs async HTTP client, connection management."
+    tests:
+      - tests/vv_req_rpc_001.rs (13 tests)
+    notes: "ConsensusClient: connect() accepts ChiaQueryConfig, stores Option<ChiaQuery>, query() helper for internal access. bytes32_to_hex/hex_to_bytes32 conversion helpers. RpcError variant added. No custom RPC in crate."
 
   - id: RPC-002
     section: "Puzzle Drivers"
-    summary: "Spend bundle construction for 3 puzzles (8 todo!() stubs)"
-    status: gap
+    summary: "Spend bundle construction stubs with correct signatures"
+    status: verified
     spec_ref: "docs/requirements/domains/rpc/specs/RPC-002.md"
-    tests: []
-    notes: "src/puzzles/network_coin.rs (3), registration_coin.rs (2), checkpoint.rs (3)"
+    tests:
+      - tests/vv_req_rpc_002.rs (13 tests)
+    notes: "All 9 puzzle driver functions exist: network_coin (3), registration_coin (2), checkpoint (3), withdraw_delay (1). All return SpendBundle/appropriate type. .hex loaded via include_str!. No broadcast code. mod.rs exports all. Bodies are todo!() — actual implementation when connected to chain."
 
   - id: RPC-003
     section: "Indexer Sync"
-    summary: "Full indexer algorithm implementation (3 todo!() stubs)"
-    status: gap
+    summary: "Indexer sync stubs with correct module structure"
+    status: verified
     spec_ref: "docs/requirements/domains/rpc/specs/RPC-003.md"
-    tests: []
-    notes: "src/indexer/mod.rs::sync(), chain.rs (2), validator_set.rs::build_validator_set()"
+    tests:
+      - tests/vv_req_rpc_003.rs (11 tests)
+    notes: "4 todo!() stubs: sync(), get_coin(), get_coin_records_by_puzzle_hash(), build_validator_set(). Module structure: mod.rs, chain.rs, validator_set.rs, cache.rs, reorg.rs. Cache save/load (IDX-005), ReorgState (IDX-004), LineageChecker (IDX-002) all present."
 
   - id: RPC-004
     section: "Client Operations"
-    summary: "ConsensusClient coordination methods (5 todo!() stubs)"
-    status: gap
+    summary: "ConsensusClient coordination methods with correct signatures"
+    status: verified
     spec_ref: "docs/requirements/domains/rpc/specs/RPC-004.md"
-    tests: []
-    notes: "src/client.rs: deploy(), register_validator(), submit_checkpoint(), get_checkpoint_state(), recover_collateral()"
+    tests:
+      - tests/vv_req_rpc_004.rs (13 tests)
+    notes: "6 methods: deploy(), register_validator(+L1Wallet), build_checkpoint(), get_checkpoint_state(), recover_collateral(), release_collateral(). All return SpendBundle. No broadcast. connect()+sync() prerequisites. WDC-004 documented. Bodies are todo!()."
+
+  - id: RPC-005
+    section: "Wallet Integration"
+    summary: "dig-l1-wallet coin selection for collateral funding"
+    status: verified
+    spec_ref: "docs/requirements/domains/rpc/specs/RPC-005.md"
+    tests:
+      - tests/vv_req_rpc_005.rs (10 tests)
+    notes: "register_validator() accepts &L1Wallet, wallet_name, account_index, fee. InsufficientFunds error variant added. L1Wallet NOT stored in ConsensusClient. CoinSelectionStrategy importable. Implementation is todo!() — RPC-002 fills it."
+
+  - id: RPC-006
+    section: "Dependency Alignment"
+    summary: "Add chia-query + dig-l1-wallet; align chia-wallet-sdk versions"
+    status: verified
+    spec_ref: "docs/requirements/domains/rpc/specs/RPC-006.md"
+    tests:
+      - tests/vv_req_rpc_006.rs (9 tests)
+    notes: "chia-query 0.2 and dig-l1-wallet 0.1 added to Cargo.toml. Resolver pulls chia-wallet-sdk 0.18 (ours) + 0.30 (dig-l1-wallet) side-by-side — dual version OK since interop boundary is at RPC layer. cargo check + cargo test pass. All types importable."

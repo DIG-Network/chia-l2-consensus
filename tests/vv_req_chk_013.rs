@@ -237,10 +237,26 @@ fn vv_req_chk_013_proof_bound_to_attestation() {
     let msg_a = compute_checkpoint_message([0xAA; 32], [0x22; 32], 1, 1, [0xFF; 32]);
     let msg_b = compute_checkpoint_message([0xBB; 32], [0x22; 32], 1, 1, [0xFF; 32]);
 
-    let circuit_a =
-        ConsensusCircuit::with_public_inputs([0x22; 32], 1, [0x22; 32], 1, [0xCC; 48], msg_a, 1);
-    let circuit_b =
-        ConsensusCircuit::with_public_inputs([0x22; 32], 1, [0x22; 32], 1, [0xCC; 48], msg_b, 1);
+    let circuit_a = ConsensusCircuit::with_public_inputs(
+        [0x22; 32],
+        1,
+        [0x22; 32],
+        1,
+        [0xCC; 48],
+        msg_a,
+        1,
+        Vec::new(),
+    );
+    let circuit_b = ConsensusCircuit::with_public_inputs(
+        [0x22; 32],
+        1,
+        [0x22; 32],
+        1,
+        [0xCC; 48],
+        msg_b,
+        1,
+        Vec::new(),
+    );
 
     let proof_a = generate_proof(circuit_a, &pk).unwrap();
     let proof_b = generate_proof(circuit_b, &pk).unwrap();
@@ -350,6 +366,7 @@ fn vv_req_chk_013_complete_attestation_flow() {
         [0xCC; 48],
         checkpoint_msg,
         1,
+        Vec::new(),
     );
     let proof = generate_proof(circuit, &pk).unwrap();
 

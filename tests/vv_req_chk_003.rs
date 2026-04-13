@@ -255,7 +255,7 @@ fn vv_req_chk_003_puzzle_has_bls_verify() {
 #[test]
 fn vv_req_chk_003_compiled_has_pairing_opcode() {
     // The compiled CLVM must contain the bls_pairing_identity opcode
-    let clvm = std::fs::read_to_string("puzzles/compiled/checkpoint_inner.hex").unwrap();
+    let _clvm = std::fs::read_to_string("puzzles/compiled/checkpoint_inner.hex").unwrap();
     // bls_pairing_identity has a specific CLVM encoding in the hex
     // Let's verify by checking the s-expression output
     let output = std::process::Command::new("rue")
@@ -402,7 +402,7 @@ fn vv_req_chk_003_checkpoint_path_executes() {
     // and the puzzle reached the cryptographic check. That's success for CHK-003.
     let result = run_puzzle(&mut a, puzzle, env);
     match result {
-        Ok((cost, output)) => {
+        Ok((_cost, output)) => {
             // Unexpected success with test data — but still valid
             let conditions = parse_conditions(&a, output);
             assert!(has_opcode(&conditions, CREATE_COIN));

@@ -7,6 +7,7 @@
 // NET-004: Self-recreation - emits CreateCoin with INNER_MOD_HASH for singleton morphing
 // NET-005: Pubkey memo - includes pubkey in memo for indexer (driver convention)
 // NET-006: End-to-end simulator test validates full singleton lifecycle
+// WDC-004: Registration coin now has 4 curried params (added delay hash + delay blocks)
 //
 // See spec-network-coin.md for specification.
 //
@@ -22,18 +23,23 @@ fn main(
     registration_coin_mod_hash: Bytes32,
     collateral_amount: Int,
     checkpoint_singleton_id: Bytes32,
+    withdraw_delay_mod_hash: Bytes32,    // WDC-004: tree hash of withdraw delay puzzle
+    withdraw_delay_blocks: Int,          // WDC-004: L1 blocks to wait (default 24,000)
 
     // Solution parameters (provided at spend time via inner_solution)
     new_validator_pubkey: PublicKey,
     conditions: List<Condition>,
 ) -> List<Condition> {
     // Compute the registration coin puzzle hash by currying:
-    // registration_coin_mod_hash(new_validator_pubkey, checkpoint_singleton_id)
+    // registration_coin_mod_hash(pubkey, checkpoint_id, delay_mod_hash, delay_blocks)
+    // WDC-004: Now includes withdraw_delay_mod_hash and withdraw_delay_blocks
     let registration_coin_puzzle_hash = curry_tree_hash(
         registration_coin_mod_hash,
         [
             tree_hash(new_validator_pubkey),
             tree_hash(checkpoint_singleton_id),
+            tree_hash(withdraw_delay_mod_hash),
+            tree_hash(withdraw_delay_blocks),
         ],
     );
 

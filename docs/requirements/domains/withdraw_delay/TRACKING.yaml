@@ -1,0 +1,146 @@
+domain_id: withdraw_delay
+normative: NORMATIVE.md
+verification: VERIFICATION.md
+
+items:
+  - id: WDC-001
+    section: "Puzzle Structure"
+    summary: "3 curried params (DESTINATION, AMOUNT, DELAY), empty solution"
+    status: verified
+    spec_ref: "docs/requirements/domains/withdraw_delay/specs/WDC-001.md"
+    tests:
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_puzzle_compiles
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_exactly_three_curried_params
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_no_passthrough_conditions
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_has_assert_height_relative
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_has_create_coin
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_compiled_hex_exists
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_compiled_hash_exists
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_default_delay_is_24000
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_clvm_loads_and_executes
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_clvm_exactly_two_conditions
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_clvm_first_is_assert_height_relative
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_clvm_delay_value_matches_curried
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_clvm_second_is_create_coin
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_clvm_destination_matches_curried
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_clvm_amount_matches_curried
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_clvm_different_destinations
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_clvm_deterministic
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_clvm_no_agg_sig
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_clvm_delay_zero
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_compiled_hex_matches_live_build
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_compiled_hash_matches_live_build
+      - tests/vv_req_wdc_001.rs::vv_req_wdc_001_spec_file_exists
+    notes: "8 source-inspection + 12 CLVM execution + 2 artifact freshness. Rue compiles, .hex/.hash match fresh build. CLVM: loads, 2 conditions, opcode 82 + 51, values match curried, deterministic, no AGG_SIG, delay=0 valid."
+
+  - id: WDC-002
+    section: "Time Lock"
+    summary: "ASSERT_HEIGHT_RELATIVE enforces block delay"
+    status: verified
+    spec_ref: "docs/requirements/domains/withdraw_delay/specs/WDC-002.md"
+    tests:
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_default_delay_is_24000_blocks
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_clvm_default_delay_value
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_clvm_delay_zero
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_clvm_delay_one
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_clvm_delay_two
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_clvm_delay_10
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_clvm_delay_256
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_clvm_delay_4608
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_clvm_large_delay
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_clvm_u32_max_delay
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_different_delays_different_conditions
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_same_delay_deterministic
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_assert_height_is_first_condition
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_assert_height_has_one_arg
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_no_bypass
+      - tests/vv_req_wdc_002.rs::vv_req_wdc_002_spec_file_exists
+    notes: "16 CLVM execution tests. Opcode 82 emitted with exact delay value at all tested points: 0, 1, 2, 10, 256, 4608, 24000, 100000, u32::MAX. Different delays → different conditions. No bypass path. Simulator-level height enforcement not available in chia-sdk-test 0.18 — ASSERT_HEIGHT_RELATIVE is emitted correctly; Chia full node enforces it at block inclusion."
+
+  - id: WDC-003
+    section: "Fund Release"
+    summary: "CREATE_COIN at DESTINATION with AMOUNT after delay"
+    status: verified
+    spec_ref: "docs/requirements/domains/withdraw_delay/specs/WDC-003.md"
+    tests:
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_clvm_destination_all_aa
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_clvm_destination_all_zeros
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_clvm_destination_realistic
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_clvm_amount_1_mojo
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_clvm_amount_1m
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_clvm_amount_10_xch
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_different_destinations
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_different_amounts
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_rust_hash_different_destinations
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_rust_hash_different_amounts
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_rust_hash_different_delays
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_rust_hash_deterministic
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_rust_hash_nontrivial
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_rust_hash_is_32_bytes
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_mod_hash_valid
+      - tests/vv_req_wdc_003.rs::vv_req_wdc_003_spec_file_exists
+    notes: "8 CLVM execution (dest 3 vectors + amount 3 values + diff dest/amt) + 7 Rust curry_tree_hash cross-impl (diff dest/amt/delay, deterministic, nontrivial, 32 bytes, mod hash) + 1 spec. CREATE_COIN verified with destinations [0xAA;32], [0x00;32], sha256('validator_wallet'). Amounts: 1 mojo, 1M, 10 XCH."
+
+  - id: WDC-004
+    section: "Registration Coin Integration"
+    summary: "Registration coin creates delay coin, not destination coin"
+    status: verified
+    spec_ref: "docs/requirements/domains/withdraw_delay/specs/WDC-004.md"
+    tests:
+      - tests/vv_req_wdc_004.rs (19 tests)
+    notes: "Registration coin: +2 curried params, CREATE_COIN → delay coin hash via curry_tree_hash. Network coin: +2 curried params for reg coin hash. Cross-impl: CLVM delay hash matches Rust curry_tree_hash. All existing tests updated for new param counts (harness, NET-006, REG-001,003,004,005,007,010, SEC-008)."
+
+  - id: WDC-005
+    section: "Driver and API"
+    summary: "release_collateral() builds SpendBundle for delay coin"
+    status: verified
+    spec_ref: "docs/requirements/domains/withdraw_delay/specs/WDC-005.md"
+    tests:
+      - tests/vv_req_wdc_005.rs (8 tests)
+    notes: "release_collateral() on ConsensusClient + withdraw_delay_puzzle_hash() + release_collateral() driver. All return SpendBundle, no broadcast. recover_collateral() docs updated for two-phase flow. Implementations are todo!() stubs — RPC-004 will fill them."
+
+  - id: WDC-006
+    section: "Configuration"
+    summary: "NetworkConfig: withdraw_delay_blocks + mod_hash"
+    status: verified
+    spec_ref: "docs/requirements/domains/withdraw_delay/specs/WDC-006.md"
+    tests:
+      - tests/vv_req_wdc_006.rs (7 tests)
+    notes: "NetworkConfig +2 fields: withdraw_delay_blocks (u64, default 24000), withdraw_delay_mod_hash (Bytes32). JSON round-trip verified. deploy_both_singletons() populates from compiled artifact. 5 existing test files updated for new fields."
+
+  - id: WDC-007
+    section: "Permissionless Release"
+    summary: "No AGG_SIG; anyone can release after delay"
+    status: verified
+    spec_ref: "docs/requirements/domains/withdraw_delay/specs/WDC-007.md"
+    tests:
+      - tests/vv_req_wdc_007.rs (8 tests)
+    notes: "No AGG_SIG_ME (50), no AGG_SIG_UNSAFE (49), no ANY AGG_SIG variant (43-50). Only opcodes 82+51 emitted. Destination always matches curried value across 4 test vectors. Source has zero AggSig* references."
+
+  - id: WDC-008
+    section: "CLVM Execution Tests"
+    summary: "Dedicated CLVM tests for WDC-001-003"
+    status: verified
+    spec_ref: "docs/requirements/domains/withdraw_delay/specs/WDC-008.md"
+    tests:
+      - tests/vv_req_wdc_008.rs (11 tests)
+    notes: "11 CLVM execution tests covering WDC-001 (load, 2 conditions, no passthrough, diff params), WDC-002 (opcode 82, delay matches at 5 values, delay=0), WDC-003 (destination matches, amount at 3 values, cross-impl curry_tree_hash). All use compiled .hex artifact."
+
+  - id: WDC-009
+    section: "E2E Simulator Test"
+    summary: "Full two-phase recovery lifecycle + failure before delay"
+    status: verified
+    spec_ref: "docs/requirements/domains/withdraw_delay/specs/WDC-009.md"
+    tests:
+      - tests/vv_req_wdc_009.rs::vv_req_wdc_009_two_phase_collateral_recovery
+      - tests/vv_req_wdc_009.rs::vv_req_wdc_009_spec_file_exists
+    notes: "Full E2E: deploy singletons → register validator → cross-coin collateral recovery (checkpoint query + registration coin) → delay coin created (not direct destination) → spend delay coin → destination coin created with full collateral. Simulator does NOT enforce ASSERT_HEIGHT_RELATIVE (Chia node does)."
+
+  - id: WDC-010
+    section: "Destination Hint Memo"
+    summary: "Registration coin memo = conflict-resistant hint; delay coin memo = DIG Network Collateral Release"
+    status: verified
+    spec_ref: "docs/requirements/domains/withdraw_delay/specs/WDC-010.md"
+    tests:
+      - tests/vv_req_wdc_010.rs (10 tests)
+    notes: "Registration coin: hint = sha256(CHECKPOINT_SINGLETON_ID + dest), puzzle-enforced, cross-impl verified, different dest/ckpt → different hints. Delay coin: memo = 'DIG Network Collateral Release' verified in CLVM output. Both puzzles compile with memos."

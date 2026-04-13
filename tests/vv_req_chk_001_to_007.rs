@@ -49,47 +49,7 @@ const CHK_HEX: &str = include_str!("../puzzles/compiled/checkpoint_inner.hex");
 // ── Helpers ────────────────────────────────────────────────────────
 
 fn compute_empty_leaf_hash() -> [u8; 32] {
-    Sha256::digest(&[0u8; 48]).into()
-}
-
-/// Build a trivial 1-leaf Merkle tree and return (root, siblings).
-/// For tree_depth=1, one leaf is active, one empty.
-fn build_single_leaf_tree(pubkey: &[u8], depth: usize) -> ([u8; 32], Vec<[u8; 32]>) {
-    let empty_leaf: [u8; 32] = compute_empty_leaf_hash();
-    let active_leaf: [u8; 32] = Sha256::digest(pubkey).into();
-
-    // For depth=1: tree has 2 leaves. Put active at index 0, empty at index 1.
-    // root = sha256(active_leaf || empty_leaf)
-    // Sibling of index 0 = empty_leaf
-    if depth == 1 {
-        let mut root_pre = Vec::new();
-        root_pre.extend_from_slice(&active_leaf);
-        root_pre.extend_from_slice(&empty_leaf);
-        let root: [u8; 32] = Sha256::digest(&root_pre).into();
-        return (root, vec![empty_leaf]);
-    }
-
-    // For deeper trees, build bottom-up with empty siblings
-    let mut empty_hashes = vec![[0u8; 32]; depth + 1];
-    empty_hashes[0] = empty_leaf;
-    for i in 1..=depth {
-        let mut pre = Vec::new();
-        pre.extend_from_slice(&empty_hashes[i - 1]);
-        pre.extend_from_slice(&empty_hashes[i - 1]);
-        empty_hashes[i] = Sha256::digest(&pre).into();
-    }
-
-    // Place active leaf at index 0, all siblings are empty hashes
-    let mut siblings = Vec::with_capacity(depth);
-    let mut current = active_leaf;
-    for level in 0..depth {
-        siblings.push(empty_hashes[level]);
-        let mut pre = Vec::new();
-        pre.extend_from_slice(&current);
-        pre.extend_from_slice(&empty_hashes[level]);
-        current = Sha256::digest(&pre).into();
-    }
-    (current, siblings)
+    Sha256::digest([0u8; 48]).into()
 }
 
 // ── CHK-001: Puzzle compiles and loads ─────────────────────────────
@@ -377,7 +337,7 @@ fn build_query_env(
 fn vv_req_chk_005_membership_query_runs() {
     // Depth=0: root = leaf = sha256(pubkey), no siblings needed.
     let pubkey = [0xAA; 48];
-    let root: [u8; 32] = Sha256::digest(&pubkey).into();
+    let root: [u8; 32] = Sha256::digest(pubkey).into();
 
     let mut a = Allocator::new();
     let puzzle = load_puzzle(&mut a, CHK_HEX);
@@ -406,7 +366,7 @@ fn vv_req_chk_005_membership_query_runs() {
 fn vv_req_chk_005_membership_announcement_cross_impl() {
     let pubkey = [0xAA; 48];
     let epoch: u64 = 7;
-    let root: [u8; 32] = Sha256::digest(&pubkey).into();
+    let root: [u8; 32] = Sha256::digest(pubkey).into();
 
     let mut a = Allocator::new();
     let puzzle = load_puzzle(&mut a, CHK_HEX);
@@ -475,7 +435,7 @@ fn vv_req_chk_005_non_membership_announcement() {
 #[test]
 fn vv_req_chk_006_no_agg_sig_in_membership_query() {
     let pubkey = [0xAA; 48];
-    let root: [u8; 32] = Sha256::digest(&pubkey).into();
+    let root: [u8; 32] = Sha256::digest(pubkey).into();
 
     let mut a = Allocator::new();
     let puzzle = load_puzzle(&mut a, CHK_HEX);

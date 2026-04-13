@@ -176,9 +176,11 @@ fn vv_req_reg_001_exactly_two_curried_params() {
         })
         .count();
 
+    // WDC-004: Registration coin now has 4 curried params
+    // (VALIDATOR_PUBKEY, CHECKPOINT_SINGLETON_ID, WITHDRAW_DELAY_MOD_HASH, WITHDRAW_DELAY_BLOCKS)
     assert_eq!(
-        curried_count, 2,
-        "REG-001: Puzzle must have exactly 2 curried parameters, found {}",
+        curried_count, 4,
+        "REG-001/WDC-004: Puzzle must have exactly 4 curried parameters, found {}",
         curried_count
     );
 }

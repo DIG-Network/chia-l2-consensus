@@ -89,3 +89,10 @@
 
 <a id="CHK-008"></a>**CHK-008** A full end-to-end integration test MUST exercise the complete lifecycle: deploy network coin + checkpoint singleton, register validators, collect signatures, generate a real Groth16 proof, submit a checkpoint spend via chia-wallet-sdk simulator, verify state update, then execute collateral recovery via membership query + registration coin spend in the same bundle.
 > **Spec:** [`CHK-008.md`](../../../design/requirements/checkpoint/CHK-008.md)
+
+---
+
+## §12 CLVM Execution for Binding Properties
+
+<a id="CHK-015"></a>**CHK-015** The binding property requirements (CHK-009 through CHK-014) SHOULD have dedicated CLVM execution tests that run the compiled checkpoint puzzle and verify the binding behaviour in CLVM, not just via Rust-side computation. At minimum: epoch in output announcement (CHK-009), network_id binding in message hash (CHK-012), and invalid proof rejection (CHK-014).
+> **Spec:** [`CHK-015.md`](specs/CHK-015.md)

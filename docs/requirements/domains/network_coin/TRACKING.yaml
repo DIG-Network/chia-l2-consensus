@@ -17,7 +17,12 @@ items:
       - tests/vv_req_net_001.rs::vv_req_net_001_puzzle_returns_conditions
       - tests/vv_req_net_001.rs::vv_req_net_001_singleton_wrapper_documented
       - tests/vv_req_net_001.rs::vv_req_net_001_inner_puzzle_pattern
-    notes: "Inner puzzle for singleton; wrapper handles lineage/recreation"
+      - tests/vv_req_net_001.rs::vv_req_net_001_clvm_loads_and_executes
+      - tests/vv_req_net_001.rs::vv_req_net_001_clvm_produces_three_conditions
+      - tests/vv_req_net_001.rs::vv_req_net_001_clvm_recreation_is_odd_amount
+      - tests/vv_req_net_001.rs::vv_req_net_001_clvm_output_is_deterministic
+      - tests/vv_req_net_001.rs::vv_req_net_001_clvm_different_pubkeys_different_output
+    notes: "8 source-inspection + 5 CLVM execution. Deserialize .hex, build flat env, run_program(), parse conditions. Verified: loads, executes, 3 conditions (AGG_SIG_ME + 2 CREATE_COIN), recreation amt=1 with INNER_MOD_HASH, deterministic, different pubkeys produce different outputs."
 
   - id: NET-002
     section: "Registration Flow"
@@ -37,7 +42,13 @@ items:
       - tests/vv_req_net_002.rs::vv_req_net_002_puzzle_documents_net_002
       - tests/vv_req_net_002.rs::vv_req_net_002_hex_prefix_equals_register_string
       - tests/vv_req_net_002.rs::vv_req_net_002_message_does_not_depend_on_conditions
-    notes: "AggSigMe verifies sha256('register' + pubkey) with validator's key"
+      - tests/vv_req_net_002.rs::vv_req_net_002_clvm_emits_one_aggsigme
+      - tests/vv_req_net_002.rs::vv_req_net_002_clvm_aggsigme_pubkey_matches_solution
+      - tests/vv_req_net_002.rs::vv_req_net_002_clvm_aggsigme_message_cross_impl
+      - tests/vv_req_net_002.rs::vv_req_net_002_clvm_cross_impl_different_pubkey
+      - tests/vv_req_net_002.rs::vv_req_net_002_clvm_different_pubkeys_different_messages
+      - tests/vv_req_net_002.rs::vv_req_net_002_clvm_aggsigme_message_is_32_bytes
+    notes: "12 source/format + 6 CLVM execution. AGG_SIG_ME pubkey == solution pubkey. Message = sha256('register' + pk) verified cross-impl with Rust sha2. Different pubkeys produce different messages in CLVM."
 
   - id: NET-003
     section: "Registration Flow"
@@ -58,7 +69,14 @@ items:
       - tests/vv_req_net_003.rs::vv_req_net_003_checkpoint_id_is_curried
       - tests/vv_req_net_003.rs::vv_req_net_003_puzzle_documents_net_003
       - tests/vv_req_net_003.rs::vv_req_net_003_curry_hash_concept
-    notes: "CreateCoin with curry_tree_hash(mod_hash, pubkey, checkpoint_id)"
+      - tests/vv_req_net_003.rs::vv_req_net_003_clvm_registration_amount_equals_collateral
+      - tests/vv_req_net_003.rs::vv_req_net_003_clvm_different_collateral_values
+      - tests/vv_req_net_003.rs::vv_req_net_003_clvm_puzzle_hash_cross_impl
+      - tests/vv_req_net_003.rs::vv_req_net_003_clvm_puzzle_hash_cross_impl_different_inputs
+      - tests/vv_req_net_003.rs::vv_req_net_003_clvm_different_pubkeys_different_hashes
+      - tests/vv_req_net_003.rs::vv_req_net_003_clvm_different_checkpoint_ids_different_hashes
+      - tests/vv_req_net_003.rs::vv_req_net_003_clvm_puzzle_hash_is_32_bytes
+    notes: "13 source + 7 CLVM execution. Registration CREATE_COIN amount == COLLATERAL, puzzle hash cross-impl verified with Rust curry_tree_hash. Different pk and ckpt_id produce different hashes."
 
   - id: NET-004
     section: "Self-Recreation"
@@ -76,7 +94,12 @@ items:
       - tests/vv_req_net_004.rs::vv_req_net_004_no_my_puzzle_hash_in_inner
       - tests/vv_req_net_004.rs::vv_req_net_004_curried_params_are_constant
       - tests/vv_req_net_004.rs::vv_req_net_004_curried_params_are_deployment_fixed
-    notes: "Self-recreation handled by singleton_top_layer_v1_1 wrapper"
+      - tests/vv_req_net_004.rs::vv_req_net_004_clvm_recreation_amount_is_one
+      - tests/vv_req_net_004.rs::vv_req_net_004_clvm_recreation_hash_equals_inner_mod_hash
+      - tests/vv_req_net_004.rs::vv_req_net_004_clvm_recreation_uses_real_mod_hash
+      - tests/vv_req_net_004.rs::vv_req_net_004_clvm_recreation_always_emitted
+      - tests/vv_req_net_004.rs::vv_req_net_004_clvm_recreation_hash_independent_of_pubkey
+    notes: "10 source + 5 CLVM execution. Recreation CREATE_COIN: amount=1 (odd), puzzle_hash=INNER_MOD_HASH, verified with real .hash artifact, always emitted for any pubkey, constant across pubkeys."
 
   - id: NET-005
     section: "Driver Convention"
@@ -101,5 +124,34 @@ items:
     status: verified
     spec_ref: "docs/requirements/domains/network_coin/specs/NET-006.md"
     tests:
-      - tests/vv_req_net_006.rs
-    notes: "4 tests: flat env construction, singleton deploy, validator registration, sequential registrations."
+      - tests/vv_req_net_006.rs::vv_req_net_006_inner_puzzle_flat_env
+      - tests/vv_req_net_006.rs::vv_req_net_006_deploy_singleton
+      - tests/vv_req_net_006.rs::vv_req_net_006_register_validator
+      - tests/vv_req_net_006.rs::vv_req_net_006_sequential_registrations
+      - tests/vv_req_net_006.rs::vv_req_net_006_invalid_lineage_proof_rejected
+      - tests/vv_req_net_006.rs::vv_req_net_006_insufficient_collateral_rejected
+      - tests/vv_req_net_006.rs::vv_req_net_006_recreated_singleton_puzzle_hash_matches
+    notes: "7 tests: 4 success-path + 3 failure/verification. Simulator does not enforce AGG_SIG_ME (chia-sdk-test limitation), so signature rejection tested via CLVM condition presence in NET-002."
+
+  - id: NET-007
+    section: "CLVM Execution Validation"
+    summary: "Dedicated CLVM execution tests for NET-001 through NET-004"
+    status: verified
+    spec_ref: "docs/requirements/domains/network_coin/specs/NET-007.md"
+    tests:
+      - tests/vv_req_net_001.rs (5 CLVM execution tests)
+      - tests/vv_req_net_002.rs (6 CLVM execution tests)
+      - tests/vv_req_net_003.rs (7 CLVM execution tests)
+      - tests/vv_req_net_004.rs (5 CLVM execution tests)
+    notes: "All 4 requirements now have CLVM execution tests: deserialize .hex, build flat env, run_program(), parse conditions, cross-impl verification."
+
+  - id: NET-008
+    section: "Failure Case Coverage"
+    summary: "Failure-path simulator tests for NET-006"
+    status: verified
+    spec_ref: "docs/requirements/domains/network_coin/specs/NET-008.md"
+    tests:
+      - tests/vv_req_net_006.rs::vv_req_net_006_invalid_lineage_proof_rejected
+      - tests/vv_req_net_006.rs::vv_req_net_006_insufficient_collateral_rejected
+      - tests/vv_req_net_006.rs::vv_req_net_006_recreated_singleton_puzzle_hash_matches
+    notes: "3 failure/verification tests. Invalid lineage proof and insufficient collateral both rejected by simulator. Recreated singleton puzzle hash matches original. Note: AGG_SIG_ME signature verification is not enforced by chia-sdk-test Simulator — the AGG_SIG_ME condition presence is verified via CLVM execution in NET-002."

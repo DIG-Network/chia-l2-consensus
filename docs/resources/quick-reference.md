@@ -426,7 +426,7 @@ It must match the public input allocation order in the Arkworks circuit.
 | `sync()` | Update all local state from chain | Drives indexer, rebuilds SMT, verifies Merkle consistency, returns `StateMismatch` if inconsistent | [crate](spec-consensus-crate.md) — ConsensusClient |
 | `deploy(...)` | One-time network deployment | Returns `(SpendBundle, NetworkConfig)`. Runs setup if VK not found. | [crate](spec-consensus-crate.md) — Deployment |
 | `register_validator(sk)` | Build registration spend bundle | Requires validator's secret key. Includes pubkey memo. | [crate](spec-consensus-crate.md) — Validator Registration |
-| `submit_checkpoint(...)` | Build checkpoint spend bundle | Runs proof generation (5-15 min) in `spawn_blocking`. Returns identity sig. | [crate](spec-consensus-crate.md) — Checkpoint Submission |
+| `build_checkpoint(...)` | Build checkpoint spend bundle | Runs proof generation (5-15 min) in `spawn_blocking`. Returns SpendBundle — caller broadcasts. | [crate](spec-consensus-crate.md) — Checkpoint Submission |
 | `checkpoint_message(...)` | Compute the 32-byte message to commit to | Input to `sha256`, not the signing message itself | [crate](spec-consensus-crate.md) — Checkpoint Submission |
 | `validator_signing_message(...)` | Compute the full message each validator signs | = checkpoint_message + genesis_challenge + coin_id | [crate](spec-consensus-crate.md) — Checkpoint Submission |
 | `compute_new_validator_set(entries, exits)` | Apply entries and exits to current SMT | Returns `(new_root, new_count, new_tree)`. Detects slot collisions. | [crate](spec-consensus-crate.md) — Validator Set Construction |
@@ -465,7 +465,7 @@ It must match the public input allocation order in the Arkworks circuit.
 | `NotDeployed` | `state()` called before `sync()` | Call `sync()` first |
 | `AlreadyRegistered` | Pubkey already in active set, or validator still active during collateral recovery | Check `is_active()` before registering or recovering |
 | `ValidatorNotFound` | Signing pubkey not in current tree, or no registration coin found | Verify validator is registered and sync is current |
-| `BelowThreshold` | `2k ≤ validator_count` | Collect more signatures before calling `submit_checkpoint()` |
+| `BelowThreshold` | `2k ≤ validator_count` | Collect more signatures before calling `build_checkpoint()` |
 | `StateMismatch` | Local Merkle root ≠ on-chain `validator_merkle_root` after sync | Delete cache, trigger full re-index |
 | `InvalidLineage` | Registration coin parent not a network coin spend | Do not use this coin — it was not created through the approved flow |
 | `InvalidMerkleProof` | Merkle proof verification failed or slot not empty for non-membership | Rebuild tree from current registration coins |
@@ -595,4 +595,4 @@ It must match the public input allocation order in the Arkworks circuit.
 | Forgetting pubkey memo on registration coin creation | Indexer cannot build validator set | Network coin driver must include pubkey as first memo on CreateCoin | [indexer](spec-indexer.md) — Important Notes |
 | Missing scalar reduction mod r | Incorrect vk_input G1 point | `scalar(bytes) = sha256(bytes) as u256 mod r` — Rust must explicitly reduce; Rue relies on g1_multiply | [wire](spec-wire-format.md) — Common Mistakes |
 | Submitting two checkpoints in-flight | Second is rejected (stale epoch) | Mutex or semaphore to allow only one checkpoint submission at a time | [l2](spec-l2-integration.md) — Important Notes |
-| Calling submit_checkpoint() without syncing first | Wrong public inputs to proof generation | Always call `sync()` immediately before starting checkpoint submission | [l2](spec-l2-integration.md) — Important Notes |
+| Calling build_checkpoint() without syncing first | Wrong public inputs to proof generation | Always call `sync()` immediately before starting checkpoint construction | [l2](spec-l2-integration.md) — Important Notes |

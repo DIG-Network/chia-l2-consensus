@@ -143,3 +143,22 @@ items:
     tests:
       - tests/vv_req_sec_010.rs
     notes: "20 VV tests: one per attack vector (A-T). 16 fully addressed, 3 acknowledged trade-offs, 1 by-design."
+
+  - id: SEC-011
+    section: "Phantom Majority Forgery"
+    summary: "CIR-003 enforced via non-native G1 arithmetic; phantom majority blocked"
+    status: verified
+    spec_ref: "docs/requirements/domains/security/specs/SEC-011.md"
+    tests:
+      - tests/vv_req_sec_011.rs::vv_req_sec_011_phantom_majority_proof_generation_fails
+      - tests/vv_req_sec_011.rs::vv_req_sec_011_phantom_majority_extreme_ratio_blocked
+      - tests/vv_req_sec_011.rs::vv_req_sec_011_actual_signers_constrained_to_keys
+      - tests/vv_req_sec_011.rs::vv_req_sec_011_minority_still_rejected_by_cir_004
+      - tests/vv_req_sec_011.rs::vv_req_sec_011_legitimate_majority_succeeds
+      - tests/vv_req_sec_011.rs::vv_req_sec_011_cir_003_enforced_in_circuit
+      - tests/vv_req_sec_011.rs::vv_req_sec_011_constructor_accepts_signing_pubkeys
+      - tests/vv_req_cir_003_constraint.rs::vv_req_cir_003_correct_aggregate_succeeds
+      - tests/vv_req_cir_003_constraint.rs::vv_req_cir_003_wrong_aggregate_fails
+      - tests/vv_req_cir_003_constraint.rs::vv_req_cir_003_phantom_majority_blocked
+      - tests/vv_req_cir_003_constraint.rs::vv_req_cir_003_single_signer
+    notes: "CIR-003 in src/prover/g1_gadget.rs enforces G1_sum(pubkeys)==agg_signers. with_public_inputs() accepts signing_pubkeys to activate CIR-003. SEC-011 tests verify: phantom attacks fail, legitimate proofs succeed."

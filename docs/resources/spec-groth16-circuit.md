@@ -559,7 +559,7 @@ pub fn run_setup(
 
 ## Proof Generation
 
-Called by the consensus crate's `submit_checkpoint()` method
+Called by the consensus crate's `build_checkpoint()` method
 (→ see [spec-consensus-crate](spec-consensus-crate.md) — Checkpoint
 Submission). Runs in `spawn_blocking` because it takes 2-15 minutes:
 

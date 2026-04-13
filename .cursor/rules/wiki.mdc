@@ -1,0 +1,14 @@
+---
+description: Local in-repo wiki (MkDocs) under docs/wiki — build with mkdocs, no external DeepWiki service.
+alwaysApply: true
+---
+
+# Local wiki (MkDocs)
+
+**Source:** [`docs/wiki/`](../../docs/wiki/) — Markdown + [`mkdocs.yml`](../../docs/wiki/mkdocs.yml).
+
+**Build (repo root):** `pip install -r requirements-wiki.txt` then `mkdocs build -f docs/wiki/mkdocs.yml` (output `docs/wiki/site/`, gitignored). **Preview:** `mkdocs serve -f docs/wiki/mkdocs.yml` or `scripts/serve-wiki.ps1`.
+
+**Contents:** Umbrella overview is [`Silicon-Sites-Submodules-Wiki.md`](../../docs/wiki/Silicon-Sites-Submodules-Wiki.md). **Per-submodule deep wikis** are generated Markdown under [`docs/wiki/generated/submodules/`](../../docs/wiki/generated/submodules/) via [`scripts/generate-submodule-wikis.py`](../../scripts/generate-submodule-wikis.py) (run from repo root; `scripts/build-wiki.ps1` / `build-wiki.sh` run it before `mkdocs build`). Commit regenerated `.md` when submodule trees change. Extend the wiki by adding hand-written Markdown under `docs/wiki/` and `nav` entries in `mkdocs.yml` when needed.
+
+Do **not** assume DeepWiki, Devin hosted wiki, or `mcp.deepwiki.com` for this repository; documentation is maintained in git and built locally.

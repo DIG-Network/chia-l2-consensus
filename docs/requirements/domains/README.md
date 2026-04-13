@@ -12,6 +12,7 @@ Quick navigation to all domain requirement documents.
 | Sparse Merkle Tree | SMT | [NORMATIVE](smt/NORMATIVE.md) | [VERIFICATION](smt/VERIFICATION.md) | [TRACKING](smt/TRACKING.yaml) | [specs/](smt/specs/) |
 | Wire Format | WIRE | [NORMATIVE](wire/NORMATIVE.md) | [VERIFICATION](wire/VERIFICATION.md) | [TRACKING](wire/TRACKING.yaml) | [specs/](wire/specs/) |
 | Indexer | IDX | [NORMATIVE](indexer/NORMATIVE.md) | [VERIFICATION](indexer/VERIFICATION.md) | [TRACKING](indexer/TRACKING.yaml) | [specs/](indexer/specs/) |
+| Withdraw Delay | WDC | [NORMATIVE](withdraw_delay/NORMATIVE.md) | [VERIFICATION](withdraw_delay/VERIFICATION.md) | [TRACKING](withdraw_delay/TRACKING.yaml) | [specs/](withdraw_delay/specs/) |
 | Security | SEC | [NORMATIVE](security/NORMATIVE.md) | [VERIFICATION](security/VERIFICATION.md) | [TRACKING](security/TRACKING.yaml) | [specs/](security/specs/) |
 | Deployment | DEP | [NORMATIVE](deployment/NORMATIVE.md) | [VERIFICATION](deployment/VERIFICATION.md) | [TRACKING](deployment/TRACKING.yaml) | [specs/](deployment/specs/) |
 | Validator Operations | VAL | [NORMATIVE](validator/NORMATIVE.md) | [VERIFICATION](validator/VERIFICATION.md) | [TRACKING](validator/TRACKING.yaml) | [specs/](validator/specs/) |
@@ -42,6 +43,10 @@ Each domain directory contains:
 - **Sparse Merkle Tree**: Validator set data structure
 - **Wire Format**: Serialization and message formats
 - **Indexer**: Off-chain state tracking and lineage verification
+- **Withdraw Delay**: Time-locked collateral release after validator exit (5-day default)
 - **Security**: Security assumptions and properties
+- **Deployment**: Trusted setup and network deployment
+- **Validator Operations**: Validator lifecycle management
+- **Crate API**: Public API conformance to spec-consensus-crate.md
 - **Deployment**: Trusted setup and network deployment
 - **Validator Operations**: Validator lifecycle management

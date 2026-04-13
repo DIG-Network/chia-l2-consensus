@@ -124,14 +124,30 @@ fn vv_req_chk_009_proof_encodes_epoch() {
 
     // Generate proof for epoch 5 (new_epoch = 5, so old_epoch was 4)
     let msg_epoch_5 = compute_checkpoint_message(sr, mr, vc, 5, [0x00; 32]);
-    let circuit_5 =
-        ConsensusCircuit::with_public_inputs(mr, vc, mr, vc, [0xCC; 48], msg_epoch_5, 1);
+    let circuit_5 = ConsensusCircuit::with_public_inputs(
+        mr,
+        vc,
+        mr,
+        vc,
+        [0xCC; 48],
+        msg_epoch_5,
+        1,
+        Vec::new(),
+    );
     let proof_5 = generate_proof(circuit_5, &pk).expect("Proof for epoch 5");
 
     // Generate proof for epoch 10 (new_epoch = 10, so old_epoch was 9)
     let msg_epoch_10 = compute_checkpoint_message(sr, mr, vc, 10, [0x00; 32]);
-    let circuit_10 =
-        ConsensusCircuit::with_public_inputs(mr, vc, mr, vc, [0xCC; 48], msg_epoch_10, 1);
+    let circuit_10 = ConsensusCircuit::with_public_inputs(
+        mr,
+        vc,
+        mr,
+        vc,
+        [0xCC; 48],
+        msg_epoch_10,
+        1,
+        Vec::new(),
+    );
     let proof_10 = generate_proof(circuit_10, &pk).expect("Proof for epoch 10");
 
     // The proofs must be different because they encode different checkpoint_messages
@@ -221,7 +237,8 @@ fn vv_req_chk_009_epoch_0_to_1_valid() {
     let pk = deserialize_proving_key(&pk_bytes).expect("PK");
 
     let msg = compute_checkpoint_message([0; 32], [0; 32], 0, 1, [0x00; 32]); // new_epoch = 1
-    let circuit = ConsensusCircuit::with_public_inputs([0; 32], 1, [0; 32], 0, [0; 48], msg, 1);
+    let circuit =
+        ConsensusCircuit::with_public_inputs([0; 32], 1, [0; 32], 0, [0; 48], msg, 1, Vec::new());
     let proof = generate_proof(circuit, &pk);
 
     assert!(

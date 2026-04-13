@@ -42,7 +42,7 @@ fn vv_req_smt_002_slot_from_sha256_pubkey() {
 
     // Compute expected slot manually
     let mut hasher = Sha256::new();
-    hasher.update(&pubkey);
+    hasher.update(pubkey);
     let hash: [u8; 32] = hasher.finalize().into();
     let n = u64::from_be_bytes(hash[0..8].try_into().unwrap());
     let expected_slot = n % (1u64 << TREE_DEPTH);
@@ -67,7 +67,7 @@ fn vv_req_smt_002_first_8_bytes_big_endian() {
     let pubkey = [0x00u8; 48];
 
     let mut hasher = Sha256::new();
-    hasher.update(&pubkey);
+    hasher.update(pubkey);
     let hash: [u8; 32] = hasher.finalize().into();
 
     // Verify we're using big-endian interpretation

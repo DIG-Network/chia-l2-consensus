@@ -50,12 +50,12 @@ fn debug_checkpoint_env_builder_output() {
 
     // Build a minimal env (flat list of 19 params, all zeros/dummy)
     // to run the env_builder part of the module
-    let nil = a.nil();
+    let _nil = a.nil();
     // Build a flat list of 19 pairs to represent env
-    let dummy32 = a.new_atom(&[0u8; 32]).unwrap();
-    let dummy48 = a.new_atom(&[0u8; 48]).unwrap();
-    let dummy96 = a.new_atom(&[0u8; 96]).unwrap();
-    let one_val = a.new_atom(&[1u8]).unwrap();
+    let _dummy32 = a.new_atom(&[0u8; 32]).unwrap();
+    let _dummy48 = a.new_atom(&[0u8; 48]).unwrap();
+    let _dummy96 = a.new_atom(&[0u8; 96]).unwrap();
+    let _one_val = a.new_atom(&[1u8]).unwrap();
 
     // Flat env: arg1..arg19 as right-linked list
     // We'll use simple dummy atoms for all (the env builder doesn't evaluate the body)
@@ -180,7 +180,7 @@ fn debug_checkpoint_membership_path() {
     let hex_bytes = hex::decode(CHK_HEX.trim()).unwrap();
     let puzzle = clvmr::serde::node_from_bytes(&mut a, &hex_bytes).unwrap();
 
-    let nil = a.nil();
+    let _nil = a.nil();
     let sha = |data: &[u8]| -> [u8; 32] { Sha256::digest(data).into() };
     let empty_leaf_hash = sha(&[0u8; 48]);
 
@@ -202,7 +202,7 @@ fn debug_checkpoint_membership_path() {
         let i = a.new_pair(vb, i).unwrap();
         a.new_pair(va, i).unwrap()
     };
-    let ic_p = a.new_atom(&[0u8; 48]).unwrap();
+    let _ic_p = a.new_atom(&[0u8; 48]).unwrap();
     let ics = {
         let ic6 = a.new_atom(&[0u8; 48]).unwrap();
         let ic5 = a.new_atom(&[0u8; 48]).unwrap();
@@ -667,7 +667,7 @@ fn test_path_mapping_for_reg_coin() {
                     curr = if *op == 0 { l } else { r };
                 }
                 SExp::Atom => {
-                    return Err(format!("path into atom"));
+                    return Err("path into atom".to_string());
                 }
             }
         }
@@ -724,7 +724,6 @@ fn test_path_mapping_for_reg_coin() {
 #[test]
 fn test_actual_clvm_path_5_evaluation() {
     use clvmr::reduction::Reduction;
-    use clvmr::serde::node_from_bytes;
 
     let mut a = Allocator::new();
 

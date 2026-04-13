@@ -121,5 +121,47 @@ items:
     status: verified
     spec_ref: "docs/requirements/domains/registration_coin/specs/REG-007.md"
     tests:
-      - tests/vv_req_reg_007.rs
-    notes: "2 tests: cross-coin bundle (checkpoint query + registration spend), collateral recovery."
+      - tests/vv_req_reg_007.rs::vv_req_reg_007_create_registration_coin
+      - tests/vv_req_reg_007.rs::vv_req_reg_007_cross_coin_collateral_recovery
+    notes: "2 success-path tests + 4 failure-path tests (REG-009). Full lifecycle verified."
+
+  - id: REG-008
+    section: "CLVM Execution Validation"
+    summary: "Dedicated CLVM execution tests for REG-001 puzzle structure"
+    status: verified
+    spec_ref: "docs/requirements/domains/registration_coin/specs/REG-008.md"
+    tests:
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_clvm_loads_and_executes
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_clvm_exactly_two_conditions
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_clvm_different_pubkeys_different_announcements
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_clvm_different_ckpt_ids_different_announcements
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_clvm_create_coin_destination_matches_solution
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_clvm_create_coin_amount_matches_solution
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_clvm_announcement_hash_cross_impl
+      - tests/vv_req_reg_001.rs::vv_req_reg_001_clvm_announcement_hash_cross_impl_epoch_0
+    notes: "8 CLVM execution tests: loads hex, executes, 2 conditions (ASSERT_COIN_ANNOUNCEMENT + CREATE_COIN), different pubkeys/ckpt_ids differ, CREATE_COIN dest+amt match solution, cross-impl hash verification at epoch 42 and epoch 0."
+
+  - id: REG-009
+    section: "Failure Case Coverage"
+    summary: "Failure-path simulator tests for REG-007"
+    status: verified
+    spec_ref: "docs/requirements/domains/registration_coin/specs/REG-009.md"
+    tests:
+      - tests/vv_req_reg_007.rs::vv_req_reg_009_spend_without_announcement
+      - tests/vv_req_reg_007.rs::vv_req_reg_009_wrong_announcement_hash
+      - tests/vv_req_reg_007.rs::vv_req_reg_009_membership_true_rejected
+      - tests/vv_req_reg_007.rs::vv_req_reg_009_wrong_epoch_rejected
+    notes: "4 failure-path tests: no announcement rejected, wrong pubkey hash rejected, is_member=0x01 rejected, epoch mismatch rejected. All use full simulator consensus."
+
+  - id: REG-010
+    section: "Simulator Spend Verification"
+    summary: "Simulator tests for REG-003 through REG-006"
+    status: verified
+    spec_ref: "docs/requirements/domains/registration_coin/specs/REG-010.md"
+    tests:
+      - tests/vv_req_reg_010.rs::vv_req_reg_010_collateral_lock_no_announcement
+      - tests/vv_req_reg_010.rs::vv_req_reg_010_announcement_assertion_cross_coin
+      - tests/vv_req_reg_010.rs::vv_req_reg_010_collateral_return_destination_and_amount
+      - tests/vv_req_reg_010.rs::vv_req_reg_010_epoch_mismatch_rejected
+      - tests/vv_req_reg_010.rs::vv_req_reg_010_spec_exists
+    notes: "5 simulator tests: REG-003 collateral lock (no-announcement rejected, coin stays unspent), REG-004 cross-coin announcement (success + checkpoint recreated), REG-005 collateral return (destination puzzle_hash + amount verified), REG-006 epoch replay (epoch 0 vs 5 rejected)."

@@ -1,12 +1,14 @@
 // registration_coin.rue
 //
 // REG-001: Puzzle structure — curried with VALIDATOR_PUBKEY + CHECKPOINT_SINGLETON_ID
+//          + WITHDRAW_DELAY_MOD_HASH + WITHDRAW_DELAY_BLOCKS (WDC-004)
 // REG-003: Collateral lock — spendable only with non-membership announcement
 // REG-004: Announcement assertion — asserts checkpoint singleton announcement
-// REG-005: Collateral return — creates coin at collateral_destination
+// WDC-004: Creates withdraw delay coin instead of direct destination coin
 // REG-006: Epoch replay protection — epoch in announcement prevents replay
 //
 // See spec-registration-coin.md for specification.
+// See spec-withdraw-delay-coin.md for withdraw delay integration.
 // Full driver code: spec-registration-coin.md — Driver Code (Rust)
 
 /// Encode an integer as exactly 8 big-endian bytes.
@@ -23,14 +25,28 @@ fn main(
     // REG-001: Curried parameters (set by network coin at creation time)
     VALIDATOR_PUBKEY: PublicKey,          // 48-byte BLS G1 point
     CHECKPOINT_SINGLETON_ID: Bytes32,    // Coin ID (not launcher ID)
+    WITHDRAW_DELAY_MOD_HASH: Bytes32,    // WDC-004: tree hash of withdraw delay puzzle
+    WITHDRAW_DELAY_BLOCKS: Int,          // WDC-004: L1 blocks to wait (default 24,000)
 
     // Solution parameters (provided at spend time)
     epoch: Int,                          // Current checkpoint epoch
-    collateral_destination: Bytes32,     // Where to send collateral
+    collateral_destination: Bytes32,     // Where collateral goes (via delay coin)
     collateral_amount: Int,              // Amount to return
     // SEC-008: No conditions passthrough — prevents CREATE_COIN/RESERVE_FEE injection.
     // Fees are handled at the outer spend bundle level (P2 coin pays fees).
 ) -> List<Condition> {
+
+    // WDC-004: Compute the withdraw delay coin puzzle hash on-chain.
+    // The delay coin locks: destination, amount, and delay blocks.
+    // curry_tree_hash(mod_hash, [tree_hash(dest), tree_hash(amt), tree_hash(delay)])
+    let withdraw_delay_puzzle_hash: Bytes32 = curry_tree_hash(
+        WITHDRAW_DELAY_MOD_HASH,
+        [
+            tree_hash(collateral_destination),
+            tree_hash(collateral_amount),
+            tree_hash(WITHDRAW_DELAY_BLOCKS),
+        ],
+    );
 
     // REG-004: Compute expected membership announcement
     // Format per spec-wire-format — Membership Announcement Format:
@@ -54,13 +70,21 @@ fn main(
         id: full_announcement,
     };
 
-    // REG-005: Return collateral to specified destination
-    let create_collateral = CreateCoin {
-        puzzle_hash: collateral_destination,
+    // WDC-004: Create WITHDRAW DELAY COIN (not direct destination coin).
+    // The delay coin holds collateral for WITHDRAW_DELAY_BLOCKS before
+    // releasing to collateral_destination.
+    // WDC-010: Conflict-resistant hint = sha256(CHECKPOINT_SINGLETON_ID + destination).
+    // Using the checkpoint singleton ID as a network prefix ensures hints are
+    // unique per L2 network, preventing cross-network hint collisions.
+    // The indexer computes the same hash to query via get_coin_records_by_hint().
+    let dest_bytes: Bytes = collateral_destination as Bytes;
+    let hint: Bytes32 = sha256(checkpoint_bytes + dest_bytes);
+    let create_delay_coin = CreateCoin {
+        puzzle_hash: withdraw_delay_puzzle_hash,
         amount: collateral_amount,
-        memos: nil,
+        memos: Memos { value: hint },
     };
 
     // SEC-008: Only two conditions — no passthrough, no injection surface
-    [assert_announcement, create_collateral]
+    [assert_announcement, create_delay_coin]
 }

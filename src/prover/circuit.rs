@@ -156,9 +156,12 @@ impl ConsensusCircuit {
         }
     }
 
-    /// Create a circuit with public inputs and majority witness.
+    /// Create a circuit with public inputs, majority witness, and signing pubkeys.
     ///
-    /// `actual_signers` is the private witness k. The circuit enforces 2k > validator_count.
+    /// When `signing_pubkeys` is non-empty, CIR-003 is activated and enforces
+    /// that G1_sum(signing_pubkeys) == agg_signers. For production proofs,
+    /// always provide the actual signing pubkeys to enable CIR-003 enforcement.
+    #[allow(clippy::too_many_arguments)]
     pub fn with_public_inputs(
         validator_merkle_root: [u8; 32],
         validator_count: u64,
@@ -167,6 +170,7 @@ impl ConsensusCircuit {
         agg_signers: [u8; 48],
         checkpoint_message: [u8; 32],
         actual_signers: usize,
+        signing_pubkeys: Vec<[u8; 48]>,
     ) -> Self {
         Self {
             validator_merkle_root,
@@ -175,7 +179,7 @@ impl ConsensusCircuit {
             new_validator_count,
             agg_signers,
             checkpoint_message,
-            signing_pubkeys: Vec::new(),
+            signing_pubkeys,
             merkle_proofs: Vec::new(),
             actual_signers,
             poseidon_config: None,
@@ -498,7 +502,28 @@ impl ConstraintSynthesizer<ark_bls12_381::Fr> for ConsensusCircuit {
             }
         }
 
-        // CIR-003: Aggregate key — Phase 3 (non-native G1 arithmetic)
+        // ================================================================
+        // CIR-003: Aggregate key — non-native G1 arithmetic
+        //
+        // Enforce: G1_sum(signing_pubkeys[0..k]) == agg_signers.
+        // This binds the Groth16 proof to the specific aggregate key
+        // verified by bls_verify on-chain, closing SEC-011.
+        //
+        // Each pubkey is decompressed to (x, y) in non-native Fq,
+        // verified on-curve (y² = x³ + 4), then accumulated via
+        // constrained affine addition. The result must equal agg_signers.
+        //
+        // Cost: ~20,000 constraints per addition × (k-1).
+        // ================================================================
+
+        if !self.signing_pubkeys.is_empty() && self.actual_signers > 0 {
+            super::g1_gadget::enforce_aggregate_key(
+                cs.clone(),
+                &self.signing_pubkeys,
+                &self.agg_signers,
+                self.actual_signers,
+            )?;
+        }
 
         Ok(())
     }

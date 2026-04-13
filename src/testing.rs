@@ -55,10 +55,28 @@ pub use crate::prover::{
 };
 
 // ============================================================================
+// Puzzles: Compiled artifacts (src/puzzles/)
+// All puzzle .hex and .hash constants for CLVM execution tests.
+// ============================================================================
+pub use crate::puzzles::{
+    CHECKPOINT_INNER_MOD_HASH_HEX, CHECKPOINT_INNER_PUZZLE_HEX, NETWORK_COIN_INNER_MOD_HASH_HEX,
+    NETWORK_COIN_INNER_PUZZLE_HEX, REGISTRATION_COIN_MOD_HASH_HEX, REGISTRATION_COIN_PUZZLE_HEX,
+};
+
+// ============================================================================
 // Puzzles: Deployment (src/puzzles/)
 // Spec: spec-deployment-runbook.md — DEP-002
 // ============================================================================
 pub use crate::puzzles::{deploy_both_singletons, derive_launcher_id};
+
+// ============================================================================
+// Puzzles: Withdraw delay coin (src/puzzles/withdraw_delay.rs)
+// Spec: spec-withdraw-delay-coin.md — WDC-001 through WDC-003
+// ============================================================================
+pub use crate::puzzles::{
+    withdraw_delay_puzzle_hash, DEFAULT_WITHDRAW_DELAY_BLOCKS, WITHDRAW_DELAY_COIN_MOD_HASH_HEX,
+    WITHDRAW_DELAY_COIN_PUZZLE_HEX,
+};
 
 // ============================================================================
 // Validator operations (src/validator/)
@@ -90,6 +108,12 @@ pub mod poseidon {
     //! Re-export of `crate::merkle::poseidon` for test access.
     pub use crate::merkle::poseidon::*;
 }
+
+// ============================================================================
+// Client: Hex conversion helpers (src/client.rs)
+// RPC-001: Bytes32 ↔ hex string conversion for chia-query interop
+// ============================================================================
+pub use crate::client::{bytes32_to_hex, hex_to_bytes32};
 
 // ============================================================================
 // Indexer (src/indexer/)

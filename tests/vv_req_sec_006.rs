@@ -142,7 +142,7 @@ fn vv_req_sec_006_epoch_is_8_byte_be() {
     let mut hasher = Sha256::new();
     hasher.update(b"membership"); // 10 bytes
     hasher.update(epoch.to_be_bytes()); // 8 bytes big-endian
-    hasher.update(&kp.pubkey); // 48 bytes
+    hasher.update(kp.pubkey); // 48 bytes
     hasher.update([0x00u8]); // 1 byte non-membership
     let expected: [u8; 32] = hasher.finalize().into();
 

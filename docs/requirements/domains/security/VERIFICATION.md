@@ -13,5 +13,6 @@
 | [SEC-008](NORMATIVE.md#SEC-008) | ✅ | Condition injection | Removed from registration + checkpoint; network coin keeps (AggSigMe protected); 9 VV tests |
 | [SEC-009](NORMATIVE.md#SEC-009) | ✅ | Destination binding | Risk mitigated by announcement requirement; RBF impractical; 8 VV tests |
 | [SEC-010](NORMATIVE.md#SEC-010) | ✅ | Attack surface | 20 attack vectors verified across all puzzles; 16 addressed, 3 trade-offs, 1 by-design; 20 VV tests |
+| [SEC-011](NORMATIVE.md#SEC-011) | ✅ | Phantom majority forgery | CIR-003 enforced via g1_gadget.rs; 7 VV tests verify attacks blocked + legitimate proofs succeed |
 
 **Status legend:** ✅ verified · ⚠️ partial · ❌ gap

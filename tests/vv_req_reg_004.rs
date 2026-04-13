@@ -50,7 +50,8 @@ use common::clvm::*;
 
 const REG_COIN_HEX: &str = include_str!("../puzzles/compiled/registration_coin.hex");
 
-/// Build registration coin env as flat list.
+/// Build registration coin env as flat list (WDC-004: 4 curried + 3 solution).
+/// (PK . (CKPT_ID . (WDC_MOD . (WDC_DELAY . (epoch . (dest . (amt . nil)))))))
 fn build_env(
     a: &mut Allocator,
     pk: &[u8],
@@ -59,27 +60,18 @@ fn build_env(
     dest: &[u8],
     amt: u64,
 ) -> clvmr::NodePtr {
-    let conds = a.nil();
     let nil = a.nil();
-    let t = a.new_pair(conds, nil).unwrap();
-    let amt_bytes: Vec<u8> = if amt == 0 {
-        vec![]
-    } else {
-        let b = amt.to_be_bytes();
-        b.iter().copied().skip_while(|&x| x == 0).collect()
-    };
-    let amt_node = a.new_atom(&amt_bytes).unwrap();
-    let t = a.new_pair(amt_node, t).unwrap();
+    let amt_node = common::clvm::u64_to_clvm(a, amt);
+    let t = a.new_pair(amt_node, nil).unwrap();
     let dest_node = a.new_atom(dest).unwrap();
     let t = a.new_pair(dest_node, t).unwrap();
-    let epoch_bytes: Vec<u8> = if epoch == 0 {
-        vec![]
-    } else {
-        let b = epoch.to_be_bytes();
-        b.iter().copied().skip_while(|&x| x == 0).collect()
-    };
-    let epoch_node = a.new_atom(&epoch_bytes).unwrap();
+    let epoch_node = common::clvm::u64_to_clvm(a, epoch);
     let t = a.new_pair(epoch_node, t).unwrap();
+    // WDC-004: default delay params
+    let delay_node = common::clvm::u64_to_clvm(a, 24_000);
+    let t = a.new_pair(delay_node, t).unwrap();
+    let wdc_mod_node = a.new_atom(&[0x55; 32]).unwrap();
+    let t = a.new_pair(wdc_mod_node, t).unwrap();
     let ckpt_node = a.new_atom(ckpt_id).unwrap();
     let t = a.new_pair(ckpt_node, t).unwrap();
     let pk_node = a.new_atom(pk).unwrap();
@@ -108,7 +100,7 @@ fn inner_preimage(epoch: u64, pk: &[u8]) -> Vec<u8> {
 
 /// Compute full announcement hash from components.
 fn full_hash(ckpt_id: &[u8], epoch: u64, pk: &[u8]) -> [u8; 32] {
-    let inner: [u8; 32] = Sha256::digest(&inner_preimage(epoch, pk)).into();
+    let inner: [u8; 32] = Sha256::digest(inner_preimage(epoch, pk)).into();
     let mut full = Vec::with_capacity(64);
     full.extend_from_slice(ckpt_id); // 32 bytes
     full.extend_from_slice(&inner); // 32 bytes
@@ -228,7 +220,7 @@ fn vv_req_reg_004_full_hash_includes_checkpoint_id() {
     let pk = [0xAA; 48];
     let epoch: u64 = 5;
 
-    let inner: [u8; 32] = Sha256::digest(&inner_preimage(epoch, &pk)).into();
+    let inner: [u8; 32] = Sha256::digest(inner_preimage(epoch, &pk)).into();
 
     // Verify full hash manually
     let mut full_preimage = Vec::with_capacity(64);
@@ -355,7 +347,7 @@ fn vv_req_reg_004_test_vector_realistic() {
 #[test]
 fn vv_req_reg_004_changing_one_pubkey_byte_changes_hash() {
     // REG-004: Flipping a single pubkey byte produces a different hash.
-    let mut pk1 = [0xAA; 48];
+    let pk1 = [0xAA; 48];
     let mut pk2 = [0xAA; 48];
     pk2[23] = 0xAB; // flip one byte
 
@@ -374,7 +366,7 @@ fn vv_req_reg_004_changing_one_pubkey_byte_changes_hash() {
 #[test]
 fn vv_req_reg_004_changing_one_ckpt_byte_changes_hash() {
     // REG-004: Flipping a single checkpoint ID byte produces a different hash.
-    let mut ckpt1 = [0xBB; 32];
+    let ckpt1 = [0xBB; 32];
     let mut ckpt2 = [0xBB; 32];
     ckpt2[0] = 0xBC;
 

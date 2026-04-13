@@ -29,11 +29,15 @@ system calls directly. The L2 system uses only `ConsensusClient` and the types
 it returns. Everything else is `pub(crate)` or private.
 
 The crate owns the full lifecycle: network deployment, validator registration,
-checkpoint submission, validator set construction with lineage verification,
+checkpoint construction, validator set construction with lineage verification,
 collateral recovery, and on-chain state indexing. Every cross-cutting concern
 that individual puzzle specs leave as an implementation detail — memo
 conventions, lineage verification, Merkle tree management, state indexing,
 proof generation, serialization — is handled inside this crate.
+
+**All public methods that produce coin spends return `SpendBundle` values.
+The crate never broadcasts transactions. The importing project is responsible
+for submitting bundles to a Chia full node via `push_tx()` or equivalent.**
 
 ```
 L2 system
@@ -1007,7 +1011,7 @@ pub fn load_verification_key(path: &str) -> ConsensusResult<VerifyingKey<Bls12_3
 /// Generate a Groth16 proof for the consensus circuit.
 /// Takes 5-15 minutes for MAX_SIGNERS=10, TREE_DEPTH=32 on BLS12-381.
 /// (→ see spec-groth16-circuit — Constraint Count Estimates)
-/// Called inside spawn_blocking by ConsensusClient::submit_checkpoint().
+/// Called inside spawn_blocking by ConsensusClient::build_checkpoint().
 /// Proof output is randomized: two calls with identical inputs produce
 /// different proofs that both verify correctly.
 /// (→ see spec-groth16-circuit — Important Notes: Deterministic proof generation)
@@ -1678,8 +1682,9 @@ impl ConsensusClient {
     /// production run the MPC ceremony first per spec-trusted-setup).
     /// (→ see spec-trusted-setup — When to Run)
     ///
-    /// Returns (SpendBundle, NetworkConfig). Submit the bundle to the node.
-    /// Save the NetworkConfig to disk — you need it on every subsequent startup.
+    /// Returns (SpendBundle, NetworkConfig). The caller is responsible for
+    /// broadcasting the bundle to the Chia node. Save the NetworkConfig to
+    /// disk — you need it on every subsequent startup.
     /// (→ see spec-deployment-runbook — Step 4 and 6)
     pub async fn deploy(
         node:              FullNodeClient,
@@ -1732,7 +1737,8 @@ impl ConsensusClient {
     // Validator Registration
     // -----------------------------------------------------------------------
 
-    /// Register a validator by spending the network coin.
+    /// Build a spend bundle that registers a validator by spending the network coin.
+    /// Returns the SpendBundle — the caller broadcasts it.
     /// The validator must provide their secret key — the puzzle enforces AggSigMe.
     /// Duplicate registration (pubkey already in active set) returns AlreadyRegistered.
     /// The crate includes the pubkey as a memo for the indexer.
@@ -1770,7 +1776,7 @@ impl ConsensusClient {
     // Checkpoint Submission
     // -----------------------------------------------------------------------
 
-    /// Generate and return a checkpoint spend bundle.
+    /// Build and return a checkpoint spend bundle.
     ///
     /// The L2 provides:
     ///   new_state_root:            the new L2 state to commit on-chain
@@ -1800,10 +1806,15 @@ impl ConsensusClient {
     /// No AGG_SIG_ME conditions are emitted by the checkpoint singleton.
     /// (→ see spec-checkpoint-singleton — Important Notes: No signatures on checkpoint spend)
     ///
+    /// **The crate does NOT broadcast the bundle.** The caller is responsible
+    /// for submitting the returned SpendBundle to a Chia full node via
+    /// `push_tx()` or equivalent. This lets the L2 inspect, modify, or
+    /// combine bundles before broadcast.
+    ///
     /// CLVM cost: ~17.2M units (→ see spec-clvm-costs — Spend Path 2)
     /// Only one checkpoint in-flight at a time.
     /// (→ see spec-l2-integration — Important Notes: Only one checkpoint in-flight at a time)
-    pub async fn submit_checkpoint(
+    pub async fn build_checkpoint(
         &self,
         new_state_root:            Bytes32,
         new_validator_merkle_root: Bytes32,
@@ -1944,7 +1955,7 @@ impl ConsensusClient {
     /// current sparse Merkle tree.
     /// Returns (new_root, new_count, new_tree).
     ///
-    /// The new_root and new_count are what you pass to submit_checkpoint().
+    /// The new_root and new_count are what you pass to build_checkpoint().
     /// Validators must sign the checkpoint_message that commits to these values.
     /// The majority signature over that message is the trustless proof the
     /// validator set is correct.
@@ -1985,6 +1996,7 @@ impl ConsensusClient {
     // -----------------------------------------------------------------------
 
     /// Build a spend bundle for a validator to recover their collateral.
+    /// Returns the SpendBundle — the caller broadcasts it.
     ///
     /// Combines two spends in one atomic bundle:
     ///   Spend 1: Checkpoint singleton membership query (permissionless)
@@ -2068,6 +2080,7 @@ impl ConsensusClient {
     }
 
     /// Build a spend bundle that queries membership on-chain and emits an announcement.
+    /// Returns the SpendBundle — the caller broadcasts it.
     /// The announcement can be asserted by other coins in the same bundle.
     /// Announcement format: spec-wire-format — Membership Announcement Format.
     /// Permissionless — no signature required.
@@ -2242,17 +2255,17 @@ async fn test_full_lifecycle() {
     let pubkeys: Vec<_> = signers.iter().map(|(pk, _)| *pk).collect();
     let sigs:    Vec<_> = signers.iter().map(|(_, s)| s.clone()).collect();
 
-    let bundle = client.submit_checkpoint(
+    let bundle = client.build_checkpoint(
         new_state_root, new_merkle_root, new_count, &pubkeys, &sigs,
     ).await.unwrap();
-    sim.push_tx(bundle).unwrap();
+    sim.push_tx(bundle).unwrap(); // Caller broadcasts
 
     client.sync().await.unwrap();
     assert_eq!(client.epoch().unwrap(), 1);
     assert_eq!(client.validator_count().unwrap(), 10);
     assert_eq!(client.state_root().unwrap(), new_state_root);
 
-    // Validator 0 exits: submit checkpoint excluding them
+    // Validator 0 exits: build checkpoint excluding them, then broadcast
     let exiting_pk = validators[0].pk;
     let (new_merkle_root2, new_count2, _) = client
         .compute_new_validator_set(&[], &[exiting_pk])
@@ -2269,10 +2282,10 @@ async fn test_full_lifecycle() {
     let pubkeys2: Vec<_> = signers2.iter().map(|(pk, _)| *pk).collect();
     let sigs2:    Vec<_> = signers2.iter().map(|(_, s)| s.clone()).collect();
 
-    let bundle2 = client.submit_checkpoint(
+    let bundle2 = client.build_checkpoint(
         new_state_root, new_merkle_root2, new_count2, &pubkeys2, &sigs2,
     ).await.unwrap();
-    sim.push_tx(bundle2).unwrap();
+    sim.push_tx(bundle2).unwrap(); // Caller broadcasts
 
     client.sync().await.unwrap();
     assert_eq!(client.epoch().unwrap(), 2);
@@ -2302,19 +2315,27 @@ is minimal when using `set_cache_path()`.
 
 **Proof generation is slow**
 
-`submit_checkpoint()` runs proof generation in `spawn_blocking` so it does
+`build_checkpoint()` runs proof generation in `spawn_blocking` so it does
 not block the async runtime, but it ties up a thread for 5-15 minutes at
 MAX_SIGNERS=10, TREE_DEPTH=32. See constraint counts:
 [spec-groth16-circuit](spec-groth16-circuit.md) — Constraint Count Estimates.
 Do not set a short timeout. Only one checkpoint can be in-flight at a time:
 [spec-l2-integration](spec-l2-integration.md) — Important Notes.
 
-**The crate returns SpendBundle but does not submit**
+**The crate builds SpendBundles but NEVER broadcasts them**
 
-All methods that produce spend bundles return them without submitting to the
-node. The L2 is responsible for submission. This keeps the crate testable in
-isolation and lets the L2 inspect, modify, or combine bundles before
-submission.
+Every method that produces a spend bundle (`deploy()`, `register_validator()`,
+`build_checkpoint()`, `recover_collateral()`, `query_membership_on_chain()`)
+returns the `SpendBundle` to the caller. The crate has no `push_tx()`,
+`send_transaction()`, or any other broadcast mechanism. The importing project
+is responsible for broadcasting the bundle to a Chia full node.
+
+This design is intentional:
+- The L2 can inspect, modify, or combine bundles before broadcast.
+- The L2 controls fee selection, timing, and retry logic.
+- The crate remains testable in isolation without a live node.
+- Bundle composition allows the L2 to include its own spends alongside
+  consensus operations.
 
 **Config is immutable after deployment**
 

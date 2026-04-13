@@ -1,0 +1,35 @@
+---
+alwaysApply: true
+---
+
+# Octocode MCP (sites)
+
+**Product:** [Octocode](https://octocode.ai/) — research-oriented code intelligence for agents. **Source / install:** [bgauryy/octocode-mcp](https://github.com/bgauryy/octocode-mcp) on GitHub.
+
+**Project MCP:** This repo declares the server in [`.cursor/mcp.json`](../mcp.json) (`npx -y octocode-mcp@latest`). **First-time auth:** run **`npx octocode-cli`** (interactive wizard: GitHub OAuth, MCP wiring, skills). See the repo’s [Authentication Setup](https://github.com/bgauryy/octocode-mcp/blob/main/docs/) and [Configuration Reference](https://github.com/bgauryy/octocode-mcp/blob/main/docs/) if tools fail with auth errors.
+
+## How Octocode fits GitNexus + Repomix (do not skip gates)
+
+| Layer | Role |
+|-------|------|
+| **Repomix** | Required **packed** snapshot of the edit scope before patches ([`repomix.mdc`](repomix.mdc)). |
+| **GitNexus** | Required **status/analyze**, **impact** (and **rename** dry-run) for symbol edits on the indexed graph ([`gitnexus.mdc`](gitnexus.mdc)). |
+| **Octocode** | **Optional augmentation:** LSP-grade local navigation (definition, references, call hierarchy), semantic search, and **GitHub/GitLab** research when you need live remote context or patterns outside the graph. |
+
+Octocode **does not replace** Repomix or GitNexus. If a step is mandatory in [`docs/prompt`](../docs/prompt/start.md), still do it.
+
+## When to use Octocode while editing
+
+1. **Local — after** Repomix + GitNexus baseline: unclear call sites, third-party types, or “where is this symbol defined” when you want compiler/LSP-backed answers; exploring files not well covered by the current graph query.
+2. **Remote —** compare implementations, read upstream issues/PRs, or find real-world usage on **public or private** repos your token can access (respect org policy; no exfiltration of secrets).
+3. **Research-heavy tasks —** multi-step discovery; prefer Octocode **Research / Researcher** skills from the [skills index](https://github.com/bgauryy/octocode-mcp/tree/main/skills) when the operator enables them (`npx add-skill …` per upstream README).
+
+## Tool hygiene
+
+- Read the **tool schema** (descriptor / description) before calling; Octocode exposes many tools — pick the smallest surface (local file search vs full GitHub search) for the question.
+- Prefer **GitNexus `impact` / `context` / `rename`** for blast radius and refactors on **already-indexed** `sites` + submodule paths; use Octocode when the gap is LSP precision, external repos, or documentation not in the graph.
+- Keep **working directory** aligned with the repo you are editing (`sites` root vs a submodule root) so local Octocode tools resolve paths correctly.
+
+## One-line
+
+**Repomix + GitNexus gates first → then Octocode for LSP/local semantic search and permitted GitHub/GitLab research when it reduces guesswork.**
