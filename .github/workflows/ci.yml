@@ -93,8 +93,12 @@ jobs:
         with:
           tool: rue-cli
       - name: Run tests with coverage (measure-only)
+        # `--no-fail-fast` so a single pre-existing test failure (e.g. the
+        # rue-version-drift artifact-format assertion in vv_req_reg_001, which
+        # the auto-regenerating build.rs triggers when a newer `rue` is present)
+        # does not abort the coverage measurement. Non-blocking either way.
         run: |
-          cargo llvm-cov --workspace --all-features --summary-only \
+          cargo llvm-cov --workspace --all-features --no-fail-fast --summary-only \
             | tee coverage-summary.txt
       - name: Upload coverage summary
         if: always()
