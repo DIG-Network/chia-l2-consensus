@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org) and
 [Conventional Commits](https://www.conventionalcommits.org).
 
+## [0.1.1] - 2026-07-04
+
+### CI
+- Release automation + auto-publish on version tag (#230 auto-publish-everything)- Add PR quality gates (fmt/clippy/test/build) [#230] (#1)
+
 ## [0.1.0] - 2026-07-04
 
 ### Features
