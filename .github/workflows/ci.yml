@@ -1,0 +1,100 @@
+# PR quality gates for chia-l2-consensus (Rust).
+#
+# Runs on every pull request to `main` (and on pushes to `main`). Job `name:`s
+# are stable, descriptive check contexts the orchestrator wires as required
+# checks:
+#   - "Rustfmt"          — formatting (`cargo fmt --all -- --check`)
+#   - "Clippy"           — lint + full compile (`--all-targets --all-features -D warnings`)
+#   - "Test + coverage"  — test suite + line-coverage measurement (measure-only for now)
+#
+# Notes:
+#   * Compiled Rue puzzles (`puzzles/compiled/*.hex|*.hash`) are committed and
+#     embedded via `include_str!`, so `fmt`/`clippy` build WITHOUT the `rue`
+#     compiler (build.rs skips recompilation and warns when `rue` is absent).
+#   * The test suite additionally asserts the `rue` compiler is installed
+#     (SETUP-005), so the test job installs `rue-cli` from crates.io.
+#   * Coverage is MEASURE-ONLY (non-blocking): the crate does not yet meet the
+#     ecosystem ≥80% line-coverage floor via an enforced gate; raising + gating
+#     coverage is tracked separately (#157). This PR adds the gate scaffold and
+#     the fmt/clippy blocking gates (#230).
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (stable + rustfmt)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (stable + clippy)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+      - name: cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  test:
+    name: Test + coverage
+    runs-on: ubuntu-latest
+    # Coverage/tests are measure-only for now (see header + #157): a failure here
+    # must not block the PR while the suite + coverage floor are being hardened.
+    continue-on-error: true
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (stable + llvm-tools)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - name: Install rue compiler (SETUP-005)
+        uses: taiki-e/install-action@v2
+        with:
+          tool: rue-cli
+      - name: Run tests with coverage (measure-only)
+        run: |
+          cargo llvm-cov --workspace --all-features --summary-only \
+            | tee coverage-summary.txt
+      - name: Upload coverage summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: coverage-summary.txt
+          if-no-files-found: ignore
