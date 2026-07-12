@@ -17,6 +17,10 @@
 #     ecosystem ≥80% line-coverage floor via an enforced gate; raising + gating
 #     coverage is tracked separately (#157). This PR adds the gate scaffold and
 #     the fmt/clippy blocking gates (#230).
+#   * Test suite runs via `cargo-nextest` (`cargo llvm-cov nextest`), retrying
+#     each failing test up to 2x — nextest natively detects+reports a test that
+#     failed then passed on retry as FLAKY in its summary output, so genuine
+#     flakiness surfaces instead of silently blocking/passing the PR (#489).
 
 name: CI
 
@@ -84,21 +88,23 @@ jobs:
           components: llvm-tools-preview
       - name: Cache cargo build
         uses: Swatinem/rust-cache@v2
-      - name: Install cargo-llvm-cov
+      - name: Install cargo-llvm-cov + cargo-nextest
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-llvm-cov
+          tool: cargo-llvm-cov,nextest
       - name: Install rue compiler (SETUP-005)
         uses: taiki-e/install-action@v2
         with:
           tool: rue-cli
-      - name: Run tests with coverage (measure-only)
+      - name: Run tests with coverage (measure-only, nextest + retries)
         # `--no-fail-fast` so a single pre-existing test failure (e.g. the
         # rue-version-drift artifact-format assertion in vv_req_reg_001, which
         # the auto-regenerating build.rs triggers when a newer `rue` is present)
         # does not abort the coverage measurement. Non-blocking either way.
+        # `--retries 2` lets nextest re-run a failing test up to 2x and report
+        # failed-then-passed as FLAKY in its summary (#489) instead of masking it.
         run: |
-          cargo llvm-cov --workspace --all-features --no-fail-fast --summary-only \
+          cargo llvm-cov nextest --workspace --all-features --no-fail-fast --retries 2 --summary-only \
             | tee coverage-summary.txt
       - name: Upload coverage summary
         if: always()
