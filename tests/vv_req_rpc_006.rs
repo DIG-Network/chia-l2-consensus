@@ -5,18 +5,20 @@
 //!
 //! ## Normative Statement
 //!
-//! Cargo.toml MUST add chia-query and dig-l1-wallet as dependencies. The crate
+//! Cargo.toml MUST add chia-query and dig-wallet-backend as dependencies. The crate
 //! MUST compile without type mismatch errors. Existing tests MUST still pass.
+//! (#998/#1004: dig-wallet-backend replaces the deprecated dig-l1-wallet — consumers
+//! migrate to its engine-seam interface rather than the reverse.)
 //!
 //! ## Acceptance Criteria Coverage
 //!
 //! - [x] chia-query added to Cargo.toml
-//! - [x] dig-l1-wallet added to Cargo.toml
+//! - [x] dig-wallet-backend added to Cargo.toml (engine feature only — no signer)
 //! - [x] cargo check passes
 //! - [x] cargo check --tests passes
 //! - [x] Existing tests still pass
 //! - [x] chia-query types importable
-//! - [x] dig-l1-wallet types importable
+//! - [x] dig-wallet-backend engine-seam types importable
 
 /// RPC-006: chia-query is in Cargo.toml and importable.
 #[test]
@@ -28,13 +30,17 @@ fn vv_req_rpc_006_chia_query_in_deps() {
     );
 }
 
-/// RPC-006: dig-l1-wallet is in Cargo.toml and importable.
+/// RPC-006: dig-wallet-backend is in Cargo.toml and importable.
 #[test]
-fn vv_req_rpc_006_dig_l1_wallet_in_deps() {
+fn vv_req_rpc_006_dig_wallet_backend_in_deps() {
     let toml = std::fs::read_to_string("Cargo.toml").expect("Cargo.toml");
     assert!(
-        toml.contains("dig-l1-wallet"),
-        "RPC-006: Cargo.toml must include dig-l1-wallet"
+        toml.contains("dig-wallet-backend"),
+        "RPC-006: Cargo.toml must include dig-wallet-backend"
+    );
+    assert!(
+        !toml.contains("dig-l1-wallet"),
+        "RPC-006: dig-l1-wallet is deprecated (#998) and must not remain a dependency"
     );
 }
 
@@ -51,16 +57,22 @@ fn vv_req_rpc_006_chia_query_config_importable() {
     fn _assert_type_exists(_: &chia_query::ChiaQueryConfig) {}
 }
 
-/// RPC-006: dig-l1-wallet L1Wallet type is importable.
+/// RPC-006: dig-wallet-backend's WalletEngine trait (engine seam) is importable.
 #[test]
-fn vv_req_rpc_006_dig_l1_wallet_importable() {
-    fn _assert_type_exists(_: &dig_l1_wallet::L1Wallet) {}
+fn vv_req_rpc_006_wallet_engine_importable() {
+    fn _assert_type_exists(_: &dyn dig_wallet_backend::engine::WalletEngine) {}
 }
 
-/// RPC-006: dig-l1-wallet config types importable.
+/// RPC-006: dig-wallet-backend's shared IdentityRef type is importable.
 #[test]
-fn vv_req_rpc_006_wallet_config_importable() {
-    fn _assert_type_exists(_: &dig_l1_wallet::L1WalletConfig) {}
+fn vv_req_rpc_006_identity_ref_importable() {
+    fn _assert_type_exists(_: &dig_wallet_backend::types::IdentityRef) {}
+}
+
+/// RPC-006: dig-wallet-backend's coin-selection outcome type is importable.
+#[test]
+fn vv_req_rpc_006_selection_outcome_importable() {
+    fn _assert_type_exists(_: &dig_wallet_backend::engine::SelectionOutcome) {}
 }
 
 /// RPC-006: Our existing chia-protocol types still work.

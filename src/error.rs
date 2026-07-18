@@ -133,8 +133,9 @@ pub enum ConsensusError {
     /// Wallet does not have enough XCH to fund collateral + fees.
     /// The validator needs to add funds before registering.
     ///
-    /// RPC-005: Returned by `register_validator()` when `dig-l1-wallet`
-    /// coin selection fails.
+    /// RPC-005: Returned by `register_validator()` when `dig-wallet-backend`
+    /// coin selection (`engine::select_for_spend`) yields `InsufficientFunds`
+    /// or `NeedsConsolidation`.
     #[error("insufficient funds for collateral: {0}")]
     InsufficientFunds(String),
 }

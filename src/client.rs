@@ -164,33 +164,41 @@ impl ConsensusClient {
     /// Register a new validator by spending the network coin.
     /// Returns SpendBundle — the caller broadcasts it (API-008).
     ///
-    /// RPC-005: Uses `dig-l1-wallet` for coin selection to fund collateral.
-    /// The `L1Wallet` is passed per-call, NOT stored in ConsensusClient.
+    /// RPC-005: Uses `dig-wallet-backend`'s engine seam for coin selection to fund
+    /// collateral. The `WalletEngine` handle is passed per-call, NOT stored in
+    /// ConsensusClient — this crate never holds wallet state (or a key: the engine
+    /// seam never signs, per the crate's key-isolation invariant). `identity`
+    /// selects which tracked wallet/profile to draw funding from, replacing
+    /// dig-l1-wallet's `wallet_name` + `account_index` pair.
     ///
     /// Builds a spend bundle that:
-    /// 1. Selects XCH coins from wallet to fund collateral + fee (RPC-005)
+    /// 1. Reads the identity's unspent coins (`WalletStore::coins`) and selects enough
+    ///    to cover collateral + fee via `dig_wallet_backend::engine::select_for_spend`
+    ///    (RPC-005)
     /// 2. Spends the network coin singleton with the validator's BLS pubkey
     /// 3. Creates a registration coin with collateral (NET-003)
     /// 4. Includes AGG_SIG_ME proving the validator controls the pubkey (NET-002)
     /// 5. Includes pubkey memo for indexer detection (NET-005)
     ///
-    /// Returns `InsufficientFunds` if wallet balance < collateral + fee.
+    /// Returns `InsufficientFunds` if wallet balance < collateral + fee, and
+    /// `NeedsConsolidation` (surfaced as the same error) if the balance suffices
+    /// but is too fragmented to spend within the selection's coin cap.
     ///
     /// See [spec-consensus-crate.md](../docs/resources/spec-consensus-crate.md).
     /// See [spec-network-coin.md](../docs/resources/spec-network-coin.md).
     pub async fn register_validator(
         &self,
         _pubkey: &[u8; 48],
-        _wallet: &dig_l1_wallet::L1Wallet,
-        _wallet_name: &str,
-        _account_index: u32,
+        _wallet: &dyn dig_wallet_backend::engine::WalletEngine,
+        _identity: &dig_wallet_backend::types::IdentityRef,
         _fee: u64,
     ) -> ConsensusResult<SpendBundle> {
         // TODO: Implement (RPC-002 + RPC-005):
-        // 1. wallet.select_coins(wallet_name, Some(account_index), collateral + fee, LargestFirst)
-        // 2. Build network coin spend via puzzles/network_coin.rs
-        // 3. Build funding spends from selected coins
-        // 4. Combine into single SpendBundle
+        // 1. wallet.coins(identity).await → Vec<CoinRecord>, converted to chia::protocol::Coin
+        // 2. dig_wallet_backend::engine::select_for_spend(&coins, collateral + fee, cap)
+        // 3. Build network coin spend via puzzles/network_coin.rs
+        // 4. Build funding spends from selected coins
+        // 5. Combine into single SpendBundle
         // See register_validator() in puzzles/network_coin.rs
         todo!()
     }
