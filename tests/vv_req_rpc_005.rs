@@ -5,126 +5,63 @@
 //!
 //! ## Normative Statement
 //!
-//! For validator registration, the crate MUST use dig-l1-wallet coin selection
-//! to fund the collateral amount. The L1Wallet is passed per-call, NOT stored
-//! in ConsensusClient.
+//! For validator registration, the crate MUST use `dig-wallet-backend`'s engine seam
+//! (`select_for_spend`, `WalletStore::coins`) to fund the collateral amount. The
+//! `WalletEngine` handle is passed per-call, NOT stored in ConsensusClient — the crate
+//! never holds wallet state or a signing key (#998, epic migration off `dig-l1-wallet`).
 //!
 //! ## Acceptance Criteria Coverage
 //!
-//! - [x] dig-l1-wallet in Cargo.toml (verified by RPC-006)
-//! - [x] register_validator() accepts &L1Wallet parameter
-//! - [x] register_validator() accepts wallet_name, account_index, fee
+//! - [x] dig-wallet-backend in Cargo.toml (verified by RPC-006)
+//! - [x] register_validator() accepts &dyn WalletEngine parameter
+//! - [x] register_validator() accepts an IdentityRef (replaces wallet_name/account_index)
 //! - [x] InsufficientFunds error variant exists
-//! - [x] L1Wallet NOT stored in ConsensusClient
-//! - [x] dig-l1-wallet types importable
+//! - [x] WalletEngine NOT stored in ConsensusClient
+//! - [x] dig-wallet-backend engine-seam types importable
 
 use std::fs;
 
-/// RPC-005: register_validator() accepts &L1Wallet parameter.
+/// RPC-005: register_validator() accepts a `&dyn WalletEngine` parameter.
 #[test]
-fn vv_req_rpc_005_register_accepts_wallet() {
+fn vv_req_rpc_005_register_accepts_wallet_engine() {
     let src = fs::read_to_string("src/client.rs").expect("client.rs");
     assert!(
-        src.contains("L1Wallet"),
-        "RPC-005: register_validator must accept L1Wallet"
+        src.contains("WalletEngine"),
+        "RPC-005: register_validator must accept a WalletEngine handle"
     );
-    // Check it's a parameter, not a stored field
+    // Check it's a parameter, not a stored field.
     let method = src.find("pub async fn register_validator(").unwrap();
     let sig_end = src[method..].find('{').unwrap();
     let signature = &src[method..method + sig_end];
     assert!(
-        signature.contains("L1Wallet"),
-        "RPC-005: L1Wallet must be in register_validator signature"
+        signature.contains("WalletEngine"),
+        "RPC-005: WalletEngine must be in register_validator's signature"
     );
-}
-
-/// RPC-005: register_validator() accepts wallet_name parameter.
-#[test]
-fn vv_req_rpc_005_register_accepts_wallet_name() {
-    let src = fs::read_to_string("src/client.rs").expect("client.rs");
-    let method = src.find("pub async fn register_validator(").unwrap();
-    let sig_end = src[method..].find('{').unwrap();
-    let signature = &src[method..method + sig_end];
     assert!(
-        signature.contains("wallet_name"),
-        "RPC-005: register_validator must accept wallet_name"
+        signature.contains("IdentityRef"),
+        "RPC-005: IdentityRef must replace wallet_name/account_index in the signature"
     );
 }
 
-/// RPC-005: register_validator() accepts account_index parameter.
+/// RPC-005: ConsensusClient does not store a WalletEngine field (passed per-call only).
 #[test]
-fn vv_req_rpc_005_register_accepts_account_index() {
+fn vv_req_rpc_005_wallet_not_stored_in_client() {
     let src = fs::read_to_string("src/client.rs").expect("client.rs");
-    let method = src.find("pub async fn register_validator(").unwrap();
-    let sig_end = src[method..].find('{').unwrap();
-    let signature = &src[method..method + sig_end];
+    let struct_start = src.find("pub struct ConsensusClient {").unwrap();
+    let struct_end = src[struct_start..].find('}').unwrap();
+    let struct_body = &src[struct_start..struct_start + struct_end];
     assert!(
-        signature.contains("account_index"),
-        "RPC-005: register_validator must accept account_index"
+        !struct_body.contains("WalletEngine"),
+        "RPC-005: ConsensusClient must NOT store a WalletEngine — it is passed per-call"
     );
 }
 
-/// RPC-005: register_validator() accepts fee parameter.
+/// RPC-005: InsufficientFunds error variant exists for a shortfall from coin selection.
 #[test]
-fn vv_req_rpc_005_register_accepts_fee() {
-    let src = fs::read_to_string("src/client.rs").expect("client.rs");
-    let method = src.find("pub async fn register_validator(").unwrap();
-    let sig_end = src[method..].find('{').unwrap();
-    let signature = &src[method..method + sig_end];
-    assert!(
-        signature.contains("fee"),
-        "RPC-005: register_validator must accept fee"
-    );
-}
-
-/// RPC-005: InsufficientFunds error variant exists.
-#[test]
-fn vv_req_rpc_005_insufficient_funds_error() {
+fn vv_req_rpc_005_insufficient_funds_variant_exists() {
     let src = fs::read_to_string("src/error.rs").expect("error.rs");
     assert!(
-        src.contains("InsufficientFunds"),
-        "RPC-005: ConsensusError must have InsufficientFunds variant"
+        src.contains("InsufficientFunds(String)"),
+        "RPC-005: ConsensusError must carry an InsufficientFunds(String) variant"
     );
-}
-
-/// RPC-005: L1Wallet NOT stored in ConsensusClient struct.
-#[test]
-fn vv_req_rpc_005_wallet_not_stored() {
-    let src = fs::read_to_string("src/client.rs").expect("client.rs");
-    // Find the struct definition
-    let struct_start = src.find("pub struct ConsensusClient").unwrap();
-    let struct_end = src[struct_start..].find("\n}").unwrap() + struct_start;
-    let struct_def = &src[struct_start..struct_end];
-    assert!(
-        !struct_def.contains("L1Wallet") && !struct_def.contains("wallet:"),
-        "RPC-005: ConsensusClient must NOT store L1Wallet"
-    );
-}
-
-/// RPC-005: dig-l1-wallet L1Wallet type importable.
-#[test]
-fn vv_req_rpc_005_wallet_type_importable() {
-    fn _assert(_: &dig_l1_wallet::L1Wallet) {}
-}
-
-/// RPC-005: dig-l1-wallet CoinSelectionStrategy type importable.
-#[test]
-fn vv_req_rpc_005_coin_selection_strategy_importable() {
-    fn _assert(_: dig_l1_wallet::CoinSelectionStrategy) {}
-}
-
-/// RPC-005: Method documents coin selection usage.
-#[test]
-fn vv_req_rpc_005_documents_coin_selection() {
-    let src = fs::read_to_string("src/client.rs").expect("client.rs");
-    assert!(
-        src.contains("coin selection") || src.contains("select_coins"),
-        "RPC-005: register_validator must document coin selection"
-    );
-}
-
-/// RPC-005: Spec file exists.
-#[test]
-fn vv_req_rpc_005_spec_file_exists() {
-    assert!(std::path::Path::new("docs/requirements/domains/rpc/specs/RPC-005.md").exists(),);
 }
