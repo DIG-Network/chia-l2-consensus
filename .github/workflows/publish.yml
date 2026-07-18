@@ -35,6 +35,11 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Install rue compiler (SETUP-005)
+        uses: taiki-e/install-action@v2
+        with:
+          tool: rue-cli
+
       - name: Verify package can be built
         run: cargo build --release
 
