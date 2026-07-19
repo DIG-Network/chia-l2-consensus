@@ -1,7 +1,11 @@
 [package]
-name    = "chia-l2-consensus"
-version = "0.2.1"
-edition = "2021"
+name        = "chia-l2-consensus"
+version     = "0.2.2"
+edition     = "2021"
+description = "Groth16-based L2 validator consensus for Chia — proves majority validator agreement to L1 at constant cost using zero-knowledge proofs"
+license     = "Apache-2.0 OR MIT"
+repository  = "https://github.com/DIG-Network/chia-l2-consensus"
+readme      = "README.md"
 
 [dependencies]
 # Chia — versions aligned with chia-wallet-sdk 0.18's internal chain (v0.15/v0.9)

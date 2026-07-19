@@ -614,7 +614,7 @@ dependencies = [
 
 [[package]]
 name = "chia-l2-consensus"
-version = "0.2.0"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "ark-bls12-381",
