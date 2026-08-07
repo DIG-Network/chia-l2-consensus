@@ -77,16 +77,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: "dig-constants v${{ steps.extract_version.outputs.VERSION }}"
+          release_name: "chia-l2-consensus v${{ steps.extract_version.outputs.VERSION }}"
           body: |
-            ## dig-constants v${{ steps.extract_version.outputs.VERSION }}
+            ## chia-l2-consensus v${{ steps.extract_version.outputs.VERSION }}
 
-            DIG network constants — genesis challenge, consensus parameters, and network configuration.
+            Groth16-based L2 validator consensus for Chia — proves majority validator agreement to L1 at constant cost using zero-knowledge proofs.
 
             ### Installation
             ```toml
             [dependencies]
-            dig-constants = "${{ steps.extract_version.outputs.VERSION }}"
+            chia-l2-consensus = "${{ steps.extract_version.outputs.VERSION }}"
             ```
           draft: false
           prerelease: false
