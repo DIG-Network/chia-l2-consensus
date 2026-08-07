@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org) and
 [Conventional Commits](https://www.conventionalcommits.org).
 
+## [0.2.3] - 2026-08-07
+
+### CI
+- **chia-l2-consensus:** Title GitHub Releases chia-l2-consensus, not dig-constants (#2318)
+
 ## [0.2.2] - 2026-07-19
 
 ### Bug Fixes
