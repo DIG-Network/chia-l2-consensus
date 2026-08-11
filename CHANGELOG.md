@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org) and
 [Conventional Commits](https://www.conventionalcommits.org).
 
+## [0.3.0] - 2026-08-11
+
+### Chores
+- **deps:** Bump chia-query 0.2 -> 0.6 and dig-wallet-backend 0.4 -> 0.27 (#7)
+
 ## [0.2.3] - 2026-08-07
 
 ### CI
