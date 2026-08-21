@@ -47,6 +47,17 @@ jobs:
         with:
           tool: rue-cli@${{ steps.rue.outputs.version }}
 
+      - name: Assert rue is actually on PATH
+        # Not silently trusted: without a compiler, build.rs skips verification
+        # and every check below this line goes vacuous.
+        run: command -v rue
+
+      # Force the build script to run even on a warm cache. Cargo does not re-run
+      # a build script merely because a program appeared on PATH, and a replayed
+      # "rue not found" result would make the verification below meaningless.
+      - name: Discard any cached build-script result
+        run: cargo clean -p chia-l2-consensus
+
       - name: Verify package can be built
         run: cargo build --release
 
