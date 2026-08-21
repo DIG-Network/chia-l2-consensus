@@ -5,8 +5,10 @@
 # checks:
 #   - "Rustfmt"          — formatting (`cargo fmt --all -- --check`)
 #   - "Clippy"           — lint + compile of the library/production code (`-D warnings`)
-#   - "Puzzle artifact integrity" — the committed consensus artifacts match both
-#                          their source-pinned expectations and the pinned compiler
+#   - "Puzzle artifact integrity"  — committed artifacts match their source-pinned
+#                          expectations (no compiler needed)
+#   - "Puzzle compiler agreement"  — committed artifacts match the PINNED compiler,
+#                          and no build step leaves the source tree dirty
 #   - "Test + coverage"  — test suite + line-coverage measurement (measure-only for now)
 #
 # Notes:
@@ -86,18 +88,34 @@ jobs:
     # measure-only `Test + coverage` job below, where it was red for four months
     # and read as noise while a regenerated artifact reached two immutable
     # crates.io releases. A gate that cannot fail a PR is not a gate.
+    #
+    # No `rue` here, deliberately: `build.rs` skips its live verification without
+    # a compiler, so what is under test is the source-pinned expectation, which no
+    # build step can rewrite. Compiler agreement is a SEPARATE job -- see below
+    # for why it cannot share this one.
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
       - name: Cache cargo build
         uses: Swatinem/rust-cache@v2
-
-      # Step 1 runs with NO `rue` on PATH, so `build.rs` skips its live
-      # verification and the source-pinned expectations are what is under test.
-      # This half is reachable whether or not a compiler exists.
       - name: Committed artifacts match their source-pinned expectations
         run: cargo test --test puzzle_artifact_integrity
+
+  compiler-agreement:
+    name: Puzzle compiler agreement
+    runs-on: ubuntu-latest
+    # A SEPARATE job, not another step of `artifacts`, because cargo does not
+    # re-run a build script merely because a program appeared on PATH. Installing
+    # `rue` after a build had already skipped verification produced a step that
+    # REPLAYED the cached "rue not found" warning and passed in 0.24s -- a step
+    # that looked like compiler verification and performed none.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
 
       - name: Read the pinned rue version
         id: rue
@@ -106,17 +124,24 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: rue-cli@${{ steps.rue.outputs.version }}
+      - name: Assert rue is actually on PATH
+        # The install action is not silently trusted: a skipped or fallback
+        # install would otherwise leave every check below vacuous.
+        run: command -v rue
 
-      # Step 2 runs WITH the pinned compiler, so `build.rs` compiles every puzzle
-      # into OUT_DIR and fails the build if any committed artifact disagrees.
+      # Force the build script to run even on a warm cache, so verification can
+      # never be satisfied by a replayed result.
+      - name: Discard any cached build-script result
+        run: cargo clean -p chia-l2-consensus
+
       - name: Committed artifacts match the pinned compiler
         run: cargo build
 
       # Defence in depth, and the same assertion `publish.yml` makes before
       # packaging: nothing in a build may leave the source tree dirty. `build.rs`
       # writes only into OUT_DIR, so this diff is expected to be empty; asserting
-      # it here means a build script that starts writing again is caught at PR
-      # time rather than at publish time.
+      # it means a build script that starts writing again is caught at PR time
+      # rather than after two releases.
       - name: No build step wrote into the source tree
         run: |
           git diff --exit-code -- puzzles/compiled/ || {
@@ -126,9 +151,8 @@ jobs:
             exit 1
           }
 
-      # REG-001's artifact assertions need `rue` on PATH (several of its tests
-      # shell out to the compiler), so they run after the install rather than in
-      # step 1.
+      # REG-001's artifact assertions shell out to the compiler, so they belong
+      # in the job that has one.
       - name: REG-001 artifact assertions
         run: cargo test --test vv_req_reg_001
 
