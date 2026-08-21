@@ -434,8 +434,15 @@ fn vv_req_wdc_001_compiled_hash_matches_live_build() {
         if output.status.success() {
             let live_hash = String::from_utf8_lossy(&output.stdout).trim().to_string();
             let saved_hash = WITHDRAW_DELAY_COIN_MOD_HASH_HEX.trim();
+            // Compare canonically: the committed artifact carries the `0x` prefix and
+            // `rue` emits bare hex. The prefix is deliberate and MUST NOT be removed from
+            // the artifact to make this pass -- it is the only signal that reddened while
+            // build.rs was overwriting the committed file with compiler output, so
+            // normalizing here rather than there keeps that alarm armed (#9).
+            let saved_c = saved_hash.trim_start_matches("0x").to_ascii_lowercase();
+            let live_c = live_hash.trim_start_matches("0x").to_ascii_lowercase();
             assert_eq!(
-                saved_hash, live_hash,
+                saved_c, live_c,
                 "WDC-001: Saved .hash must match fresh rue build"
             );
         }

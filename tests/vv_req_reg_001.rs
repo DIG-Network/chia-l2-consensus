@@ -19,8 +19,11 @@
 //! curried, has exactly 2 curried parameters (UPPERCASE convention), has epoch/
 //! collateral_destination/collateral_amount solution params, does NOT have
 //! conditions passthrough, returns List<Condition>, documents coin ID vs
-//! launcher ID, is a standalone puzzle (not inner), compiled .hex and .hash
-//! artifacts exist and match fresh builds.
+//! launcher ID, is a standalone puzzle (not inner), and that the compiled
+//! .hex and .hash artifacts exist in the documented format. Whether those
+//! artifacts hold the RIGHT values is asserted against a source-pinned
+//! expectation in `tests/puzzle_artifact_integrity.rs`, and enforced against the
+//! compiler by `build.rs`.
 //!
 //! ## Acceptance Criteria Coverage
 //!
@@ -364,53 +367,13 @@ fn vv_req_reg_001_compiled_hash_exists() {
     );
 }
 
-// Verifies the stored .hex matches a fresh `rue build -x` output. This
-// catches stale artifacts that would cause puzzle hash mismatches.
-#[test]
-fn vv_req_reg_001_compiled_hex_matches_live_build() {
-    // REG-001: The stored .hex must match a fresh `rue build -x`
-    let output = Command::new("rue")
-        .args(["build", "-x", "puzzles/registration_coin.rue"])
-        .output()
-        .expect("Failed to run rue build -x");
-    assert!(
-        output.status.success(),
-        "REG-001: rue build -x must succeed"
-    );
-
-    let fresh_hex = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stored_hex = std::fs::read_to_string("puzzles/compiled/registration_coin.hex")
-        .expect("Failed to read stored hex")
-        .trim()
-        .to_string();
-
-    assert_eq!(
-        fresh_hex, stored_hex,
-        "REG-001: Stored .hex must match fresh rue build -x output"
-    );
-}
-
-// Verifies the stored .hash matches a fresh `rue build --hash` output.
-#[test]
-fn vv_req_reg_001_compiled_hash_matches_live_build() {
-    // REG-001: The stored .hash must match a fresh `rue build --hash`
-    let output = Command::new("rue")
-        .args(["build", "--hash", "puzzles/registration_coin.rue"])
-        .output()
-        .expect("Failed to run rue build --hash");
-    assert!(
-        output.status.success(),
-        "REG-001: rue build --hash must succeed"
-    );
-
-    let fresh_hash = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stored_hash = std::fs::read_to_string("puzzles/compiled/registration_coin.hash")
-        .expect("Failed to read stored hash")
-        .trim()
-        .to_string();
-
-    assert_eq!(
-        fresh_hash, stored_hash,
-        "REG-001: Stored .hash must match fresh rue build --hash output"
-    );
-}
+// The two tests that used to live here compared `puzzles/compiled/registration_coin.{hex,hash}`
+// against a fresh `rue build` -- of a file `build.rs` had regenerated from the same compiler
+// seconds earlier. The gate and the thing it guarded shared a producer, so neither could ever
+// fail (DIG-Network/dig_ecosystem#9). `build.rs` no longer writes into the source tree, and it
+// now fails the BUILD on a compiler-vs-source mismatch, which means a live-build comparison in
+// a test can never be reached in the failing direction.
+//
+// The surviving, reachable check is the source-pinned expectation, which no build step can
+// rewrite: see `tests/puzzle_artifact_integrity.rs` and `tests/common/puzzle_artifacts.rs`.
+// It covers all four puzzles, not just this one.

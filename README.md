@@ -218,6 +218,55 @@ Phase 2: release_collateral()
 - **Trusted setup**: Requires multi-party computation (MPC) ceremony. At least
   one honest participant needed for soundness.
 
+## Building the Puzzles
+
+The compiled artifacts in `puzzles/compiled/` are **committed source files**, not
+build output. They are embedded into the library with `include_str!`, so their
+bytes are the shipped consensus rule and are reviewed like any other source.
+
+`build.rs` therefore **verifies** them; it never writes them:
+
+- each `puzzles/*.rue` is compiled into `OUT_DIR`;
+- the result is compared against the committed `.hex` / `.hash`, in canonical
+  form (trimmed, un-prefixed, lowercase);
+- any mismatch **fails the build** and prints both values.
+
+The `0x` prefix on the committed `.hash` files is added by a human commit. `rue`
+emits none, and `build.rs` will not add one — the prefix is what makes an
+accidentally-regenerated artifact visible.
+
+### The compiler is pinned
+
+The `rue` version that produces the committed artifacts is recorded in
+**`puzzles/RUE_VERSION`**, beside `rust-toolchain.toml`. `rue` has no
+`--version` flag; verify a local install with `cargo install --list`:
+
+```
+$ cargo install --list | grep rue-cli
+rue-cli v0.10.0:
+```
+
+Note that the `rue-compiler` entry in `Cargo.lock` is the **library** pulled in
+by `chia-sdk-types` and does **not** track the CLI version. Every CI job that
+installs `rue` reads `puzzles/RUE_VERSION`, so the artifacts are a function of a
+reviewed file rather than of when the job ran.
+
+### Building without `rue`
+
+`cargo build` works with no compiler installed: the committed artifacts are all
+the library needs, and `build.rs` emits a `cargo:warning` and **skips
+verification**. CI does not rely on that path — the `Puzzle artifact integrity`
+job installs the pinned compiler and requires the check to pass.
+
+### Changing a puzzle
+
+1. Edit the `.rue` source.
+2. Run `rue build puzzles/<name>.rue --hex` and `--hash` and commit the output
+   into `puzzles/compiled/`, adding the `0x` prefix to the `.hash` by hand.
+3. Move the pinned expectation in `tests/common/puzzle_artifacts.rs` in the
+   **same commit**, and say why in the commit message. A regenerated artifact
+   with a regenerated expectation proves nothing.
+
 ## Project Structure
 
 ```

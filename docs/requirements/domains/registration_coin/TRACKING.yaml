@@ -25,9 +25,9 @@ items:
       - tests/vv_req_reg_001.rs::vv_req_reg_001_puzzle_documents_reg_001
       - tests/vv_req_reg_001.rs::vv_req_reg_001_compiled_hex_exists
       - tests/vv_req_reg_001.rs::vv_req_reg_001_compiled_hash_exists
-      - tests/vv_req_reg_001.rs::vv_req_reg_001_compiled_hex_matches_live_build
-      - tests/vv_req_reg_001.rs::vv_req_reg_001_compiled_hash_matches_live_build
-    notes: "Puzzle compiles with rue; int_to_8_bytes_be helper uses sentinel+substr; .hex/.hash in puzzles/compiled/"
+      - tests/puzzle_artifact_integrity.rs::committed_tree_hashes_match_pinned_expectations
+      - tests/puzzle_artifact_integrity.rs::committed_tree_hashes_are_0x_prefixed_32_byte_hex
+    notes: "Puzzle compiles with rue; int_to_8_bytes_be helper uses sentinel+substr; .hex/.hash in puzzles/compiled/. The two *_matches_live_build tests were REMOVED and replaced: they compared the committed artifact against a fresh `rue` build of the same source, while build.rs had regenerated that artifact from the same compiler moments earlier -- a fresh build against a fresh build, unable to fail. The replacements pin the expected tree hashes as a const in Rust source, where no build step can rewrite the expectation, and cover all four puzzles rather than this one."
 
   - id: REG-002
     section: "Lineage Verification"

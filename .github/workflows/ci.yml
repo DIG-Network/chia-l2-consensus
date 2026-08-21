@@ -5,12 +5,20 @@
 # checks:
 #   - "Rustfmt"          — formatting (`cargo fmt --all -- --check`)
 #   - "Clippy"           — lint + compile of the library/production code (`-D warnings`)
+#   - "Puzzle artifact integrity"  — committed artifacts match their source-pinned
+#                          expectations (no compiler needed)
+#   - "Puzzle compiler agreement"  — committed artifacts match the PINNED compiler,
+#                          and no build step leaves the source tree dirty
 #   - "Test + coverage"  — test suite + line-coverage measurement (measure-only for now)
 #
 # Notes:
 #   * Compiled Rue puzzles (`puzzles/compiled/*.hex|*.hash`) are committed and
 #     embedded via `include_str!`, so `fmt`/`clippy` build WITHOUT the `rue`
-#     compiler (build.rs skips recompilation and warns when `rue` is absent).
+#     compiler (build.rs skips VERIFICATION and warns when `rue` is absent).
+#     build.rs never writes into the source tree; it compiles into OUT_DIR and
+#     fails the build on a mismatch (#9).
+#   * Every job that installs `rue` pins it to `puzzles/RUE_VERSION`, so the
+#     artifacts are a function of a reviewed file, not of when the job ran.
 #   * The test suite additionally asserts the `rue` compiler is installed
 #     (SETUP-005), so the test job installs `rue-cli` from crates.io.
 #   * Coverage is MEASURE-ONLY (non-blocking): the crate does not yet meet the
@@ -73,6 +81,94 @@ jobs:
       - name: cargo clippy (lib + bins)
         run: cargo clippy --all-features -- -D warnings
 
+  artifacts:
+    name: Puzzle artifact integrity
+    runs-on: ubuntu-latest
+    # BLOCKING on purpose (#9). The predecessor of these checks lived in the
+    # measure-only `Test + coverage` job below, where it was red for four months
+    # and read as noise while a regenerated artifact reached two immutable
+    # crates.io releases. A gate that cannot fail a PR is not a gate.
+    #
+    # No `rue` here, deliberately: `build.rs` skips its live verification without
+    # a compiler, so what is under test is the source-pinned expectation, which no
+    # build step can rewrite -- and which stays reachable even on a machine with no
+    # compiler at all. Compiler agreement is a SEPARATE job; see below for why it
+    # cannot share this one.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+      # `Swatinem/rust-cache` caches `~/.cargo/bin`, so a job that installs no
+      # compiler can still be handed one by a restored cache -- measured: this job
+      # ran `rue` from a cache saved by an earlier revision of itself. The
+      # compiler-free premise is therefore enforced, not assumed.
+      - name: Ensure no rue compiler is present
+        run: |
+          rm -f "$HOME/.cargo/bin/rue"
+          if command -v rue; then
+            echo "::error::rue is on PATH; this job must run without a compiler."
+            exit 1
+          fi
+
+      - name: Committed artifacts match their source-pinned expectations
+        run: cargo test --test puzzle_artifact_integrity
+
+  compiler-agreement:
+    name: Puzzle compiler agreement
+    runs-on: ubuntu-latest
+    # A SEPARATE job, not another step of `artifacts`, because cargo does not
+    # re-run a build script merely because a program appeared on PATH. Installing
+    # `rue` after a build had already skipped verification produced a step that
+    # REPLAYED the cached "rue not found" warning and passed in 0.24s -- a step
+    # that looked like compiler verification and performed none.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Read the pinned rue version
+        id: rue
+        run: echo "version=$(tr -d '[:space:]' < puzzles/RUE_VERSION)" >> "$GITHUB_OUTPUT"
+      - name: Install rue compiler (pinned)
+        uses: taiki-e/install-action@v2
+        with:
+          tool: rue-cli@${{ steps.rue.outputs.version }}
+      - name: Assert rue is actually on PATH
+        # The install action is not silently trusted: a skipped or fallback
+        # install would otherwise leave every check below vacuous.
+        run: command -v rue
+
+      # Force the build script to run even on a warm cache, so verification can
+      # never be satisfied by a replayed result.
+      - name: Discard any cached build-script result
+        run: cargo clean -p chia-l2-consensus
+
+      - name: Committed artifacts match the pinned compiler
+        run: cargo build
+
+      # Defence in depth, and the same assertion `publish.yml` makes before
+      # packaging: nothing in a build may leave the source tree dirty. `build.rs`
+      # writes only into OUT_DIR, so this diff is expected to be empty; asserting
+      # it means a build script that starts writing again is caught at PR time
+      # rather than after two releases.
+      - name: No build step wrote into the source tree
+        run: |
+          git diff --exit-code -- puzzles/compiled/ || {
+            echo "::error::A build step modified puzzles/compiled/. These artifacts are"
+            echo "::error::tracked source embedded via include_str!; a build must never"
+            echo "::error::rewrite them."
+            exit 1
+          }
+
+      # REG-001's artifact assertions shell out to the compiler, so they belong
+      # in the job that has one.
+      - name: REG-001 artifact assertions
+        run: cargo test --test vv_req_reg_001
+
   test:
     name: Test + coverage
     runs-on: ubuntu-latest
@@ -92,15 +188,18 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-llvm-cov,nextest
-      - name: Install rue compiler (SETUP-005)
+      - name: Read the pinned rue version
+        id: rue
+        run: echo "version=$(tr -d '[:space:]' < puzzles/RUE_VERSION)" >> "$GITHUB_OUTPUT"
+      - name: Install rue compiler (SETUP-005, pinned)
         uses: taiki-e/install-action@v2
         with:
-          tool: rue-cli
+          tool: rue-cli@${{ steps.rue.outputs.version }}
       - name: Run tests with coverage (measure-only, nextest + retries)
-        # `--no-fail-fast` so a single pre-existing test failure (e.g. the
-        # rue-version-drift artifact-format assertion in vv_req_reg_001, which
-        # the auto-regenerating build.rs triggers when a newer `rue` is present)
-        # does not abort the coverage measurement. Non-blocking either way.
+        # `--no-fail-fast` so a single pre-existing test failure does not abort
+        # the coverage measurement. Non-blocking either way — the artifact checks
+        # that used to be red-and-ignored here now block in the `Puzzle artifact
+        # integrity` job above.
         # `--retries 2` lets nextest re-run a failing test up to 2x and report
         # failed-then-passed as FLAKY in its summary (#489) instead of masking it.
         run: |
