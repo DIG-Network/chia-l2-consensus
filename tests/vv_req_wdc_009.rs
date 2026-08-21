@@ -8,12 +8,19 @@
 //! A full E2E simulator test exercises the complete two-phase collateral
 //! recovery lifecycle: register → exit → delay coin → release.
 //!
-//! ## Simulator Limitation
+//! ## Simulator Enforcement
 //!
-//! chia-sdk-test v0.18 Simulator does NOT enforce ASSERT_HEIGHT_RELATIVE.
-//! The delay coin spend succeeds immediately in the simulator. Actual delay
-//! enforcement is by the Chia full node at block inclusion time. The test
-//! verifies the correct CLVM conditions are emitted; the network enforces them.
+//! chia-sdk-test v0.34 Simulator DOES enforce ASSERT_HEIGHT_RELATIVE, so the
+//! delay is checked here rather than only by a full node at block inclusion.
+//!
+//! This note previously said the opposite, and that was true of v0.18 — which is
+//! why the pre-delay-spend case below was left unchecked and this test passed for
+//! sixteen SDK minors without ever exercising the timelock. The assertions are now
+//! load-bearing: do not remove them on the authority of a stale limitation note.
+//!
+//! The rejection is asserted on the specific `AssertHeightRelativeFailed`, not a
+//! bare `is_err()` — a bare error check also passes on a malformed spend, which
+//! would leave the timelock unverified in a different way.
 //!
 //! ## Acceptance Criteria Coverage
 //!
@@ -21,7 +28,8 @@
 //! - [x] Destination coin amount == original collateral (after delay coin spend)
 //! - [x] No direct destination coin from registration coin spend
 //! - [x] Third-party release succeeds (no signature needed)
-//! - [ ] Spend before delay rejected (simulator doesn't enforce — see note)
+//! - [x] Spend before delay rejected (bounded from both sides; asserts the specific
+//!       `AssertHeightRelativeFailed`)
 
 mod common;
 
