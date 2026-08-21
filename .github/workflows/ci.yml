@@ -91,14 +91,27 @@ jobs:
     #
     # No `rue` here, deliberately: `build.rs` skips its live verification without
     # a compiler, so what is under test is the source-pinned expectation, which no
-    # build step can rewrite. Compiler agreement is a SEPARATE job -- see below
-    # for why it cannot share this one.
+    # build step can rewrite -- and which stays reachable even on a machine with no
+    # compiler at all. Compiler agreement is a SEPARATE job; see below for why it
+    # cannot share this one.
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
       - name: Cache cargo build
         uses: Swatinem/rust-cache@v2
+      # `Swatinem/rust-cache` caches `~/.cargo/bin`, so a job that installs no
+      # compiler can still be handed one by a restored cache -- measured: this job
+      # ran `rue` from a cache saved by an earlier revision of itself. The
+      # compiler-free premise is therefore enforced, not assumed.
+      - name: Ensure no rue compiler is present
+        run: |
+          rm -f "$HOME/.cargo/bin/rue"
+          if command -v rue; then
+            echo "::error::rue is on PATH; this job must run without a compiler."
+            exit 1
+          fi
+
       - name: Committed artifacts match their source-pinned expectations
         run: cargo test --test puzzle_artifact_integrity
 
