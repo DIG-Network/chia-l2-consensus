@@ -21,10 +21,11 @@
 //! reason in the commit message. A regenerated artifact and a regenerated
 //! expectation together prove nothing.
 //!
-//! The values below are the artifacts committed on `main` as of 0.4.0. Three of
-//! them differ from what the pinned compiler produces (see
-//! DIG-Network/dig_ecosystem#9); reconciling that divergence is a separate,
-//! deliberate step, and this table moves when it does.
+//! The values below are what pinned `rue-cli` (`puzzles/RUE_VERSION`) produces,
+//! which is also what crates.io 0.3.0 and 0.4.0 already ship. Until this table
+//! moved, it held three older values that no released artifact carried and no
+//! consumer referenced (see DIG-Network/dig_ecosystem#9): the compiler was
+//! authoritative and the repository was stale, so the repository moved.
 
 /// Every puzzle: source stem, and the tree hash its committed `.hash` must hold.
 ///
@@ -38,15 +39,15 @@ pub const EXPECTED_TREE_HASHES: [(&str, &str); 4] = [
     ),
     (
         "checkpoint_inner",
-        "a5ab9c0f24fb913cc2affe69e26df3991e816c733ee0a5e52e811e931fcc3d16",
+        "82cf72c615a69946a63da1a5b079afe75807ba94d4148988b1b29720d595ba6c",
     ),
     (
         "network_coin_inner",
-        "81865e9faae271365aa4eeac8a05fe0a37fead6a96507c751cffe2c45a95dd20",
+        "cde089e3a8016118492faab8c37f30105d858397cf41c8499ed167aae6b7cf1e",
     ),
     (
         "withdraw_delay_coin",
-        "5f5ab1bd89b7592c57a5c770d42d060d03dab21b50e02a94ee686aa075a50f19",
+        "744bef9c15142dcee2b1b8031125814680eb390d88e6daaa7541f807b1194433",
     ),
 ];
 
