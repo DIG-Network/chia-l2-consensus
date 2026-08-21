@@ -25,13 +25,16 @@
 
 mod common;
 
-use chia_protocol::Bytes32;
+// ErrorCode reached through the SDK facade rather than adding a direct
+// chia-consensus dependency for one test assertion.
+use chia_protocol::{Bytes32, CoinSpend};
 use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
 use chia_puzzle_types::{EveProof, Proof};
 use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
 use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
-use chia_sdk_test::{BlsPair, BlsPairWithCoin, Simulator};
+use chia_sdk_test::{BlsPair, BlsPairWithCoin, Simulator, SimulatorError};
 use chia_sdk_types::Conditions;
+use chia_wallet_sdk::chia::consensus::validation_error::ErrorCode;
 use clvm_traits::ToClvm;
 use clvm_utils::CurriedProgram;
 use clvmr::serde::node_from_bytes;
@@ -421,7 +424,15 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
         delay_coin_state.is_some(),
         "WDC-009: Delay coin must be created with COLLATERAL_AMOUNT"
     );
-    let delay_coin = delay_coin_state.unwrap().coin;
+    let delay_coin_state = delay_coin_state.unwrap();
+    let delay_coin = delay_coin_state.coin;
+    // ASSERT_HEIGHT_RELATIVE is measured from the height the coin was created
+    // at, not from the current tip, so read it off the coin state.
+    let delay_coin_created_height = u64::from(
+        delay_coin_state
+            .created_height
+            .expect("WDC-009: delay coin must have a created height"),
+    );
 
     // Verify: delay coin puzzle hash is NOT the raw destination
     let dest_bytes32: Bytes32 = dest.into();
@@ -431,22 +442,52 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
     );
 
     // ── Phase 2: Spend delay coin → release funds ─────────────────────
-    // NOTE: Simulator does NOT enforce ASSERT_HEIGHT_RELATIVE.
-    // The spend succeeds immediately. Actual delay enforcement is by Chia node.
-    let ctx = &mut SpendContext::new();
-    let wdc_mod = node_from_bytes(&mut *ctx, &wdc_hex())?;
-    let dest_atom = ctx.new_atom(&dest).unwrap();
-    let amt_atom = common::clvm::u64_to_clvm(&mut *ctx, COLLATERAL_AMOUNT);
-    let delay_atom = common::clvm::u64_to_clvm(&mut *ctx, WDC_DELAY_BLOCKS);
-    let wdc_curried = clvm_curry(&mut *ctx, wdc_mod, &[dest_atom, amt_atom, delay_atom]);
-    let nil_sol = ctx.nil();
-    ctx.spend(delay_coin, Spend::new(wdc_curried, nil_sol))?;
+    // The chia-sdk-test simulator enforces ASSERT_HEIGHT_RELATIVE, so the delay
+    // is exercised here rather than merely asserted on the emitted condition.
+    // Build the same spend twice and bound the delay from both sides: one block
+    // short must be rejected, exactly WDC_DELAY_BLOCKS must be accepted. A test
+    // that only spends after the delay cannot tell an enforced timelock from an
+    // ignored one.
+    let build_release_spend = |sim: &Simulator| -> anyhow::Result<Vec<CoinSpend>> {
+        let ctx = &mut SpendContext::new();
+        let wdc_mod = node_from_bytes(&mut **ctx, &wdc_hex())?;
+        let dest_atom = ctx.new_atom(&dest).unwrap();
+        let amt_atom = common::clvm::u64_to_clvm(&mut **ctx, COLLATERAL_AMOUNT);
+        let delay_atom = common::clvm::u64_to_clvm(&mut **ctx, WDC_DELAY_BLOCKS);
+        let wdc_curried = clvm_curry(&mut **ctx, wdc_mod, &[dest_atom, amt_atom, delay_atom]);
+        let nil_sol = ctx.nil();
+        ctx.spend(delay_coin, Spend::new(wdc_curried, nil_sol))?;
+        let _ = sim;
+        Ok(ctx.take())
+    };
+
+    while u64::from(sim.height()) < delay_coin_created_height + WDC_DELAY_BLOCKS - 1 {
+        sim.create_block();
+    }
+
+    // One block short of the delay: the timelock must still bite.
+    let too_early = sim.spend_coins(build_release_spend(&sim)?, &[]);
+    // Assert the specific rejection reason. Any error would satisfy `is_err`,
+    // including a malformed spend, which would make this half of the bound
+    // pass without the timelock being enforced at all.
+    assert!(
+        matches!(
+            too_early,
+            Err(SimulatorError::Validation(
+                ErrorCode::AssertHeightRelativeFailed
+            ))
+        ),
+        "WDC-009: release one block early must fail on the height timelock, got {:?}",
+        too_early.err()
+    );
+
+    sim.create_block();
 
     // No signatures needed (WDC-007: permissionless)
-    let result = sim.spend_coins(ctx.take(), &[]);
+    let result = sim.spend_coins(build_release_spend(&sim)?, &[]);
     assert!(
         result.is_ok(),
-        "WDC-009: Delay coin release must succeed: {:?}",
+        "WDC-009: Delay coin release must succeed once the delay has elapsed: {:?}",
         result.err()
     );
 

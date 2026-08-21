@@ -7,7 +7,8 @@
 
 ## Summary
 
-The crate must be named `chia-l2-consensus` with version `0.1.0` and edition `2021`. All dependencies must be pinned to specific versions for reproducible builds.
+The crate must be named `chia-l2-consensus`, declare a SemVer
+`major.minor.patch` version, and use edition `2021`. All dependencies must be pinned to specific versions for reproducible builds.
 
 ## Specification
 
@@ -86,7 +87,7 @@ rand  = "0.8"
 ## Acceptance Criteria
 
 - [ ] Package name is `chia-l2-consensus`
-- [ ] Version is `0.1.0`
+- [ ] Version is a SemVer `major.minor.patch` string
 - [ ] Edition is `2021`
 - [ ] All dependencies pinned to major.minor versions
 - [ ] `cargo build` resolves all dependencies
