@@ -112,6 +112,20 @@ jobs:
       - name: Committed artifacts match the pinned compiler
         run: cargo build
 
+      # Defence in depth, and the same assertion `publish.yml` makes before
+      # packaging: nothing in a build may leave the source tree dirty. `build.rs`
+      # writes only into OUT_DIR, so this diff is expected to be empty; asserting
+      # it here means a build script that starts writing again is caught at PR
+      # time rather than at publish time.
+      - name: No build step wrote into the source tree
+        run: |
+          git diff --exit-code -- puzzles/compiled/ || {
+            echo "::error::A build step modified puzzles/compiled/. These artifacts are"
+            echo "::error::tracked source embedded via include_str!; a build must never"
+            echo "::error::rewrite them."
+            exit 1
+          }
+
       # REG-001's artifact assertions need `rue` on PATH (several of its tests
       # shell out to the compiler), so they run after the install rather than in
       # step 1.
