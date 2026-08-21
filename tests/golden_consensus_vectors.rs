@@ -63,7 +63,10 @@ fn golden_derive_launcher_id_amount_one() {
 #[test]
 fn golden_derive_launcher_id_large_amount() {
     assert_eq!(
-        hex::encode(derive_launcher_id(Bytes32::new(PARENT_COIN), 13_370_000_000_000)),
+        hex::encode(derive_launcher_id(
+            Bytes32::new(PARENT_COIN),
+            13_370_000_000_000
+        )),
         "7003c54e9b95f497b906e88899466bbea92bacd1e47cda52b156ccd3d6332d6d"
     );
 }

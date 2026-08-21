@@ -935,9 +935,9 @@ fn vv_req_chk_008_checkpoint_path_with_real_proof() {
 #[test]
 fn vv_req_chk_008_checkpoint_in_simulator() -> anyhow::Result<()> {
     use chia_protocol::Bytes32;
-    use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
-use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
+    use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
     use chia_puzzle_types::{EveProof, Proof};
+    use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
     use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
     use chia_sdk_test::{BlsPairWithCoin, Simulator};
     use clvm_traits::ToClvm;
@@ -1024,7 +1024,12 @@ use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonSt
     // ── Deploy checkpoint singleton ──────────────────────────────────
     let mut sim = Simulator::new();
     let ctx = &mut SpendContext::new();
-    let BlsPairWithCoin { sk: p2_sk, pk: p2_pk, coin: p2_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin {
+        sk: p2_sk,
+        pk: p2_pk,
+        coin: p2_coin,
+        ..
+    } = sim.bls(1);
     let launcher = Launcher::new(p2_coin.coin_id(), 1);
     let launcher_id = launcher.coin().coin_id();
     let (conds, chk_singleton) = launcher.spend(ctx, inner_ph, ())?;
@@ -1160,7 +1165,12 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
     // ── Deploy checkpoint singleton ──────────────────────────────────
     let mut sim = Simulator::new();
     let ctx = &mut SpendContext::new();
-    let BlsPairWithCoin { sk: p2_sk, pk: p2_pk, coin: p2_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin {
+        sk: p2_sk,
+        pk: p2_pk,
+        coin: p2_coin,
+        ..
+    } = sim.bls(1);
     let launcher = Launcher::new(p2_coin.coin_id(), 1);
     let launcher_id = launcher.coin().coin_id();
     let inner_ph: Bytes32 = inner_mod_hash.into();

@@ -35,9 +35,9 @@
 mod common;
 
 use chia_protocol::Bytes32;
-use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
 use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
 use chia_puzzle_types::{EveProof, Proof};
+use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
 use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
 use chia_sdk_test::{BlsPair, BlsPairWithCoin, Simulator};
 use chia_sdk_types::Conditions;
@@ -286,7 +286,12 @@ fn deploy_and_register() -> anyhow::Result<TestSetup> {
 
     // Deploy checkpoint singleton
     let ctx = &mut SpendContext::new();
-    let BlsPairWithCoin { sk: chk_sk, pk: chk_pk, coin: chk_p2, .. } = sim.bls(1);
+    let BlsPairWithCoin {
+        sk: chk_sk,
+        pk: chk_pk,
+        coin: chk_p2,
+        ..
+    } = sim.bls(1);
     let chk_launcher = Launcher::new(chk_p2.coin_id(), 1);
     let chk_launcher_id = chk_launcher.coin().coin_id();
     let (chk_conds, chk_singleton) = chk_launcher.spend(ctx, chk_inner_mod_hash(), ())?;
@@ -295,7 +300,12 @@ fn deploy_and_register() -> anyhow::Result<TestSetup> {
 
     // Deploy network coin singleton
     let ctx = &mut SpendContext::new();
-    let BlsPairWithCoin { sk: net_sk, pk: net_pk, coin: net_p2, .. } = sim.bls(1);
+    let BlsPairWithCoin {
+        sk: net_sk,
+        pk: net_pk,
+        coin: net_p2,
+        ..
+    } = sim.bls(1);
     let net_launcher = Launcher::new(net_p2.coin_id(), 1);
     let net_launcher_id = net_launcher.coin().coin_id();
     let (net_conds, net_singleton) = net_launcher.spend(ctx, net_inner_mod_hash(), ())?;
@@ -330,7 +340,12 @@ fn deploy_and_register() -> anyhow::Result<TestSetup> {
     .to_clvm(&mut *ctx)?;
     ctx.spend(net_singleton, Spend::new(net_puzzle, net_sol))?;
 
-    let BlsPairWithCoin { sk: fund_sk, pk: fund_pk, coin: fund_coin, .. } = sim.bls(COLLATERAL_AMOUNT);
+    let BlsPairWithCoin {
+        sk: fund_sk,
+        pk: fund_pk,
+        coin: fund_coin,
+        ..
+    } = sim.bls(COLLATERAL_AMOUNT);
     StandardLayer::new(fund_pk).spend(ctx, fund_coin, Conditions::new())?;
     sim.spend_coins(ctx.take(), &[validator_sk.clone(), fund_sk])?;
 
@@ -500,14 +515,7 @@ fn vv_req_reg_010_collateral_return_destination_and_amount() -> anyhow::Result<(
         },
     }
     .to_clvm(&mut *ctx)?;
-    let chk_inner_sol = build_chk_query_env(
-        &mut *ctx,
-        &empty_leaf,
-        epoch,
-        0,
-        &s.pk_bytes,
-        false,
-    );
+    let chk_inner_sol = build_chk_query_env(&mut *ctx, &empty_leaf, epoch, 0, &s.pk_bytes, false);
     let chk_sol = SingletonSolution {
         lineage_proof: Proof::Eve(EveProof {
             parent_parent_coin_info: s.chk_p2_coin_id,
@@ -591,14 +599,8 @@ fn vv_req_reg_010_epoch_mismatch_rejected() -> anyhow::Result<()> {
         },
     }
     .to_clvm(&mut *ctx)?;
-    let chk_inner_sol = build_chk_query_env(
-        &mut *ctx,
-        &empty_leaf,
-        real_epoch,
-        0,
-        &s.pk_bytes,
-        false,
-    );
+    let chk_inner_sol =
+        build_chk_query_env(&mut *ctx, &empty_leaf, real_epoch, 0, &s.pk_bytes, false);
     let chk_sol = SingletonSolution {
         lineage_proof: Proof::Eve(EveProof {
             parent_parent_coin_info: s.chk_p2_coin_id,

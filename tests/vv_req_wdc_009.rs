@@ -26,9 +26,9 @@
 mod common;
 
 use chia_protocol::Bytes32;
-use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
 use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
 use chia_puzzle_types::{EveProof, Proof};
+use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
 use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
 use chia_sdk_test::{BlsPair, BlsPairWithCoin, Simulator};
 use chia_sdk_types::Conditions;
@@ -284,7 +284,12 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
 
     // ── Phase 0: Deploy checkpoint singleton ──────────────────────────
     let ctx = &mut SpendContext::new();
-    let BlsPairWithCoin { sk: chk_sk, pk: chk_pk, coin: chk_p2, .. } = sim.bls(1);
+    let BlsPairWithCoin {
+        sk: chk_sk,
+        pk: chk_pk,
+        coin: chk_p2,
+        ..
+    } = sim.bls(1);
     let chk_launcher = Launcher::new(chk_p2.coin_id(), 1);
     let chk_launcher_id = chk_launcher.coin().coin_id();
     let (chk_conds, chk_singleton) = chk_launcher.spend(ctx, chk_inner_mod_hash(), ())?;
@@ -293,7 +298,12 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
 
     // ── Phase 0: Deploy network coin + register validator ─────────────
     let ctx = &mut SpendContext::new();
-    let BlsPairWithCoin { sk: net_sk, pk: net_pk, coin: net_p2, .. } = sim.bls(1);
+    let BlsPairWithCoin {
+        sk: net_sk,
+        pk: net_pk,
+        coin: net_p2,
+        ..
+    } = sim.bls(1);
     let net_launcher = Launcher::new(net_p2.coin_id(), 1);
     let net_launcher_id = net_launcher.coin().coin_id();
     let (net_conds, net_singleton) = net_launcher.spend(ctx, net_inner_mod_hash(), ())?;
@@ -326,7 +336,12 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
     }
     .to_clvm(&mut *ctx)?;
     ctx.spend(net_singleton, Spend::new(net_puzzle, net_sol))?;
-    let BlsPairWithCoin { sk: fund_sk, pk: fund_pk, coin: fund_coin, .. } = sim.bls(COLLATERAL_AMOUNT);
+    let BlsPairWithCoin {
+        sk: fund_sk,
+        pk: fund_pk,
+        coin: fund_coin,
+        ..
+    } = sim.bls(COLLATERAL_AMOUNT);
     StandardLayer::new(fund_pk).spend(ctx, fund_coin, Conditions::new())?;
     sim.spend_coins(ctx.take(), &[validator_sk.clone(), fund_sk])?;
 
@@ -423,11 +438,7 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
     let dest_atom = ctx.new_atom(&dest).unwrap();
     let amt_atom = common::clvm::u64_to_clvm(&mut *ctx, COLLATERAL_AMOUNT);
     let delay_atom = common::clvm::u64_to_clvm(&mut *ctx, WDC_DELAY_BLOCKS);
-    let wdc_curried = clvm_curry(
-        &mut *ctx,
-        wdc_mod,
-        &[dest_atom, amt_atom, delay_atom],
-    );
+    let wdc_curried = clvm_curry(&mut *ctx, wdc_mod, &[dest_atom, amt_atom, delay_atom]);
     let nil_sol = ctx.nil();
     ctx.spend(delay_coin, Spend::new(wdc_curried, nil_sol))?;
 

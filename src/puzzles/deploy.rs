@@ -25,11 +25,7 @@ use crate::puzzles::registration_coin::REGISTRATION_COIN_MOD_HASH_HEX;
 /// This is the permanent identifier for the singleton — it never changes
 /// across spends of the singleton.
 pub fn derive_launcher_id(parent_coin_id: Bytes32, amount: u64) -> Bytes32 {
-    let launcher_coin = Coin::new(
-        parent_coin_id,
-        SINGLETON_LAUNCHER_HASH.into(),
-        amount,
-    );
+    let launcher_coin = Coin::new(parent_coin_id, SINGLETON_LAUNCHER_HASH.into(), amount);
     launcher_coin.coin_id()
 }
 

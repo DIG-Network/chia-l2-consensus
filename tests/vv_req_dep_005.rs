@@ -38,8 +38,18 @@ use chia_sdk_test::{BlsPairWithCoin, Simulator};
 fn setup_artifacts() -> DeploymentArtifacts {
     let mut sim = Simulator::new();
     let ctx = &mut SpendContext::new();
-    let BlsPairWithCoin { sk: sk1, pk: pk1, coin: net_coin, .. } = sim.bls(1);
-    let BlsPairWithCoin { sk: sk2, pk: pk2, coin: chk_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin {
+        sk: sk1,
+        pk: pk1,
+        coin: net_coin,
+        ..
+    } = sim.bls(1);
+    let BlsPairWithCoin {
+        sk: sk2,
+        pk: pk2,
+        coin: chk_coin,
+        ..
+    } = sim.bls(1);
 
     let (pk_bytes, _) = run_test_setup().unwrap();
     let pk = deserialize_proving_key(&pk_bytes).unwrap();

@@ -49,9 +49,9 @@
 mod common;
 
 use chia_protocol::Bytes32;
-use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
 use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
 use chia_puzzle_types::{EveProof, LineageProof, Proof};
+use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
 use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
 use chia_sdk_test::{BlsPair, BlsPairWithCoin, Simulator};
 use chia_sdk_types::Conditions;
@@ -216,7 +216,12 @@ fn vv_req_net_006_deploy_singleton() -> anyhow::Result<()> {
     // Inner puzzle = uncurried module. Hash = INNER_MOD_HASH.
     let inner_ph = net_inner_mod_hash();
 
-    let BlsPairWithCoin { sk, pk, coin: p2_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin {
+        sk,
+        pk,
+        coin: p2_coin,
+        ..
+    } = sim.bls(1);
     let launcher = Launcher::new(p2_coin.coin_id(), 1);
     let launcher_id = launcher.coin().coin_id();
     let (conds, singleton) = launcher.spend(ctx, inner_ph, ())?;
@@ -249,7 +254,12 @@ fn vv_req_net_006_register_validator() -> anyhow::Result<()> {
     // Deploy
     let ctx = &mut SpendContext::new();
     let inner_ph = net_inner_mod_hash();
-    let BlsPairWithCoin { sk: p2_sk, pk: p2_pk, coin: p2_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin {
+        sk: p2_sk,
+        pk: p2_pk,
+        coin: p2_coin,
+        ..
+    } = sim.bls(1);
     let launcher = Launcher::new(p2_coin.coin_id(), 1);
     let launcher_id = launcher.coin().coin_id();
     let (conds, singleton) = launcher.spend(ctx, inner_ph, ())?;
@@ -304,7 +314,12 @@ fn vv_req_net_006_register_validator() -> anyhow::Result<()> {
     ctx.spend(singleton, Spend::new(singleton_puzzle, singleton_sol))?;
 
     // Fund collateral
-    let BlsPairWithCoin { sk: fund_sk, pk: fund_pk, coin: fund_coin, .. } = sim.bls(COLLATERAL_AMOUNT);
+    let BlsPairWithCoin {
+        sk: fund_sk,
+        pk: fund_pk,
+        coin: fund_coin,
+        ..
+    } = sim.bls(COLLATERAL_AMOUNT);
     StandardLayer::new(fund_pk).spend(ctx, fund_coin, Conditions::new())?;
 
     let result = sim.spend_coins(ctx.take(), &[validator_sk.clone(), fund_sk]);
@@ -352,7 +367,12 @@ fn vv_req_net_006_sequential_registrations() -> anyhow::Result<()> {
     // Deploy
     let ctx = &mut SpendContext::new();
     let inner_ph = net_inner_mod_hash();
-    let BlsPairWithCoin { sk: p2_sk, pk: p2_pk, coin: p2_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin {
+        sk: p2_sk,
+        pk: p2_pk,
+        coin: p2_coin,
+        ..
+    } = sim.bls(1);
     let launcher = Launcher::new(p2_coin.coin_id(), 1);
     let launcher_id = launcher.coin().coin_id();
     let (conds, singleton) = launcher.spend(ctx, inner_ph, ())?;
@@ -407,7 +427,12 @@ fn vv_req_net_006_sequential_registrations() -> anyhow::Result<()> {
 
         ctx.spend(current, Spend::new(singleton_puzzle, singleton_sol))?;
 
-        let BlsPairWithCoin { sk: fund_sk, pk: fund_pk, coin: fund_coin, .. } = sim.bls(COLLATERAL_AMOUNT);
+        let BlsPairWithCoin {
+            sk: fund_sk,
+            pk: fund_pk,
+            coin: fund_coin,
+            ..
+        } = sim.bls(COLLATERAL_AMOUNT);
         StandardLayer::new(fund_pk).spend(ctx, fund_coin, Conditions::new())?;
 
         let result = sim.spend_coins(ctx.take(), &[val_sk, fund_sk]);
