@@ -35,10 +35,11 @@
 mod common;
 
 use chia_protocol::Bytes32;
-use chia_puzzles::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
-use chia_puzzles::{EveProof, Proof};
+use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
+use chia_puzzle_types::{EveProof, Proof};
+use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
 use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
-use chia_sdk_test::Simulator;
+use chia_sdk_test::{BlsPair, BlsPairWithCoin, Simulator};
 use chia_sdk_types::Conditions;
 use clvm_traits::ToClvm;
 use clvm_utils::CurriedProgram;
@@ -266,7 +267,12 @@ fn vv_req_reg_007_create_registration_coin() -> anyhow::Result<()> {
 
     // Deploy checkpoint singleton (for its coin ID)
     let ctx = &mut SpendContext::new();
-    let (chk_sk, chk_pk, _, chk_p2) = sim.new_p2(1)?;
+    let BlsPairWithCoin {
+        sk: chk_sk,
+        pk: chk_pk,
+        coin: chk_p2,
+        ..
+    } = sim.bls(1);
     let chk_launcher = Launcher::new(chk_p2.coin_id(), 1);
     let _chk_launcher_id = chk_launcher.coin().coin_id();
     let (chk_conds, chk_singleton) = chk_launcher.spend(ctx, chk_inner_mod_hash(), ())?;
@@ -275,7 +281,12 @@ fn vv_req_reg_007_create_registration_coin() -> anyhow::Result<()> {
 
     // Deploy network coin singleton
     let ctx = &mut SpendContext::new();
-    let (net_sk, net_pk, _, net_p2) = sim.new_p2(1)?;
+    let BlsPairWithCoin {
+        sk: net_sk,
+        pk: net_pk,
+        coin: net_p2,
+        ..
+    } = sim.bls(1);
     let net_launcher = Launcher::new(net_p2.coin_id(), 1);
     let net_launcher_id = net_launcher.coin().coin_id();
     let (net_conds, net_singleton) = net_launcher.spend(ctx, net_inner_mod_hash(), ())?;
@@ -284,13 +295,13 @@ fn vv_req_reg_007_create_registration_coin() -> anyhow::Result<()> {
 
     // Register validator via network coin spend
     let ctx = &mut SpendContext::new();
-    let validator_sk = chia_sdk_test::test_secret_key()?;
+    let validator_sk = BlsPair::new(0).sk;
     let pk_bytes = validator_sk.public_key().to_bytes();
     let chk_coin_id: [u8; 32] = chk_singleton.coin_id().into();
 
     // Build network coin singleton puzzle + solution
-    let inner_mod = node_from_bytes(&mut ctx.allocator, &net_inner_hex())?;
-    let singleton_mod = ctx.singleton_top_layer()?;
+    let inner_mod = node_from_bytes(&mut *ctx, &net_inner_hex())?;
+    let singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let net_puzzle = CurriedProgram {
         program: singleton_mod,
         args: SingletonArgs {
@@ -298,9 +309,9 @@ fn vv_req_reg_007_create_registration_coin() -> anyhow::Result<()> {
             inner_puzzle: inner_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
-    let inner_sol = build_net_env(&mut ctx.allocator, &chk_coin_id, &pk_bytes);
+    let inner_sol = build_net_env(&mut *ctx, &chk_coin_id, &pk_bytes);
     let net_sol = SingletonSolution {
         lineage_proof: Proof::Eve(EveProof {
             parent_parent_coin_info: net_p2.coin_id(),
@@ -309,12 +320,17 @@ fn vv_req_reg_007_create_registration_coin() -> anyhow::Result<()> {
         amount: 1,
         inner_solution: inner_sol,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
     ctx.spend(net_singleton, Spend::new(net_puzzle, net_sol))?;
 
     // Fund collateral
-    let (fund_sk, fund_pk, _, fund_coin) = sim.new_p2(COLLATERAL_AMOUNT)?;
+    let BlsPairWithCoin {
+        sk: fund_sk,
+        pk: fund_pk,
+        coin: fund_coin,
+        ..
+    } = sim.bls(COLLATERAL_AMOUNT);
     StandardLayer::new(fund_pk).spend(ctx, fund_coin, Conditions::new())?;
 
     sim.spend_coins(ctx.take(), &[validator_sk.clone(), fund_sk])?;
@@ -347,7 +363,12 @@ fn vv_req_reg_007_cross_coin_collateral_recovery() -> anyhow::Result<()> {
 
     // ── Deploy checkpoint singleton ─────────────────────────────────
     let ctx = &mut SpendContext::new();
-    let (chk_sk, chk_pk, _, chk_p2) = sim.new_p2(1)?;
+    let BlsPairWithCoin {
+        sk: chk_sk,
+        pk: chk_pk,
+        coin: chk_p2,
+        ..
+    } = sim.bls(1);
     let chk_launcher = Launcher::new(chk_p2.coin_id(), 1);
     let chk_launcher_id = chk_launcher.coin().coin_id();
     let (chk_conds, chk_singleton) = chk_launcher.spend(ctx, chk_inner_mod_hash(), ())?;
@@ -356,7 +377,12 @@ fn vv_req_reg_007_cross_coin_collateral_recovery() -> anyhow::Result<()> {
 
     // ── Deploy network coin + register validator ────────────────────
     let ctx = &mut SpendContext::new();
-    let (net_sk, net_pk, _, net_p2) = sim.new_p2(1)?;
+    let BlsPairWithCoin {
+        sk: net_sk,
+        pk: net_pk,
+        coin: net_p2,
+        ..
+    } = sim.bls(1);
     let net_launcher = Launcher::new(net_p2.coin_id(), 1);
     let net_launcher_id = net_launcher.coin().coin_id();
     let (net_conds, net_singleton) = net_launcher.spend(ctx, net_inner_mod_hash(), ())?;
@@ -364,12 +390,12 @@ fn vv_req_reg_007_cross_coin_collateral_recovery() -> anyhow::Result<()> {
     sim.spend_coins(ctx.take(), &[net_sk])?;
 
     let ctx = &mut SpendContext::new();
-    let validator_sk = chia_sdk_test::test_secret_key()?;
+    let validator_sk = BlsPair::new(0).sk;
     let pk_bytes = validator_sk.public_key().to_bytes();
     let chk_coin_id: [u8; 32] = chk_singleton.coin_id().into();
 
-    let inner_mod = node_from_bytes(&mut ctx.allocator, &net_inner_hex())?;
-    let singleton_mod = ctx.singleton_top_layer()?;
+    let inner_mod = node_from_bytes(&mut *ctx, &net_inner_hex())?;
+    let singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let net_puzzle = CurriedProgram {
         program: singleton_mod,
         args: SingletonArgs {
@@ -377,8 +403,8 @@ fn vv_req_reg_007_cross_coin_collateral_recovery() -> anyhow::Result<()> {
             inner_puzzle: inner_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
-    let inner_sol = build_net_env(&mut ctx.allocator, &chk_coin_id, &pk_bytes);
+    .to_clvm(&mut *ctx)?;
+    let inner_sol = build_net_env(&mut *ctx, &chk_coin_id, &pk_bytes);
     let net_sol = SingletonSolution {
         lineage_proof: Proof::Eve(EveProof {
             parent_parent_coin_info: net_p2.coin_id(),
@@ -387,9 +413,14 @@ fn vv_req_reg_007_cross_coin_collateral_recovery() -> anyhow::Result<()> {
         amount: 1,
         inner_solution: inner_sol,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
     ctx.spend(net_singleton, Spend::new(net_puzzle, net_sol))?;
-    let (fund_sk, fund_pk, _, fund_coin) = sim.new_p2(COLLATERAL_AMOUNT)?;
+    let BlsPairWithCoin {
+        sk: fund_sk,
+        pk: fund_pk,
+        coin: fund_coin,
+        ..
+    } = sim.bls(COLLATERAL_AMOUNT);
     StandardLayer::new(fund_pk).spend(ctx, fund_coin, Conditions::new())?;
     sim.spend_coins(ctx.take(), &[validator_sk.clone(), fund_sk])?;
 
@@ -412,8 +443,8 @@ fn vv_req_reg_007_cross_coin_collateral_recovery() -> anyhow::Result<()> {
     let validator_count: u64 = 0;
 
     // Spend 1: Checkpoint singleton membership query
-    let chk_mod = node_from_bytes(&mut ctx.allocator, &chk_inner_hex())?;
-    let chk_singleton_mod = ctx.singleton_top_layer()?;
+    let chk_mod = node_from_bytes(&mut *ctx, &chk_inner_hex())?;
+    let chk_singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let chk_puzzle = CurriedProgram {
         program: chk_singleton_mod,
         args: SingletonArgs {
@@ -421,10 +452,10 @@ fn vv_req_reg_007_cross_coin_collateral_recovery() -> anyhow::Result<()> {
             inner_puzzle: chk_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
     let chk_inner_sol = build_chk_query_env(
-        &mut ctx.allocator,
+        &mut *ctx,
         &empty_leaf, // root = EMPTY_LEAF_HASH for depth=0 non-membership
         epoch,
         validator_count,
@@ -439,24 +470,24 @@ fn vv_req_reg_007_cross_coin_collateral_recovery() -> anyhow::Result<()> {
         amount: 1,
         inner_solution: chk_inner_sol,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
     ctx.spend(chk_singleton, Spend::new(chk_puzzle, chk_sol))?;
 
     // Spend 2: Registration coin (WDC-004: now 4 curried params)
-    let reg_mod = node_from_bytes(&mut ctx.allocator, &reg_hex())?;
-    let pk_atom = ctx.allocator.new_atom(&pk_bytes).unwrap();
-    let ckpt_atom = ctx.allocator.new_atom(&chk_coin_id).unwrap();
-    let wdc_mod_atom = ctx.allocator.new_atom(&[0x55u8; 32]).unwrap();
-    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut ctx.allocator, 24_000);
+    let reg_mod = node_from_bytes(&mut *ctx, &reg_hex())?;
+    let pk_atom = ctx.new_atom(&pk_bytes).unwrap();
+    let ckpt_atom = ctx.new_atom(&chk_coin_id).unwrap();
+    let wdc_mod_atom = ctx.new_atom(&[0x55u8; 32]).unwrap();
+    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut *ctx, 24_000);
     let reg_curried = clvm_curry(
-        &mut ctx.allocator,
+        &mut *ctx,
         reg_mod,
         &[pk_atom, ckpt_atom, wdc_mod_atom, wdc_delay_atom],
     );
 
     // Destination for collateral return
     let dest = [0xDD; 32];
-    let reg_sol = build_reg_solution(&mut ctx.allocator, epoch, &dest, COLLATERAL_AMOUNT);
+    let reg_sol = build_reg_solution(&mut *ctx, epoch, &dest, COLLATERAL_AMOUNT);
 
     ctx.spend(reg_coin, Spend::new(reg_curried, reg_sol))?;
 

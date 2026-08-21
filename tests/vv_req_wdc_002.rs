@@ -19,12 +19,12 @@
 //!
 //! ## Simulator Note
 //!
-//! The chia-sdk-test Simulator (v0.18) does NOT enforce ASSERT_HEIGHT_RELATIVE
-//! at the consensus level — it validates CLVM execution and signatures only.
-//! Height-based conditions are enforced by the full node at block inclusion
-//! time. Tests here verify the CONDITION IS EMITTED CORRECTLY; enforcement
-//! is by the Chia network. This is the correct boundary: our puzzle emits
-//! the right condition, Chia enforces it.
+//! The chia-sdk-test Simulator DOES enforce ASSERT_HEIGHT_RELATIVE as of
+//! v0.34; it did not on v0.18. Tests in this file still verify only that the
+//! CONDITION IS EMITTED CORRECTLY, which is their scope. End-to-end
+//! enforcement of the delay is exercised in `vv_req_wdc_009`, which spends the
+//! delay coin one block early and at the boundary and requires the early spend
+//! to be rejected with `AssertHeightRelativeFailed`.
 //!
 //! ## Acceptance Criteria Coverage
 //!

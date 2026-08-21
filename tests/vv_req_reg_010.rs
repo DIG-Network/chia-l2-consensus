@@ -35,10 +35,11 @@
 mod common;
 
 use chia_protocol::Bytes32;
-use chia_puzzles::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
-use chia_puzzles::{EveProof, Proof};
+use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
+use chia_puzzle_types::{EveProof, Proof};
+use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
 use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
-use chia_sdk_test::Simulator;
+use chia_sdk_test::{BlsPair, BlsPairWithCoin, Simulator};
 use chia_sdk_types::Conditions;
 use clvm_traits::ToClvm;
 use clvm_utils::CurriedProgram;
@@ -285,7 +286,12 @@ fn deploy_and_register() -> anyhow::Result<TestSetup> {
 
     // Deploy checkpoint singleton
     let ctx = &mut SpendContext::new();
-    let (chk_sk, chk_pk, _, chk_p2) = sim.new_p2(1)?;
+    let BlsPairWithCoin {
+        sk: chk_sk,
+        pk: chk_pk,
+        coin: chk_p2,
+        ..
+    } = sim.bls(1);
     let chk_launcher = Launcher::new(chk_p2.coin_id(), 1);
     let chk_launcher_id = chk_launcher.coin().coin_id();
     let (chk_conds, chk_singleton) = chk_launcher.spend(ctx, chk_inner_mod_hash(), ())?;
@@ -294,7 +300,12 @@ fn deploy_and_register() -> anyhow::Result<TestSetup> {
 
     // Deploy network coin singleton
     let ctx = &mut SpendContext::new();
-    let (net_sk, net_pk, _, net_p2) = sim.new_p2(1)?;
+    let BlsPairWithCoin {
+        sk: net_sk,
+        pk: net_pk,
+        coin: net_p2,
+        ..
+    } = sim.bls(1);
     let net_launcher = Launcher::new(net_p2.coin_id(), 1);
     let net_launcher_id = net_launcher.coin().coin_id();
     let (net_conds, net_singleton) = net_launcher.spend(ctx, net_inner_mod_hash(), ())?;
@@ -303,12 +314,12 @@ fn deploy_and_register() -> anyhow::Result<TestSetup> {
 
     // Register validator via network coin
     let ctx = &mut SpendContext::new();
-    let validator_sk = chia_sdk_test::test_secret_key()?;
+    let validator_sk = BlsPair::new(0).sk;
     let pk_bytes: [u8; 48] = validator_sk.public_key().to_bytes();
     let chk_coin_id: [u8; 32] = chk_singleton.coin_id().into();
 
-    let inner_mod = node_from_bytes(&mut ctx.allocator, &net_inner_hex())?;
-    let singleton_mod = ctx.singleton_top_layer()?;
+    let inner_mod = node_from_bytes(&mut *ctx, &net_inner_hex())?;
+    let singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let net_puzzle = CurriedProgram {
         program: singleton_mod,
         args: SingletonArgs {
@@ -316,8 +327,8 @@ fn deploy_and_register() -> anyhow::Result<TestSetup> {
             inner_puzzle: inner_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
-    let inner_sol = build_net_env(&mut ctx.allocator, &chk_coin_id, &pk_bytes);
+    .to_clvm(&mut *ctx)?;
+    let inner_sol = build_net_env(&mut *ctx, &chk_coin_id, &pk_bytes);
     let net_sol = SingletonSolution {
         lineage_proof: Proof::Eve(EveProof {
             parent_parent_coin_info: net_p2.coin_id(),
@@ -326,10 +337,15 @@ fn deploy_and_register() -> anyhow::Result<TestSetup> {
         amount: 1,
         inner_solution: inner_sol,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
     ctx.spend(net_singleton, Spend::new(net_puzzle, net_sol))?;
 
-    let (fund_sk, fund_pk, _, fund_coin) = sim.new_p2(COLLATERAL_AMOUNT)?;
+    let BlsPairWithCoin {
+        sk: fund_sk,
+        pk: fund_pk,
+        coin: fund_coin,
+        ..
+    } = sim.bls(COLLATERAL_AMOUNT);
     StandardLayer::new(fund_pk).spend(ctx, fund_coin, Conditions::new())?;
     sim.spend_coins(ctx.take(), &[validator_sk.clone(), fund_sk])?;
 
@@ -364,19 +380,19 @@ fn vv_req_reg_010_collateral_lock_no_announcement() -> anyhow::Result<()> {
     let mut s = deploy_and_register()?;
     let ctx = &mut SpendContext::new();
 
-    let reg_mod = node_from_bytes(&mut ctx.allocator, &reg_hex())?;
-    let pk_atom = ctx.allocator.new_atom(&s.pk_bytes).unwrap();
-    let ckpt_atom = ctx.allocator.new_atom(&s.chk_coin_id).unwrap();
-    let wdc_mod_atom = ctx.allocator.new_atom(&[0x55u8; 32]).unwrap();
-    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut ctx.allocator, 24_000);
+    let reg_mod = node_from_bytes(&mut *ctx, &reg_hex())?;
+    let pk_atom = ctx.new_atom(&s.pk_bytes).unwrap();
+    let ckpt_atom = ctx.new_atom(&s.chk_coin_id).unwrap();
+    let wdc_mod_atom = ctx.new_atom(&[0x55u8; 32]).unwrap();
+    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut *ctx, 24_000);
     let reg_curried = clvm_curry(
-        &mut ctx.allocator,
+        &mut *ctx,
         reg_mod,
         &[pk_atom, ckpt_atom, wdc_mod_atom, wdc_delay_atom],
     );
 
     let dest = [0xDD; 32];
-    let reg_sol = build_reg_solution(&mut ctx.allocator, 0, &dest, COLLATERAL_AMOUNT);
+    let reg_sol = build_reg_solution(&mut *ctx, 0, &dest, COLLATERAL_AMOUNT);
     ctx.spend(s.reg_coin, Spend::new(reg_curried, reg_sol))?;
 
     let result = s.sim.spend_coins(ctx.take(), &[]);
@@ -410,8 +426,8 @@ fn vv_req_reg_010_announcement_assertion_cross_coin() -> anyhow::Result<()> {
     let epoch: u64 = 0;
 
     // Spend 1: Checkpoint query with correct params
-    let chk_mod = node_from_bytes(&mut ctx.allocator, &chk_inner_hex())?;
-    let chk_singleton_mod = ctx.singleton_top_layer()?;
+    let chk_mod = node_from_bytes(&mut *ctx, &chk_inner_hex())?;
+    let chk_singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let chk_puzzle = CurriedProgram {
         program: chk_singleton_mod,
         args: SingletonArgs {
@@ -419,10 +435,10 @@ fn vv_req_reg_010_announcement_assertion_cross_coin() -> anyhow::Result<()> {
             inner_puzzle: chk_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
     let chk_inner_sol = build_chk_query_env(
-        &mut ctx.allocator,
+        &mut *ctx,
         &empty_leaf,
         epoch,
         0,
@@ -437,22 +453,22 @@ fn vv_req_reg_010_announcement_assertion_cross_coin() -> anyhow::Result<()> {
         amount: 1,
         inner_solution: chk_inner_sol,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
     ctx.spend(s.chk_singleton, Spend::new(chk_puzzle, chk_sol))?;
 
     // Spend 2: Registration coin asserting announcement
-    let reg_mod = node_from_bytes(&mut ctx.allocator, &reg_hex())?;
-    let pk_atom = ctx.allocator.new_atom(&s.pk_bytes).unwrap();
-    let ckpt_atom = ctx.allocator.new_atom(&s.chk_coin_id).unwrap();
-    let wdc_mod_atom = ctx.allocator.new_atom(&[0x55u8; 32]).unwrap();
-    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut ctx.allocator, 24_000);
+    let reg_mod = node_from_bytes(&mut *ctx, &reg_hex())?;
+    let pk_atom = ctx.new_atom(&s.pk_bytes).unwrap();
+    let ckpt_atom = ctx.new_atom(&s.chk_coin_id).unwrap();
+    let wdc_mod_atom = ctx.new_atom(&[0x55u8; 32]).unwrap();
+    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut *ctx, 24_000);
     let reg_curried = clvm_curry(
-        &mut ctx.allocator,
+        &mut *ctx,
         reg_mod,
         &[pk_atom, ckpt_atom, wdc_mod_atom, wdc_delay_atom],
     );
     let dest = [0xDD; 32];
-    let reg_sol = build_reg_solution(&mut ctx.allocator, epoch, &dest, COLLATERAL_AMOUNT);
+    let reg_sol = build_reg_solution(&mut *ctx, epoch, &dest, COLLATERAL_AMOUNT);
     ctx.spend(s.reg_coin, Spend::new(reg_curried, reg_sol))?;
 
     let result = s.sim.spend_coins(ctx.take(), &[]);
@@ -489,8 +505,8 @@ fn vv_req_reg_010_collateral_return_destination_and_amount() -> anyhow::Result<(
     let dest = [0xDD; 32]; // Specific destination
 
     // Build cross-coin recovery bundle
-    let chk_mod = node_from_bytes(&mut ctx.allocator, &chk_inner_hex())?;
-    let chk_singleton_mod = ctx.singleton_top_layer()?;
+    let chk_mod = node_from_bytes(&mut *ctx, &chk_inner_hex())?;
+    let chk_singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let chk_puzzle = CurriedProgram {
         program: chk_singleton_mod,
         args: SingletonArgs {
@@ -498,15 +514,8 @@ fn vv_req_reg_010_collateral_return_destination_and_amount() -> anyhow::Result<(
             inner_puzzle: chk_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
-    let chk_inner_sol = build_chk_query_env(
-        &mut ctx.allocator,
-        &empty_leaf,
-        epoch,
-        0,
-        &s.pk_bytes,
-        false,
-    );
+    .to_clvm(&mut *ctx)?;
+    let chk_inner_sol = build_chk_query_env(&mut *ctx, &empty_leaf, epoch, 0, &s.pk_bytes, false);
     let chk_sol = SingletonSolution {
         lineage_proof: Proof::Eve(EveProof {
             parent_parent_coin_info: s.chk_p2_coin_id,
@@ -515,20 +524,20 @@ fn vv_req_reg_010_collateral_return_destination_and_amount() -> anyhow::Result<(
         amount: 1,
         inner_solution: chk_inner_sol,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
     ctx.spend(s.chk_singleton, Spend::new(chk_puzzle, chk_sol))?;
 
-    let reg_mod = node_from_bytes(&mut ctx.allocator, &reg_hex())?;
-    let pk_atom = ctx.allocator.new_atom(&s.pk_bytes).unwrap();
-    let ckpt_atom = ctx.allocator.new_atom(&s.chk_coin_id).unwrap();
-    let wdc_mod_atom = ctx.allocator.new_atom(&[0x55u8; 32]).unwrap();
-    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut ctx.allocator, 24_000);
+    let reg_mod = node_from_bytes(&mut *ctx, &reg_hex())?;
+    let pk_atom = ctx.new_atom(&s.pk_bytes).unwrap();
+    let ckpt_atom = ctx.new_atom(&s.chk_coin_id).unwrap();
+    let wdc_mod_atom = ctx.new_atom(&[0x55u8; 32]).unwrap();
+    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut *ctx, 24_000);
     let reg_curried = clvm_curry(
-        &mut ctx.allocator,
+        &mut *ctx,
         reg_mod,
         &[pk_atom, ckpt_atom, wdc_mod_atom, wdc_delay_atom],
     );
-    let reg_sol = build_reg_solution(&mut ctx.allocator, epoch, &dest, COLLATERAL_AMOUNT);
+    let reg_sol = build_reg_solution(&mut *ctx, epoch, &dest, COLLATERAL_AMOUNT);
     ctx.spend(s.reg_coin, Spend::new(reg_curried, reg_sol))?;
 
     s.sim.spend_coins(ctx.take(), &[])?;
@@ -580,8 +589,8 @@ fn vv_req_reg_010_epoch_mismatch_rejected() -> anyhow::Result<()> {
     let wrong_epoch: u64 = 5; // Registration coin's claimed epoch
 
     // Spend 1: Checkpoint query at real epoch (0)
-    let chk_mod = node_from_bytes(&mut ctx.allocator, &chk_inner_hex())?;
-    let chk_singleton_mod = ctx.singleton_top_layer()?;
+    let chk_mod = node_from_bytes(&mut *ctx, &chk_inner_hex())?;
+    let chk_singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let chk_puzzle = CurriedProgram {
         program: chk_singleton_mod,
         args: SingletonArgs {
@@ -589,15 +598,9 @@ fn vv_req_reg_010_epoch_mismatch_rejected() -> anyhow::Result<()> {
             inner_puzzle: chk_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
-    let chk_inner_sol = build_chk_query_env(
-        &mut ctx.allocator,
-        &empty_leaf,
-        real_epoch,
-        0,
-        &s.pk_bytes,
-        false,
-    );
+    .to_clvm(&mut *ctx)?;
+    let chk_inner_sol =
+        build_chk_query_env(&mut *ctx, &empty_leaf, real_epoch, 0, &s.pk_bytes, false);
     let chk_sol = SingletonSolution {
         lineage_proof: Proof::Eve(EveProof {
             parent_parent_coin_info: s.chk_p2_coin_id,
@@ -606,22 +609,22 @@ fn vv_req_reg_010_epoch_mismatch_rejected() -> anyhow::Result<()> {
         amount: 1,
         inner_solution: chk_inner_sol,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
     ctx.spend(s.chk_singleton, Spend::new(chk_puzzle, chk_sol))?;
 
     // Spend 2: Registration coin with WRONG epoch (5)
-    let reg_mod = node_from_bytes(&mut ctx.allocator, &reg_hex())?;
-    let pk_atom = ctx.allocator.new_atom(&s.pk_bytes).unwrap();
-    let ckpt_atom = ctx.allocator.new_atom(&s.chk_coin_id).unwrap();
-    let wdc_mod_atom = ctx.allocator.new_atom(&[0x55u8; 32]).unwrap();
-    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut ctx.allocator, 24_000);
+    let reg_mod = node_from_bytes(&mut *ctx, &reg_hex())?;
+    let pk_atom = ctx.new_atom(&s.pk_bytes).unwrap();
+    let ckpt_atom = ctx.new_atom(&s.chk_coin_id).unwrap();
+    let wdc_mod_atom = ctx.new_atom(&[0x55u8; 32]).unwrap();
+    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut *ctx, 24_000);
     let reg_curried = clvm_curry(
-        &mut ctx.allocator,
+        &mut *ctx,
         reg_mod,
         &[pk_atom, ckpt_atom, wdc_mod_atom, wdc_delay_atom],
     );
     let dest = [0xDD; 32];
-    let reg_sol = build_reg_solution(&mut ctx.allocator, wrong_epoch, &dest, COLLATERAL_AMOUNT);
+    let reg_sol = build_reg_solution(&mut *ctx, wrong_epoch, &dest, COLLATERAL_AMOUNT);
     ctx.spend(s.reg_coin, Spend::new(reg_curried, reg_sol))?;
 
     let result = s.sim.spend_coins(ctx.take(), &[]);

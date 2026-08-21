@@ -27,13 +27,32 @@ fn vv_req_setup_002_crate_name() {
     );
 }
 
-/// Verifies `package.version = "0.1.0"`.
+/// Verifies `package.version` is a SemVer `major.minor.patch` string.
+///
+/// The version deliberately is not pinned to a literal: it changes on every
+/// release, so asserting one value makes this test fail by construction from
+/// the first release onward. What SETUP-002 requires is that a well-formed
+/// version is declared, which is what is checked here.
 #[test]
 fn vv_req_setup_002_crate_version() {
+    let declared = env!("CARGO_PKG_VERSION");
+    let parts: Vec<&str> = declared.split('.').collect();
+    assert_eq!(
+        parts.len(),
+        3,
+        "SETUP-002: version must be SemVer major.minor.patch, got {declared:?}"
+    );
+    for part in parts {
+        assert!(
+            !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()),
+            "SETUP-002: each version component must be numeric, got {declared:?}"
+        );
+    }
+
     let toml = cargo_toml();
     assert!(
-        toml.contains("version") && toml.contains("\"0.1.0\""),
-        "SETUP-002: Cargo.toml must set version = \"0.1.0\""
+        toml.contains(&format!("\"{declared}\"")),
+        "SETUP-002: Cargo.toml must declare version = \"{declared}\""
     );
 }
 

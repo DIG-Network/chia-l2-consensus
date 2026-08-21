@@ -12,7 +12,7 @@
 //! for the full NetworkConfig specification.
 
 use chia_protocol::{Bytes32, Coin};
-use chia_puzzles::singleton::SINGLETON_LAUNCHER_PUZZLE_HASH;
+use chia_puzzles::SINGLETON_LAUNCHER_HASH;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::{ConsensusError, ConsensusResult};
@@ -161,7 +161,7 @@ impl NetworkConfig {
 
     /// Derive the checkpoint singleton coin ID from the launcher ID.
     ///
-    /// The singleton coin ID is: `sha256(launcher_id + SINGLETON_LAUNCHER_PUZZLE_HASH + 1)`.
+    /// The singleton coin ID is: `sha256(launcher_id + SINGLETON_LAUNCHER_HASH + 1)`.
     /// This is the coin ID used in registration coin assertions and announcement
     /// binding. It changes every checkpoint spend (new coin created).
     ///
@@ -173,7 +173,7 @@ impl NetworkConfig {
     pub fn checkpoint_singleton_id(&self) -> Bytes32 {
         let launcher_coin = Coin::new(
             self.checkpoint_launcher_id,
-            SINGLETON_LAUNCHER_PUZZLE_HASH.into(),
+            SINGLETON_LAUNCHER_HASH.into(),
             1, // singleton amount
         );
         launcher_coin.coin_id()

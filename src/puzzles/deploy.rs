@@ -8,7 +8,7 @@
 //! See [spec-deployment-runbook.md](../../docs/resources/spec-deployment-runbook.md).
 
 use chia_protocol::{Bytes32, Coin};
-use chia_puzzles::singleton::SINGLETON_LAUNCHER_PUZZLE_HASH;
+use chia_puzzles::SINGLETON_LAUNCHER_HASH;
 use chia_sdk_driver::{Launcher, SpendContext, StandardLayer};
 
 use crate::config::NetworkConfig;
@@ -19,17 +19,13 @@ use crate::puzzles::registration_coin::REGISTRATION_COIN_MOD_HASH_HEX;
 
 /// Derive the singleton launcher ID from a parent coin ID and amount.
 ///
-/// The launcher coin's ID is `sha256(parent_coin_id + SINGLETON_LAUNCHER_PUZZLE_HASH + amount)`.
+/// The launcher coin's ID is `sha256(parent_coin_id + SINGLETON_LAUNCHER_HASH + amount)`.
 /// This lets you predict the launcher ID before actually spending the parent coin.
 ///
 /// This is the permanent identifier for the singleton — it never changes
 /// across spends of the singleton.
 pub fn derive_launcher_id(parent_coin_id: Bytes32, amount: u64) -> Bytes32 {
-    let launcher_coin = Coin::new(
-        parent_coin_id,
-        SINGLETON_LAUNCHER_PUZZLE_HASH.into(),
-        amount,
-    );
+    let launcher_coin = Coin::new(parent_coin_id, SINGLETON_LAUNCHER_HASH.into(), amount);
     launcher_coin.coin_id()
 }
 

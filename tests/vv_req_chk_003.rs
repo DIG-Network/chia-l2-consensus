@@ -409,7 +409,7 @@ fn vv_req_chk_003_checkpoint_path_executes() {
             assert!(has_opcode(&conditions, CREATE_COIN_ANNOUNCEMENT));
         }
         Err(e) => {
-            let err_msg = e.1.to_string();
+            let err_msg = e.to_string();
             // Expected: pairing or BLS failure (test data isn't real crypto)
             assert!(
                 err_msg.contains("bls")

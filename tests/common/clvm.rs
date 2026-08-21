@@ -46,7 +46,7 @@ pub fn run_puzzle(
     a: &mut Allocator,
     puzzle: NodePtr,
     solution: NodePtr,
-) -> Result<(u64, NodePtr), clvmr::reduction::EvalErr> {
+) -> Result<(u64, NodePtr), clvmr::error::EvalErr> {
     let Reduction(cost, output) = run_program(a, &ChiaDialect::new(0), puzzle, solution, MAX_COST)?;
     Ok((cost, output))
 }

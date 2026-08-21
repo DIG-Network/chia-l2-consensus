@@ -8,12 +8,19 @@
 //! A full E2E simulator test exercises the complete two-phase collateral
 //! recovery lifecycle: register → exit → delay coin → release.
 //!
-//! ## Simulator Limitation
+//! ## Simulator Enforcement
 //!
-//! chia-sdk-test v0.18 Simulator does NOT enforce ASSERT_HEIGHT_RELATIVE.
-//! The delay coin spend succeeds immediately in the simulator. Actual delay
-//! enforcement is by the Chia full node at block inclusion time. The test
-//! verifies the correct CLVM conditions are emitted; the network enforces them.
+//! chia-sdk-test v0.34 Simulator DOES enforce ASSERT_HEIGHT_RELATIVE, so the
+//! delay is checked here rather than only by a full node at block inclusion.
+//!
+//! This note previously said the opposite, and that was true of v0.18 — which is
+//! why the pre-delay-spend case below was left unchecked and this test passed for
+//! sixteen SDK minors without ever exercising the timelock. The assertions are now
+//! load-bearing: do not remove them on the authority of a stale limitation note.
+//!
+//! The rejection is asserted on the specific `AssertHeightRelativeFailed`, not a
+//! bare `is_err()` — a bare error check also passes on a malformed spend, which
+//! would leave the timelock unverified in a different way.
 //!
 //! ## Acceptance Criteria Coverage
 //!
@@ -21,16 +28,21 @@
 //! - [x] Destination coin amount == original collateral (after delay coin spend)
 //! - [x] No direct destination coin from registration coin spend
 //! - [x] Third-party release succeeds (no signature needed)
-//! - [ ] Spend before delay rejected (simulator doesn't enforce — see note)
+//! - [x] Spend before delay rejected (bounded from both sides; asserts the specific
+//!       `AssertHeightRelativeFailed`)
 
 mod common;
 
-use chia_protocol::Bytes32;
-use chia_puzzles::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
-use chia_puzzles::{EveProof, Proof};
+// ErrorCode reached through the SDK facade rather than adding a direct
+// chia-consensus dependency for one test assertion.
+use chia_protocol::{Bytes32, CoinSpend};
+use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
+use chia_puzzle_types::{EveProof, Proof};
+use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
 use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
-use chia_sdk_test::Simulator;
-use chia_wallet_sdk::Conditions;
+use chia_sdk_test::{BlsPair, BlsPairWithCoin, Simulator, SimulatorError};
+use chia_sdk_types::Conditions;
+use chia_wallet_sdk::chia::consensus::validation_error::ErrorCode;
 use clvm_traits::ToClvm;
 use clvm_utils::CurriedProgram;
 use clvmr::serde::node_from_bytes;
@@ -283,7 +295,12 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
 
     // ── Phase 0: Deploy checkpoint singleton ──────────────────────────
     let ctx = &mut SpendContext::new();
-    let (chk_sk, chk_pk, _, chk_p2) = sim.new_p2(1)?;
+    let BlsPairWithCoin {
+        sk: chk_sk,
+        pk: chk_pk,
+        coin: chk_p2,
+        ..
+    } = sim.bls(1);
     let chk_launcher = Launcher::new(chk_p2.coin_id(), 1);
     let chk_launcher_id = chk_launcher.coin().coin_id();
     let (chk_conds, chk_singleton) = chk_launcher.spend(ctx, chk_inner_mod_hash(), ())?;
@@ -292,7 +309,12 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
 
     // ── Phase 0: Deploy network coin + register validator ─────────────
     let ctx = &mut SpendContext::new();
-    let (net_sk, net_pk, _, net_p2) = sim.new_p2(1)?;
+    let BlsPairWithCoin {
+        sk: net_sk,
+        pk: net_pk,
+        coin: net_p2,
+        ..
+    } = sim.bls(1);
     let net_launcher = Launcher::new(net_p2.coin_id(), 1);
     let net_launcher_id = net_launcher.coin().coin_id();
     let (net_conds, net_singleton) = net_launcher.spend(ctx, net_inner_mod_hash(), ())?;
@@ -300,12 +322,12 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
     sim.spend_coins(ctx.take(), &[net_sk])?;
 
     let ctx = &mut SpendContext::new();
-    let validator_sk = chia_sdk_test::test_secret_key()?;
+    let validator_sk = BlsPair::new(0).sk;
     let pk_bytes = validator_sk.public_key().to_bytes();
     let chk_coin_id: [u8; 32] = chk_singleton.coin_id().into();
 
-    let inner_mod = node_from_bytes(&mut ctx.allocator, &net_inner_hex())?;
-    let singleton_mod = ctx.singleton_top_layer()?;
+    let inner_mod = node_from_bytes(&mut *ctx, &net_inner_hex())?;
+    let singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let net_puzzle = CurriedProgram {
         program: singleton_mod,
         args: SingletonArgs {
@@ -313,8 +335,8 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
             inner_puzzle: inner_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
-    let inner_sol = build_net_env(&mut ctx.allocator, &chk_coin_id, &pk_bytes);
+    .to_clvm(&mut *ctx)?;
+    let inner_sol = build_net_env(&mut *ctx, &chk_coin_id, &pk_bytes);
     let net_sol = SingletonSolution {
         lineage_proof: Proof::Eve(EveProof {
             parent_parent_coin_info: net_p2.coin_id(),
@@ -323,9 +345,14 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
         amount: 1,
         inner_solution: inner_sol,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
     ctx.spend(net_singleton, Spend::new(net_puzzle, net_sol))?;
-    let (fund_sk, fund_pk, _, fund_coin) = sim.new_p2(COLLATERAL_AMOUNT)?;
+    let BlsPairWithCoin {
+        sk: fund_sk,
+        pk: fund_pk,
+        coin: fund_coin,
+        ..
+    } = sim.bls(COLLATERAL_AMOUNT);
     StandardLayer::new(fund_pk).spend(ctx, fund_coin, Conditions::new())?;
     sim.spend_coins(ctx.take(), &[validator_sk.clone(), fund_sk])?;
 
@@ -344,8 +371,8 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
     let validator_count: u64 = 0;
 
     // Spend 1: Checkpoint membership query
-    let chk_mod = node_from_bytes(&mut ctx.allocator, &chk_inner_hex())?;
-    let chk_singleton_mod = ctx.singleton_top_layer()?;
+    let chk_mod = node_from_bytes(&mut *ctx, &chk_inner_hex())?;
+    let chk_singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let chk_puzzle = CurriedProgram {
         program: chk_singleton_mod,
         args: SingletonArgs {
@@ -353,9 +380,9 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
             inner_puzzle: chk_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
     let chk_inner_sol = build_chk_query_env(
-        &mut ctx.allocator,
+        &mut *ctx,
         &empty_leaf,
         epoch,
         validator_count,
@@ -370,23 +397,23 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
         amount: 1,
         inner_solution: chk_inner_sol,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
     ctx.spend(chk_singleton, Spend::new(chk_puzzle, chk_sol))?;
 
     // Spend 2: Registration coin (WDC-004: creates delay coin)
-    let reg_mod = node_from_bytes(&mut ctx.allocator, &reg_hex())?;
-    let pk_atom = ctx.allocator.new_atom(&pk_bytes).unwrap();
-    let ckpt_atom = ctx.allocator.new_atom(&chk_coin_id).unwrap();
+    let reg_mod = node_from_bytes(&mut *ctx, &reg_hex())?;
+    let pk_atom = ctx.new_atom(&pk_bytes).unwrap();
+    let ckpt_atom = ctx.new_atom(&chk_coin_id).unwrap();
     // Use real WDC mod hash — must match what network coin used
-    let wdc_mod_atom = ctx.allocator.new_atom(&wdc_mod_hash_bytes()).unwrap();
-    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut ctx.allocator, WDC_DELAY_BLOCKS);
+    let wdc_mod_atom = ctx.new_atom(&wdc_mod_hash_bytes()).unwrap();
+    let wdc_delay_atom = common::clvm::u64_to_clvm(&mut *ctx, WDC_DELAY_BLOCKS);
     let reg_curried = clvm_curry(
-        &mut ctx.allocator,
+        &mut *ctx,
         reg_mod,
         &[pk_atom, ckpt_atom, wdc_mod_atom, wdc_delay_atom],
     );
     let dest = [0xDD; 32];
-    let reg_sol = build_reg_solution(&mut ctx.allocator, epoch, &dest, COLLATERAL_AMOUNT);
+    let reg_sol = build_reg_solution(&mut *ctx, epoch, &dest, COLLATERAL_AMOUNT);
     ctx.spend(reg_coin, Spend::new(reg_curried, reg_sol))?;
 
     let result = sim.spend_coins(ctx.take(), &[]);
@@ -405,7 +432,15 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
         delay_coin_state.is_some(),
         "WDC-009: Delay coin must be created with COLLATERAL_AMOUNT"
     );
-    let delay_coin = delay_coin_state.unwrap().coin;
+    let delay_coin_state = delay_coin_state.unwrap();
+    let delay_coin = delay_coin_state.coin;
+    // ASSERT_HEIGHT_RELATIVE is measured from the height the coin was created
+    // at, not from the current tip, so read it off the coin state.
+    let delay_coin_created_height = u64::from(
+        delay_coin_state
+            .created_height
+            .expect("WDC-009: delay coin must have a created height"),
+    );
 
     // Verify: delay coin puzzle hash is NOT the raw destination
     let dest_bytes32: Bytes32 = dest.into();
@@ -415,26 +450,52 @@ fn vv_req_wdc_009_two_phase_collateral_recovery() -> anyhow::Result<()> {
     );
 
     // ── Phase 2: Spend delay coin → release funds ─────────────────────
-    // NOTE: Simulator does NOT enforce ASSERT_HEIGHT_RELATIVE.
-    // The spend succeeds immediately. Actual delay enforcement is by Chia node.
-    let ctx = &mut SpendContext::new();
-    let wdc_mod = node_from_bytes(&mut ctx.allocator, &wdc_hex())?;
-    let dest_atom = ctx.allocator.new_atom(&dest).unwrap();
-    let amt_atom = common::clvm::u64_to_clvm(&mut ctx.allocator, COLLATERAL_AMOUNT);
-    let delay_atom = common::clvm::u64_to_clvm(&mut ctx.allocator, WDC_DELAY_BLOCKS);
-    let wdc_curried = clvm_curry(
-        &mut ctx.allocator,
-        wdc_mod,
-        &[dest_atom, amt_atom, delay_atom],
+    // The chia-sdk-test simulator enforces ASSERT_HEIGHT_RELATIVE, so the delay
+    // is exercised here rather than merely asserted on the emitted condition.
+    // Build the same spend twice and bound the delay from both sides: one block
+    // short must be rejected, exactly WDC_DELAY_BLOCKS must be accepted. A test
+    // that only spends after the delay cannot tell an enforced timelock from an
+    // ignored one.
+    let build_release_spend = |sim: &Simulator| -> anyhow::Result<Vec<CoinSpend>> {
+        let ctx = &mut SpendContext::new();
+        let wdc_mod = node_from_bytes(&mut **ctx, &wdc_hex())?;
+        let dest_atom = ctx.new_atom(&dest).unwrap();
+        let amt_atom = common::clvm::u64_to_clvm(&mut **ctx, COLLATERAL_AMOUNT);
+        let delay_atom = common::clvm::u64_to_clvm(&mut **ctx, WDC_DELAY_BLOCKS);
+        let wdc_curried = clvm_curry(&mut **ctx, wdc_mod, &[dest_atom, amt_atom, delay_atom]);
+        let nil_sol = ctx.nil();
+        ctx.spend(delay_coin, Spend::new(wdc_curried, nil_sol))?;
+        let _ = sim;
+        Ok(ctx.take())
+    };
+
+    while u64::from(sim.height()) < delay_coin_created_height + WDC_DELAY_BLOCKS - 1 {
+        sim.create_block();
+    }
+
+    // One block short of the delay: the timelock must still bite.
+    let too_early = sim.spend_coins(build_release_spend(&sim)?, &[]);
+    // Assert the specific rejection reason. Any error would satisfy `is_err`,
+    // including a malformed spend, which would make this half of the bound
+    // pass without the timelock being enforced at all.
+    assert!(
+        matches!(
+            too_early,
+            Err(SimulatorError::Validation(
+                ErrorCode::AssertHeightRelativeFailed
+            ))
+        ),
+        "WDC-009: release one block early must fail on the height timelock, got {:?}",
+        too_early.err()
     );
-    let nil_sol = ctx.allocator.nil();
-    ctx.spend(delay_coin, Spend::new(wdc_curried, nil_sol))?;
+
+    sim.create_block();
 
     // No signatures needed (WDC-007: permissionless)
-    let result = sim.spend_coins(ctx.take(), &[]);
+    let result = sim.spend_coins(build_release_spend(&sim)?, &[]);
     assert!(
         result.is_ok(),
-        "WDC-009: Delay coin release must succeed: {:?}",
+        "WDC-009: Delay coin release must succeed once the delay has elapsed: {:?}",
         result.err()
     );
 

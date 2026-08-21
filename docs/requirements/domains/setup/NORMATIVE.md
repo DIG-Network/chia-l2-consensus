@@ -13,7 +13,7 @@
 
 ## §2 Cargo.toml Configuration
 
-<a id="SETUP-002"></a>**SETUP-002** The crate MUST be named `chia-l2-consensus` with version `0.1.0` and edition `2021`. All dependencies MUST be pinned to specific versions to ensure reproducible builds.
+<a id="SETUP-002"></a>**SETUP-002** The crate MUST be named `chia-l2-consensus`, MUST declare a SemVer `major.minor.patch` version, and MUST use edition `2021`. All dependencies MUST be pinned to specific versions to ensure reproducible builds.
 > **Spec:** [`SETUP-002.md`](specs/SETUP-002.md)
 
 ---
