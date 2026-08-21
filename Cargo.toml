@@ -8,8 +8,9 @@ repository  = "https://github.com/DIG-Network/chia-l2-consensus"
 readme      = "README.md"
 
 [dependencies]
-# Chia — versions aligned with chia-wallet-sdk 0.18's internal chain (v0.15/v0.9)
-# to avoid type incompatibilities between main crate and SDK test infrastructure
+# Chia — versions aligned with the chia-wallet-sdk internal chain
+# to avoid type incompatibilities between main crate and SDK test infrastructure.
+# WIP: uplifting chia-wallet-sdk 0.18 -> 0.34 (dig_ecosystem#2610).
 chia-wallet-sdk = "0.18"
 chia-protocol   = "0.15"
 chia-puzzles    = "0.15"
