@@ -4,10 +4,13 @@
 //! ```rust
 //! mod common;
 //! use common::clvm::*;
+//! use common::puzzle_artifacts::*;
 //! use common::sim::*;
 //! ```
 
 #[allow(dead_code)]
 pub mod clvm;
+#[allow(dead_code)]
+pub mod puzzle_artifacts;
 #[allow(dead_code)]
 pub mod sim;
