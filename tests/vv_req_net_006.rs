@@ -49,10 +49,11 @@
 mod common;
 
 use chia_protocol::Bytes32;
-use chia_puzzles::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
-use chia_puzzles::{EveProof, LineageProof, Proof};
+use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
+use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
+use chia_puzzle_types::{EveProof, LineageProof, Proof};
 use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
-use chia_sdk_test::Simulator;
+use chia_sdk_test::{BlsPair, BlsPairWithCoin, Simulator};
 use chia_sdk_types::Conditions;
 use clvm_traits::ToClvm;
 use clvm_utils::CurriedProgram;
@@ -197,7 +198,7 @@ fn vv_req_net_006_inner_puzzle_flat_env() {
                 conditions.len()
             );
         }
-        Err(e) => panic!("NET-006: Inner puzzle FAILED: {}", e.1),
+        Err(e) => panic!("NET-006: Inner puzzle FAILED: {}", e),
     }
 }
 
@@ -215,7 +216,7 @@ fn vv_req_net_006_deploy_singleton() -> anyhow::Result<()> {
     // Inner puzzle = uncurried module. Hash = INNER_MOD_HASH.
     let inner_ph = net_inner_mod_hash();
 
-    let (sk, pk, _, p2_coin) = sim.new_p2(1)?;
+    let BlsPairWithCoin { sk, pk, coin: p2_coin, .. } = sim.bls(1);
     let launcher = Launcher::new(p2_coin.coin_id(), 1);
     let launcher_id = launcher.coin().coin_id();
     let (conds, singleton) = launcher.spend(ctx, inner_ph, ())?;
@@ -248,7 +249,7 @@ fn vv_req_net_006_register_validator() -> anyhow::Result<()> {
     // Deploy
     let ctx = &mut SpendContext::new();
     let inner_ph = net_inner_mod_hash();
-    let (p2_sk, p2_pk, _, p2_coin) = sim.new_p2(1)?;
+    let BlsPairWithCoin { sk: p2_sk, pk: p2_pk, coin: p2_coin, .. } = sim.bls(1);
     let launcher = Launcher::new(p2_coin.coin_id(), 1);
     let launcher_id = launcher.coin().coin_id();
     let (conds, singleton) = launcher.spend(ctx, inner_ph, ())?;
@@ -257,14 +258,14 @@ fn vv_req_net_006_register_validator() -> anyhow::Result<()> {
 
     // ── Register ────────────────────────────────────────────────────
     let ctx = &mut SpendContext::new();
-    let validator_sk = chia_sdk_test::test_secret_key()?;
+    let validator_sk = BlsPair::new(0).sk;
     let pk_bytes = validator_sk.public_key().to_bytes();
 
     // Load uncurried inner puzzle
-    let inner_mod = node_from_bytes(&mut ctx.allocator, &net_inner_hex())?;
+    let inner_mod = node_from_bytes(&mut *ctx, &net_inner_hex())?;
 
     // Build singleton outer puzzle: singleton_top_layer curried with (STRUCT, inner_mod)
-    let singleton_mod = ctx.singleton_top_layer()?;
+    let singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let singleton_puzzle = CurriedProgram {
         program: singleton_mod,
         args: SingletonArgs {
@@ -272,14 +273,14 @@ fn vv_req_net_006_register_validator() -> anyhow::Result<()> {
             inner_puzzle: inner_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
     // Build inner solution: flat list of ALL params
     let imh: [u8; 32] = net_inner_mod_hash().into();
     let rmh: [u8; 32] = reg_mod_hash().into();
     let ckpt: [u8; 32] = checkpoint_id.into();
     let inner_sol = build_flat_env(
-        &mut ctx.allocator,
+        &mut *ctx,
         &imh,
         &rmh,
         COLLATERAL_AMOUNT,
@@ -298,12 +299,12 @@ fn vv_req_net_006_register_validator() -> anyhow::Result<()> {
         amount: 1,
         inner_solution: inner_sol,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
     ctx.spend(singleton, Spend::new(singleton_puzzle, singleton_sol))?;
 
     // Fund collateral
-    let (fund_sk, fund_pk, _, fund_coin) = sim.new_p2(COLLATERAL_AMOUNT)?;
+    let BlsPairWithCoin { sk: fund_sk, pk: fund_pk, coin: fund_coin, .. } = sim.bls(COLLATERAL_AMOUNT);
     StandardLayer::new(fund_pk).spend(ctx, fund_coin, Conditions::new())?;
 
     let result = sim.spend_coins(ctx.take(), &[validator_sk.clone(), fund_sk]);
@@ -351,7 +352,7 @@ fn vv_req_net_006_sequential_registrations() -> anyhow::Result<()> {
     // Deploy
     let ctx = &mut SpendContext::new();
     let inner_ph = net_inner_mod_hash();
-    let (p2_sk, p2_pk, _, p2_coin) = sim.new_p2(1)?;
+    let BlsPairWithCoin { sk: p2_sk, pk: p2_pk, coin: p2_coin, .. } = sim.bls(1);
     let launcher = Launcher::new(p2_coin.coin_id(), 1);
     let launcher_id = launcher.coin().coin_id();
     let (conds, singleton) = launcher.spend(ctx, inner_ph, ())?;
@@ -372,8 +373,8 @@ fn vv_req_net_006_sequential_registrations() -> anyhow::Result<()> {
         };
         let pk_bytes = val_sk.public_key().to_bytes();
 
-        let inner_mod = node_from_bytes(&mut ctx.allocator, &net_inner_hex())?;
-        let singleton_mod = ctx.singleton_top_layer()?;
+        let inner_mod = node_from_bytes(&mut *ctx, &net_inner_hex())?;
+        let singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
         let singleton_puzzle = CurriedProgram {
             program: singleton_mod,
             args: SingletonArgs {
@@ -381,13 +382,13 @@ fn vv_req_net_006_sequential_registrations() -> anyhow::Result<()> {
                 inner_puzzle: inner_mod,
             },
         }
-        .to_clvm(&mut ctx.allocator)?;
+        .to_clvm(&mut *ctx)?;
 
         let imh: [u8; 32] = net_inner_mod_hash().into();
         let rmh: [u8; 32] = reg_mod_hash().into();
         let ckpt: [u8; 32] = checkpoint_id.into();
         let inner_sol = build_flat_env(
-            &mut ctx.allocator,
+            &mut *ctx,
             &imh,
             &rmh,
             COLLATERAL_AMOUNT,
@@ -402,11 +403,11 @@ fn vv_req_net_006_sequential_registrations() -> anyhow::Result<()> {
             amount: 1,
             inner_solution: inner_sol,
         }
-        .to_clvm(&mut ctx.allocator)?;
+        .to_clvm(&mut *ctx)?;
 
         ctx.spend(current, Spend::new(singleton_puzzle, singleton_sol))?;
 
-        let (fund_sk, fund_pk, _, fund_coin) = sim.new_p2(COLLATERAL_AMOUNT)?;
+        let BlsPairWithCoin { sk: fund_sk, pk: fund_pk, coin: fund_coin, .. } = sim.bls(COLLATERAL_AMOUNT);
         StandardLayer::new(fund_pk).spend(ctx, fund_coin, Conditions::new())?;
 
         let result = sim.spend_coins(ctx.take(), &[val_sk, fund_sk]);

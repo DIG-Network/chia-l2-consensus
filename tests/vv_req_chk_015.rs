@@ -399,7 +399,7 @@ fn vv_req_chk_015_network_id_binding_scalar_mismatch() {
         Ok(_) => {} // Unexpected success is fine too
         Err(e) => {
             // Should be a crypto/pairing error, NOT an assert error
-            let msg = e.1.to_string();
+            let msg = e.to_string();
             assert!(
                 msg.contains("bls")
                     || msg.contains("pairing")
@@ -569,7 +569,7 @@ fn vv_req_chk_015_invalid_proof_rejected() {
     );
 
     // Verify the error is from the crypto layer (BLS/pairing), not a parse error
-    let err_msg = result.unwrap_err().1.to_string();
+    let err_msg = result.unwrap_err().to_string();
     assert!(
         err_msg.contains("bls")
             || err_msg.contains("pairing")

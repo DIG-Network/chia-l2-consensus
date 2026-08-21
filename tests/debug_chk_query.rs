@@ -133,7 +133,7 @@ fn debug_chk_both_paths() {
 
         match run_program(&mut a, &ChiaDialect::new(0), puzzle, env, 11_000_000_000) {
             Ok(Reduction(cost, _)) => println!("  checkpoint -> OK cost={}", cost),
-            Err(e) => println!("  checkpoint -> ERR: {}", e.1),
+            Err(e) => println!("  checkpoint -> ERR: {e}"),
         }
     }
 
@@ -185,7 +185,7 @@ fn debug_chk_both_paths() {
 
         match run_program(&mut a, &ChiaDialect::new(0), puzzle, env, 11_000_000_000) {
             Ok(Reduction(cost, _)) => println!("  query -> OK cost={}", cost),
-            Err(e) => println!("  query -> ERR: {}", e.1),
+            Err(e) => println!("  query -> ERR: {e}"),
         }
     }
 

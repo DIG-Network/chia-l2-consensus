@@ -477,7 +477,7 @@ fn vv_req_chk_008_pairing_with_blst_direct() {
                 b.as_ref().to_vec()
             }
             Err(e) => {
-                eprintln!("CLVM IC[1]*s1 FAILED: {}", e.1);
+                eprintln!("CLVM IC[1]*s1 FAILED: {}", e);
                 vec![]
             }
         };
@@ -572,7 +572,7 @@ fn vv_req_chk_008_pairing_with_blst_direct() {
                     eprintln!("FULL vk_input MISMATCH! Puzzle computes different vk_input.");
                 }
             }
-            Err(e) => eprintln!("CLVM vk_input FAILED: {}", e.1),
+            Err(e) => eprintln!("CLVM vk_input FAILED: {}", e),
         }
     }
 
@@ -594,7 +594,7 @@ fn vv_req_chk_008_pairing_with_blst_direct() {
                 &b.as_ref()[..4.min(b.as_ref().len())]
             );
         }
-        Err(e) => eprintln!("path 2 FAILED: {}", e.1),
+        Err(e) => eprintln!("path 2 FAILED: {}", e),
     }
 
     // STEP 2: Test g1_negate(alpha) — path 11
@@ -616,7 +616,7 @@ fn vv_req_chk_008_pairing_with_blst_direct() {
             let b = a.atom(*n);
             eprintln!("g1_negate(alpha) = {} bytes", b.as_ref().len());
         }
-        Err(e) => eprintln!("g1_negate(alpha) FAILED: {}", e.1),
+        Err(e) => eprintln!("g1_negate(alpha) FAILED: {}", e),
     }
 
     // STEP 3: Full pairing
@@ -630,7 +630,7 @@ fn vv_req_chk_008_pairing_with_blst_direct() {
 
     match &result {
         Ok(_) => eprintln!("Direct pairing check PASSED with ark-computed vk_input"),
-        Err(e) => eprintln!("Direct pairing check FAILED: {}", e.1),
+        Err(e) => eprintln!("Direct pairing check FAILED: {}", e),
     }
     assert!(
         result.is_ok(),
@@ -926,7 +926,7 @@ fn vv_req_chk_008_checkpoint_path_with_real_proof() {
                 conditions.len()
             );
         }
-        Err(e) => panic!("CHK-008: Checkpoint path FAILED: {}", e.1),
+        Err(e) => panic!("CHK-008: Checkpoint path FAILED: {}", e),
     }
 }
 
@@ -935,10 +935,11 @@ fn vv_req_chk_008_checkpoint_path_with_real_proof() {
 #[test]
 fn vv_req_chk_008_checkpoint_in_simulator() -> anyhow::Result<()> {
     use chia_protocol::Bytes32;
-    use chia_puzzles::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
-    use chia_puzzles::{EveProof, Proof};
+    use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
+use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
+    use chia_puzzle_types::{EveProof, Proof};
     use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
-    use chia_sdk_test::Simulator;
+    use chia_sdk_test::{BlsPairWithCoin, Simulator};
     use clvm_traits::ToClvm;
     use clvm_utils::CurriedProgram;
 
@@ -1023,7 +1024,7 @@ fn vv_req_chk_008_checkpoint_in_simulator() -> anyhow::Result<()> {
     // ── Deploy checkpoint singleton ──────────────────────────────────
     let mut sim = Simulator::new();
     let ctx = &mut SpendContext::new();
-    let (p2_sk, p2_pk, _, p2_coin) = sim.new_p2(1)?;
+    let BlsPairWithCoin { sk: p2_sk, pk: p2_pk, coin: p2_coin, .. } = sim.bls(1);
     let launcher = Launcher::new(p2_coin.coin_id(), 1);
     let launcher_id = launcher.coin().coin_id();
     let (conds, chk_singleton) = launcher.spend(ctx, inner_ph, ())?;
@@ -1040,7 +1041,7 @@ fn vv_req_chk_008_checkpoint_in_simulator() -> anyhow::Result<()> {
 
     // Build the full checkpoint inner solution (all 19 params as flat list)
     let chk_inner_sol = build_chk_path_env(
-        &mut ctx.allocator,
+        &mut *ctx,
         &inner_mod_hash,
         &vk_alpha,
         &vk_beta,
@@ -1065,8 +1066,8 @@ fn vv_req_chk_008_checkpoint_in_simulator() -> anyhow::Result<()> {
     );
 
     // Build singleton outer puzzle (uncurried inner mod)
-    let chk_mod = node_from_bytes(&mut ctx.allocator, &hex::decode(CHK_HEX.trim()).unwrap())?;
-    let singleton_mod = ctx.singleton_top_layer()?;
+    let chk_mod = node_from_bytes(&mut *ctx, &hex::decode(CHK_HEX.trim()).unwrap())?;
+    let singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let chk_puzzle = CurriedProgram {
         program: singleton_mod,
         args: SingletonArgs {
@@ -1074,7 +1075,7 @@ fn vv_req_chk_008_checkpoint_in_simulator() -> anyhow::Result<()> {
             inner_puzzle: chk_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
     let chk_sol = SingletonSolution {
         lineage_proof: Proof::Eve(EveProof {
@@ -1084,7 +1085,7 @@ fn vv_req_chk_008_checkpoint_in_simulator() -> anyhow::Result<()> {
         amount: 1,
         inner_solution: chk_inner_sol,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
     ctx.spend(chk_singleton, Spend::new(chk_puzzle, chk_sol))?;
 
@@ -1120,10 +1121,11 @@ fn vv_req_chk_008_checkpoint_in_simulator() -> anyhow::Result<()> {
 #[test]
 fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
     use chia_protocol::Bytes32;
-    use chia_puzzles::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
-    use chia_puzzles::{EveProof, LineageProof, Proof};
+    use chia_puzzle_types::singleton::{SingletonArgs, SingletonSolution, SingletonStruct};
+    use chia_puzzle_types::{EveProof, LineageProof, Proof};
+    use chia_puzzles::SINGLETON_TOP_LAYER_V1_1;
     use chia_sdk_driver::{Launcher, Spend, SpendContext, StandardLayer};
-    use chia_sdk_test::Simulator;
+    use chia_sdk_test::{BlsPairWithCoin, Simulator};
     use clvm_traits::ToClvm;
     use clvm_utils::{curry_tree_hash, tree_hash, CurriedProgram, TreeHash};
 
@@ -1158,7 +1160,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
     // ── Deploy checkpoint singleton ──────────────────────────────────
     let mut sim = Simulator::new();
     let ctx = &mut SpendContext::new();
-    let (p2_sk, p2_pk, _, p2_coin) = sim.new_p2(1)?;
+    let BlsPairWithCoin { sk: p2_sk, pk: p2_pk, coin: p2_coin, .. } = sim.bls(1);
     let launcher = Launcher::new(p2_coin.coin_id(), 1);
     let launcher_id = launcher.coin().coin_id();
     let inner_ph: Bytes32 = inner_mod_hash.into();
@@ -1323,7 +1325,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
     // First spend uses uncurried module + all 19 params (eve proof)
     let ctx = &mut SpendContext::new();
     let chk_inner_sol_1 = build_chk_path_env(
-        &mut ctx.allocator,
+        &mut *ctx,
         &inner_mod_hash,
         &vk_alpha,
         &vk_beta,
@@ -1347,8 +1349,8 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
         &scalars_1,
     );
 
-    let chk_mod = node_from_bytes(&mut ctx.allocator, &hex::decode(CHK_HEX.trim()).unwrap())?;
-    let singleton_mod = ctx.singleton_top_layer()?;
+    let chk_mod = node_from_bytes(&mut *ctx, &hex::decode(CHK_HEX.trim()).unwrap())?;
+    let singleton_mod = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let chk_puzzle_1 = CurriedProgram {
         program: singleton_mod,
         args: SingletonArgs {
@@ -1356,7 +1358,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
             inner_puzzle: chk_mod,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
     let chk_sol_1 = SingletonSolution {
         lineage_proof: Proof::Eve(EveProof {
@@ -1366,7 +1368,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
         amount: 1,
         inner_solution: chk_inner_sol_1,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
     ctx.spend(singleton_coin, Spend::new(chk_puzzle_1, chk_sol_1))?;
     sim.spend_coins(ctx.take(), &[])?;
@@ -1419,47 +1421,47 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
     let ctx = &mut SpendContext::new();
 
     // Curry the module with epoch-1 state
-    let chk_mod_2 = node_from_bytes(&mut ctx.allocator, &hex::decode(CHK_HEX.trim()).unwrap())?;
-    let nil = ctx.allocator.nil();
+    let chk_mod_2 = node_from_bytes(&mut *ctx, &hex::decode(CHK_HEX.trim()).unwrap())?;
+    let nil = ctx.nil();
 
     // Build curried args as CLVM nodes (nil-terminated structs)
-    let imh_n = ctx.allocator.new_atom(&inner_mod_hash).unwrap();
-    let va = ctx.allocator.new_atom(&vk_alpha).unwrap();
-    let vb = ctx.allocator.new_atom(&vk_beta).unwrap();
-    let vg = ctx.allocator.new_atom(&vk_gamma).unwrap();
-    let vd = ctx.allocator.new_atom(&vk_delta).unwrap();
-    let vk_n = ctx.allocator.new_pair(vd, nil).unwrap();
-    let vk_n = ctx.allocator.new_pair(vg, vk_n).unwrap();
-    let vk_n = ctx.allocator.new_pair(vb, vk_n).unwrap();
-    let vk_n = ctx.allocator.new_pair(va, vk_n).unwrap();
+    let imh_n = ctx.new_atom(&inner_mod_hash).unwrap();
+    let va = ctx.new_atom(&vk_alpha).unwrap();
+    let vb = ctx.new_atom(&vk_beta).unwrap();
+    let vg = ctx.new_atom(&vk_gamma).unwrap();
+    let vd = ctx.new_atom(&vk_delta).unwrap();
+    let vk_n = ctx.new_pair(vd, nil).unwrap();
+    let vk_n = ctx.new_pair(vg, vk_n).unwrap();
+    let vk_n = ctx.new_pair(vb, vk_n).unwrap();
+    let vk_n = ctx.new_pair(va, vk_n).unwrap();
 
     let ic_ns: Vec<_> = ic
         .iter()
-        .map(|p| ctx.allocator.new_atom(p.as_slice()).unwrap())
+        .map(|p| ctx.new_atom(p.as_slice()).unwrap())
         .collect();
     let mut ic_n = nil;
     for i in (0..7).rev() {
-        ic_n = ctx.allocator.new_pair(ic_ns[i], ic_n).unwrap();
+        ic_n = ctx.new_pair(ic_ns[i], ic_n).unwrap();
     }
 
-    let td_n = common::clvm::u64_to_clvm(&mut ctx.allocator, tree_depth);
-    let elh_n = ctx.allocator.new_atom(&empty_leaf_hash).unwrap();
-    let ncli_n = ctx.allocator.new_atom(&[0x00u8; 32]).unwrap(); // CHK-012
+    let td_n = common::clvm::u64_to_clvm(&mut *ctx, tree_depth);
+    let elh_n = ctx.new_atom(&empty_leaf_hash).unwrap();
+    let ncli_n = ctx.new_atom(&[0x00u8; 32]).unwrap(); // CHK-012
 
     // Epoch 1 state
-    let sr_n = ctx.allocator.new_atom(&new_sr_1).unwrap();
-    let ep_n = common::clvm::u64_to_clvm(&mut ctx.allocator, new_epoch_1);
-    let vmr_n = ctx.allocator.new_atom(&new_vmr_1).unwrap();
-    let vc_n = common::clvm::u64_to_clvm(&mut ctx.allocator, new_vc_1);
-    let state_n = ctx.allocator.new_pair(vc_n, nil).unwrap();
-    let state_n = ctx.allocator.new_pair(vmr_n, state_n).unwrap();
-    let state_n = ctx.allocator.new_pair(ep_n, state_n).unwrap();
-    let state_n = ctx.allocator.new_pair(sr_n, state_n).unwrap();
+    let sr_n = ctx.new_atom(&new_sr_1).unwrap();
+    let ep_n = common::clvm::u64_to_clvm(&mut *ctx, new_epoch_1);
+    let vmr_n = ctx.new_atom(&new_vmr_1).unwrap();
+    let vc_n = common::clvm::u64_to_clvm(&mut *ctx, new_vc_1);
+    let state_n = ctx.new_pair(vc_n, nil).unwrap();
+    let state_n = ctx.new_pair(vmr_n, state_n).unwrap();
+    let state_n = ctx.new_pair(ep_n, state_n).unwrap();
+    let state_n = ctx.new_pair(sr_n, state_n).unwrap();
 
     // Curry: (a (q . module) (c (q . imh) (c (q . vk) (c (q . ic) (c (q . td) (c (q . elh) (c (q . state) 1)))))))
     // Build manually because CurriedProgram with &[NodePtr] doesn't use curry pattern
     let curried_inner = {
-        let a = &mut ctx.allocator;
+        let a = &mut *ctx;
         let one = a.new_atom(&[1]).unwrap(); // path 1 = solution
         let q_op = a.new_atom(&[1]).unwrap(); // quote
         let a_op = a.new_atom(&[2]).unwrap(); // apply
@@ -1483,7 +1485,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
 
     // Build solution with just the 13 non-curried params
     let inner_sol_2 = build_solution(
-        &mut ctx.allocator,
+        &mut *ctx,
         &proof_2[0..48].try_into().unwrap(),
         &proof_2[48..144].try_into().unwrap(),
         &proof_2[144..192].try_into().unwrap(),
@@ -1496,7 +1498,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
     );
 
     // Wrap in singleton
-    let singleton_mod_2 = ctx.singleton_top_layer()?;
+    let singleton_mod_2 = node_from_bytes(&mut *ctx, &SINGLETON_TOP_LAYER_V1_1)?;
     let chk_puzzle_2 = CurriedProgram {
         program: singleton_mod_2,
         args: SingletonArgs {
@@ -1504,7 +1506,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
             inner_puzzle: curried_inner,
         },
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
     // Lineage proof: parent was the first singleton (uncurried inner)
     let chk_sol_2 = SingletonSolution {
@@ -1516,7 +1518,7 @@ fn vv_req_chk_008_two_epoch_e2e() -> anyhow::Result<()> {
         amount: 1,
         inner_solution: inner_sol_2,
     }
-    .to_clvm(&mut ctx.allocator)?;
+    .to_clvm(&mut *ctx)?;
 
     ctx.spend(singleton_2, Spend::new(chk_puzzle_2, chk_sol_2))?;
 
@@ -1674,7 +1676,7 @@ fn vv_req_chk_008_invalid_proof_rejected() {
     );
     eprintln!(
         "CHK-008: Invalid proof correctly rejected: {}",
-        result.unwrap_err().1
+        result.unwrap_err()
     );
 }
 
@@ -1815,7 +1817,7 @@ fn vv_req_chk_008_trace_puzzle_pairing_args() {
         1_000_000,
     ) {
         Ok(clvmr::reduction::Reduction(_, n)) => n,
-        Err(e) => panic!("outer env_builder failed: {}", e.1),
+        Err(e) => panic!("outer env_builder failed: {}", e),
     };
     eprintln!("body_env OK");
 
@@ -1853,7 +1855,7 @@ fn vv_req_chk_008_trace_puzzle_pairing_args() {
                     SExp::Pair(_, _) => Ok(vec![0xFF, 0xFF]), // marker for pair
                 }
             }
-            Err(e) => Err(e.1.to_string()),
+            Err(e) => Err(e.to_string()),
         }
     };
 
@@ -2069,7 +2071,7 @@ fn vv_req_chk_008_trace_puzzle_pairing_args() {
         Ok(_) => eprintln!("\nPairing with puzzle paths against manual level2_env: PASSED!"),
         Err(e) => eprintln!(
             "\nPairing with puzzle paths against manual level2_env: FAILED: {}",
-            e.1
+            e
         ),
     }
 
@@ -2125,7 +2127,7 @@ fn vv_req_chk_008_trace_puzzle_pairing_args() {
     // Run eb1 in body_env to get REAL level1_env
     let real_level1 = match run_program(&mut a, &ChiaDialect::new(0), eb1, body_env, 1_000_000) {
         Ok(clvmr::reduction::Reduction(_, n)) => n,
-        Err(e) => panic!("eb1 failed: {}", e.1),
+        Err(e) => panic!("eb1 failed: {}", e),
     };
     eprintln!("Real level1_env OK");
 
@@ -2151,7 +2153,7 @@ fn vv_req_chk_008_trace_puzzle_pairing_args() {
     // Run eb2 in real_level1 to get REAL level2_env
     let real_level2 = match run_program(&mut a, &ChiaDialect::new(0), eb2, real_level1, 1_000_000) {
         Ok(clvmr::reduction::Reduction(_, n)) => n,
-        Err(e) => panic!("eb2 failed: {}", e.1),
+        Err(e) => panic!("eb2 failed: {}", e),
     };
     eprintln!("Real level2_env OK");
 
@@ -2186,7 +2188,7 @@ fn vv_req_chk_008_trace_puzzle_pairing_args() {
         Ok(_) => eprintln!("Pairing with puzzle paths against REAL level2_env: PASSED!"),
         Err(e) => eprintln!(
             "Pairing with puzzle paths against REAL level2_env: FAILED: {}",
-            e.1
+            e
         ),
     }
 
@@ -2204,7 +2206,7 @@ fn vv_req_chk_008_trace_puzzle_pairing_args() {
     );
     match &inner2_direct {
         Ok(_) => eprintln!("INNER2 body in real level2_env: PASSED!"),
-        Err(e) => eprintln!("INNER2 body in real level2_env: FAILED: {}", e.1),
+        Err(e) => eprintln!("INNER2 body in real level2_env: FAILED: {}", e),
     }
 
     // ── Run INNER1 body (= a INNER2 eb2) in real level1_env ──
@@ -2221,7 +2223,7 @@ fn vv_req_chk_008_trace_puzzle_pairing_args() {
     );
     match &inner1_direct {
         Ok(_) => eprintln!("INNER1 body in real level1_env: PASSED!"),
-        Err(e) => eprintln!("INNER1 body in real level1_env: FAILED: {}", e.1),
+        Err(e) => eprintln!("INNER1 body in real level1_env: FAILED: {}", e),
     }
 
     // ── Run the inner1 code (a INNER1 eb1) in body_env ──
@@ -2238,7 +2240,7 @@ fn vv_req_chk_008_trace_puzzle_pairing_args() {
             eprintln!("Running (a INNER1 eb1) in body_env: PASSED!");
         }
         Err(e) => {
-            eprintln!("Running (a INNER1 eb1) in body_env: FAILED: {}", e.1);
+            eprintln!("Running (a INNER1 eb1) in body_env: FAILED: {}", e);
         }
     }
 
@@ -2252,7 +2254,7 @@ fn vv_req_chk_008_trace_puzzle_pairing_args() {
     );
     match &full_result {
         Ok(_) => eprintln!("Full puzzle execution: PASSED!"),
-        Err(e) => eprintln!("Full puzzle execution: FAILED: {}", e.1),
+        Err(e) => eprintln!("Full puzzle execution: FAILED: {}", e),
     }
 }
 
@@ -2367,7 +2369,7 @@ fn vv_req_cir_004_majority_proof_verified_on_chain() {
     assert!(
         result.is_ok(),
         "CIR-004: Majority proof (k=3, n=5) must be accepted on-chain: {:?}",
-        result.err().map(|e| e.1)
+        result.err().map(|e| e)
     );
     eprintln!("CIR-004: Majority proof (k=3, n=5) verified on-chain ✓");
 }

@@ -286,6 +286,6 @@ fn harness_smoke_run_network_coin() {
                 "Must emit CREATE_COIN (51)"
             );
         }
-        Err(e) => panic!("Network coin CLVM failed: {}", e.1),
+        Err(e) => panic!("Network coin CLVM failed: {}", e),
     }
 }

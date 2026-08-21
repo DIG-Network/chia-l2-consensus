@@ -162,7 +162,7 @@ fn debug_checkpoint_env_builder_output() {
             eprintln!("{}", print_tree(&a, new_env, 0, 4));
         }
         Err(e) => {
-            eprintln!("\nBody env = run(env_builder, flat_env) -> ERR: {}", e.1);
+            eprintln!("\nBody env = run(env_builder, flat_env) -> ERR: {e}");
         }
     }
 }
@@ -288,7 +288,7 @@ fn debug_checkpoint_membership_path() {
             eprintln!("Membership path OK (cost={})", cost);
         }
         Err(e) => {
-            eprintln!("Membership path ERR: {}", e.1);
+            eprintln!("Membership path ERR: {e}");
         }
     }
 }
@@ -428,7 +428,7 @@ fn debug_checkpoint_env_nesting_levels() {
             n
         }
         Err(e) => {
-            eprintln!("ERR getting body_env: {}", e.1);
+            eprintln!("ERR getting body_env: {}", e);
             return;
         }
     };
@@ -444,7 +444,7 @@ fn debug_checkpoint_env_nesting_levels() {
     );
     match result {
         Ok(_) => eprintln!("Puzzle ran OK (unexpected for dummy data)"),
-        Err(e) => eprintln!("Puzzle ERR: {} (at env node {:?})", e.1, e.0),
+        Err(e) => eprintln!("Puzzle ERR: {e}"),
     }
 
     // Test a path access: is path 5887 actually STATE.vmr in body_env?
@@ -467,7 +467,7 @@ fn debug_checkpoint_env_nesting_levels() {
                 &bytes[..4.min(bytes.len())]
             );
         }
-        Err(e) => eprintln!("path 5887 in body_env ERR: {}", e.1),
+        Err(e) => eprintln!("path 5887 in body_env ERR: {e}"),
     }
 
     // What about after level1 checkpoint restructuring?
@@ -495,7 +495,7 @@ fn debug_checkpoint_env_nesting_levels() {
                 &bytes[..4.min(bytes.len())]
             );
         }
-        Err(e) => eprintln!("path 5887 in level1_env ERR: {}", e.1),
+        Err(e) => eprintln!("path 5887 in level1_env ERR: {e}"),
     }
 }
 
@@ -539,7 +539,7 @@ fn try_run(label: &str, hex: &str, build_env: impl FnOnce(&mut Allocator) -> Nod
     let env = build_env(&mut a);
     match run_program(&mut a, &ChiaDialect::new(0), puzzle, env, 11_000_000_000) {
         Ok(Reduction(cost, _)) => println!("  {} -> OK (cost={})", label, cost),
-        Err(e) => println!("  {} -> ERR: {}", label, e.1),
+        Err(e) => println!("  {} -> ERR: {e}", label),
     }
 }
 
@@ -760,7 +760,7 @@ fn test_actual_clvm_path_5_evaluation() {
                 &a.atom(n)[..4.min(a.atom(n).len())]
             );
         }
-        Err(e) => eprintln!("path 2 = ERR: {}", e.1),
+        Err(e) => eprintln!("path 2 = ERR: {e}"),
     }
 
     let result5 = run_program(&mut a, &ChiaDialect::new(0), prog_path5, env, 1000);
@@ -772,7 +772,7 @@ fn test_actual_clvm_path_5_evaluation() {
                 &a.atom(n)[..4.min(a.atom(n).len())]
             );
         }
-        Err(e) => eprintln!("path 5 = ERR: {}", e.1),
+        Err(e) => eprintln!("path 5 = ERR: {e}"),
     }
 
     let result6 = run_program(&mut a, &ChiaDialect::new(0), prog_path6, env, 1000);
@@ -784,6 +784,6 @@ fn test_actual_clvm_path_5_evaluation() {
                 &a.atom(n)[..4.min(a.atom(n).len())]
             );
         }
-        Err(e) => eprintln!("path 6 = ERR: {}", e.1),
+        Err(e) => eprintln!("path 6 = ERR: {e}"),
     }
 }

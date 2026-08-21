@@ -31,15 +31,15 @@ use chia_l2_consensus::testing::{
 };
 use chia_l2_consensus::DeploymentArtifacts;
 use chia_sdk_driver::SpendContext;
-use chia_sdk_test::Simulator;
+use chia_sdk_test::{BlsPairWithCoin, Simulator};
 
 // ── Helper: create a deployment and get artifacts ───────────────────
 
 fn setup_artifacts() -> DeploymentArtifacts {
     let mut sim = Simulator::new();
     let ctx = &mut SpendContext::new();
-    let (sk1, pk1, _, net_coin) = sim.new_p2(1).unwrap();
-    let (sk2, pk2, _, chk_coin) = sim.new_p2(1).unwrap();
+    let BlsPairWithCoin { sk: sk1, pk: pk1, coin: net_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin { sk: sk2, pk: pk2, coin: chk_coin, .. } = sim.bls(1);
 
     let (pk_bytes, _) = run_test_setup().unwrap();
     let pk = deserialize_proving_key(&pk_bytes).unwrap();

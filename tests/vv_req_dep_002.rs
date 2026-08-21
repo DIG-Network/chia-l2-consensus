@@ -38,7 +38,7 @@
 
 use chia_l2_consensus::testing::{deploy_both_singletons, derive_launcher_id};
 use chia_sdk_driver::SpendContext;
-use chia_sdk_test::Simulator;
+use chia_sdk_test::{BlsPairWithCoin, Simulator};
 
 // ── Launcher ID derivation is deterministic ────────────────────────
 
@@ -87,7 +87,7 @@ fn vv_req_dep_002_launcher_id_matches_sdk() {
     use chia_sdk_driver::Launcher;
 
     let mut sim = Simulator::new();
-    let (_, _, _, p2_coin) = sim.new_p2(1).expect("P2 coin");
+    let BlsPairWithCoin { coin: p2_coin, .. } = sim.bls(1);
 
     // Derive using our function
     let derived_id = derive_launcher_id(p2_coin.coin_id(), 1);
@@ -119,8 +119,8 @@ fn vv_req_dep_002_deploy_both_singletons() -> anyhow::Result<()> {
     let ctx = &mut SpendContext::new();
 
     // Two funding coins (simulates genesis split)
-    let (sk1, pk1, _, net_coin) = sim.new_p2(1)?;
-    let (sk2, pk2, _, chk_coin) = sim.new_p2(1)?;
+    let BlsPairWithCoin { sk: sk1, pk: pk1, coin: net_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin { sk: sk2, pk: pk2, coin: chk_coin, .. } = sim.bls(1);
 
     // Trusted setup for VK
     let (pk_bytes, _) = run_test_setup().expect("Setup");
@@ -183,8 +183,8 @@ fn vv_req_dep_002_both_created_in_same_block() -> anyhow::Result<()> {
     let mut sim = Simulator::new();
     let ctx = &mut SpendContext::new();
 
-    let (sk1, pk1, _, net_coin) = sim.new_p2(1)?;
-    let (sk2, pk2, _, chk_coin) = sim.new_p2(1)?;
+    let BlsPairWithCoin { sk: sk1, pk: pk1, coin: net_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin { sk: sk2, pk: pk2, coin: chk_coin, .. } = sim.bls(1);
 
     let (pk_bytes, _) = run_test_setup().expect("Setup");
     let pk = deserialize_proving_key(&pk_bytes).expect("PK");
@@ -261,8 +261,8 @@ fn vv_req_dep_002_config_fields_populated() -> anyhow::Result<()> {
     let mut sim = Simulator::new();
     let ctx = &mut SpendContext::new();
 
-    let (sk1, pk1, _, net_coin) = sim.new_p2(1)?;
-    let (sk2, pk2, _, chk_coin) = sim.new_p2(1)?;
+    let BlsPairWithCoin { sk: sk1, pk: pk1, coin: net_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin { sk: sk2, pk: pk2, coin: chk_coin, .. } = sim.bls(1);
 
     let (pk_bytes, _) = run_test_setup().expect("Setup");
     let pk = deserialize_proving_key(&pk_bytes).expect("PK");
@@ -344,8 +344,8 @@ fn vv_req_dep_002_ids_predictable_before_deploy() -> anyhow::Result<()> {
 
     let mut sim = Simulator::new();
 
-    let (sk1, pk1, _, net_coin) = sim.new_p2(1)?;
-    let (sk2, pk2, _, chk_coin) = sim.new_p2(1)?;
+    let BlsPairWithCoin { sk: sk1, pk: pk1, coin: net_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin { sk: sk2, pk: pk2, coin: chk_coin, .. } = sim.bls(1);
 
     // Predict IDs BEFORE deployment
     let predicted_net_id = derive_launcher_id(net_coin.coin_id(), 1);
@@ -397,8 +397,8 @@ fn vv_req_dep_002_singletons_have_amount_1() -> anyhow::Result<()> {
     let mut sim = Simulator::new();
     let ctx = &mut SpendContext::new();
 
-    let (sk1, pk1, _, net_coin) = sim.new_p2(1)?;
-    let (sk2, pk2, _, chk_coin) = sim.new_p2(1)?;
+    let BlsPairWithCoin { sk: sk1, pk: pk1, coin: net_coin, .. } = sim.bls(1);
+    let BlsPairWithCoin { sk: sk2, pk: pk2, coin: chk_coin, .. } = sim.bls(1);
 
     let (pk_bytes, _) = run_test_setup().expect("Setup");
     let pk = deserialize_proving_key(&pk_bytes).expect("PK");
